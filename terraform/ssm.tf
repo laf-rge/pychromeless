@@ -22,3 +22,15 @@ resource "aws_ssm_parameter" "ctpass" {
   value = data.lastpass_secret.crunchtime_lp.password
   tags = local.common_tags
 }
+resource "aws_ssm_parameter" "emailuser" {
+  name  = "/${terraform.workspace}/email/user"
+  type  = "String"
+  value = data.lastpass_secret.email_lp.username
+  tags = local.common_tags
+}
+resource "aws_ssm_parameter" "emailpass" {
+  name  = "/${terraform.workspace}/email/password"
+  type  = "SecureString"
+  value = data.lastpass_secret.email_lp.password
+  tags = local.common_tags
+}

@@ -3,10 +3,13 @@ import shutil
 import uuid
 
 from selenium import webdriver
+if os.environ.get("AWS_EXECUTION_ENV") is not None:
+    import chromedriver_binary
 
 
 class WebDriverWrapper:
     def __init__(self, download_location=None):
+        in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
         chrome_options = webdriver.ChromeOptions()
         self._tmp_folder = '/tmp/{}'.format(uuid.uuid4())
         self.download_location = download_location
@@ -33,24 +36,25 @@ class WebDriverWrapper:
 
             chrome_options.add_experimental_option('prefs', prefs)
 
-        chrome_options.add_argument('--headless')
-        chrome_options.add_argument('--no-sandbox')
-        chrome_options.add_argument('--disable-gpu')
-        chrome_options.add_argument('--window-size=1280x1696')
-        chrome_options.add_argument('--user-data-dir={}'.format(self._tmp_folder + '/user-data'))
-        chrome_options.add_argument('--hide-scrollbars')
-        chrome_options.add_argument('--enable-logging')
-        chrome_options.add_argument('--log-level=0')
-        chrome_options.add_argument('--v=99')
-        chrome_options.add_argument('--single-process')
-        chrome_options.add_argument('--data-path={}'.format(self._tmp_folder + '/data-path'))
-        chrome_options.add_argument('--ignore-certificate-errors')
-        chrome_options.add_argument('--homedir={}'.format(self._tmp_folder))
-        chrome_options.add_argument('--disk-cache-dir={}'.format(self._tmp_folder + '/cache-dir'))
-        chrome_options.add_argument(
-            'user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36')
+        if in_aws:
+            chrome_options.add_argument('--headless')
+            chrome_options.add_argument('--no-sandbox')
+            chrome_options.add_argument('--disable-gpu')
+            chrome_options.add_argument('--window-size=1280x1696')
+            chrome_options.add_argument('--user-data-dir={}'.format(self._tmp_folder + '/user-data'))
+            chrome_options.add_argument('--hide-scrollbars')
+            chrome_options.add_argument('--enable-logging')
+            chrome_options.add_argument('--log-level=0')
+            chrome_options.add_argument('--v=99')
+            chrome_options.add_argument('--single-process')
+            chrome_options.add_argument('--data-path={}'.format(self._tmp_folder + '/data-path'))
+            chrome_options.add_argument('--ignore-certificate-errors')
+            chrome_options.add_argument('--homedir={}'.format(self._tmp_folder))
+            chrome_options.add_argument('--disk-cache-dir={}'.format(self._tmp_folder + '/cache-dir'))
+            chrome_options.add_argument(
+                'user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36')
 
-        chrome_options.binary_location = os.getcwd() + "/bin/headless-chromium"
+            chrome_options.binary_location = "/opt/bin/headless-chromium"
 
         self._driver = webdriver.Chrome(chrome_options=chrome_options)
 
@@ -71,10 +75,10 @@ class WebDriverWrapper:
     def get_inner_html(self, xpath):
         elem_value = self._driver.find_element_by_xpath(xpath)
         return elem_value.get_attribute('innerHTML')
-    
+
     def find(self, xpath):
         return self._driver.find_element_by_xpath(xpath)
-    
+
     def close(self):
         # Close webdriver connection
         self._driver.quit()

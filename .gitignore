@@ -12,3 +12,6 @@ env/
 
 ### Project specifics
 bin/
+layer.zip
+build
+deploy
