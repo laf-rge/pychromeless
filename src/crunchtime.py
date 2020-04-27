@@ -31,7 +31,6 @@ class Crunchtime():
     """
     """
     def _login(self):
-        self._init()
         driver = self._driver._driver
         driver.implicitly_wait(25)
 
