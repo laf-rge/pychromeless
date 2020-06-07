@@ -23,7 +23,7 @@ class Crunchtime():
     def __init__(self):
         self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
         self._driver = WebDriverWrapper(download_location='/tmp')
-        self._parameters = SSMParameterStore(prefix='/prod')['flexepos']
+        self._parameters = SSMParameterStore(prefix='/prod')['crunchtime']
         self._driver = WebDriverWrapper(download_location='/tmp')
 
         return

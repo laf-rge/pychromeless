@@ -1,3 +1,4 @@
+import os
 import datetime
 import json
 import qb
@@ -5,6 +6,8 @@ import smtplib, ssl
 import crunchtime
 from flexepos import Flexepos
 from ssm_parameter_store import SSMParameterStore
+if os.environ.get("AWS_EXECUTION_ENV") is not None:
+    import chromedriver_binary
 
 def invoice_sync_handler(*args, **kwargs):
     ct = crunchtime.Crunchtime()
