@@ -96,7 +96,16 @@ def create_daily_sales(txdate, daily_report):
 
     pattern = re.compile("\d+\.\d\d")
 
-    new_receipt = SalesReceipt()
+    existing_receipt = SalesReceipt.filter(TxnDate=qb_date_format(txdate))
+
+    if len(existing_receipt) == 0:
+        new_receipt = SalesReceipt()
+    else :
+        new_receipt = existing_receipt[0]
+        # clear old lines
+        new_receipt.Line.clear()
+
+
     new_receipt.TxnDate = qb_date_format(txdate)
     new_receipt.CustomerRef = Customer.all()[0].to_ref()
 
