@@ -33,7 +33,7 @@ class Flexepos():
         driver.find_element_by_id("login:username").send_keys(self._parameters['user'])
         driver.find_element_by_id("login:password").clear()
         driver.find_element_by_id("login:password").send_keys(self._parameters['password'])
-        driver.find_element_by_name("login:j_id28").click()
+        driver.find_element_by_name("login:j_id24").click()
         return
 
 
