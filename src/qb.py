@@ -2,6 +2,8 @@ import json
 import boto3
 import base64
 import re
+import calendar
+import datetime
 from functools import reduce
 from botocore.exceptions import ClientError
 from quickbooks import QuickBooks
@@ -43,7 +45,7 @@ gl_code_map = { "1700" : "1995", #security deposit
                "5010.6" : "1301", # Cheese
                "5020" : "1301", # Paper
                "5030" : "1301", # Beverages Other
-               "5030.1" : "1301", # Beverages Fountain 
+               "5030.1" : "1301", # Beverages Fountain
                "5030.2" : "1301", # Beverages Bottles
                "5040" : "1301", # Produce
                "6243" : "6720", # Kitchen
@@ -63,7 +65,7 @@ gl_code_map_to_cogs = { "1700" : "1995", #security deposit
                "5010.6" : "5205", # Cheese
                "5020" : "5300", # Paper
                "5030" : "5100", # Beverages Other
-               "5030.1" : "5101", # Beverages Fountain 
+               "5030.1" : "5101", # Beverages Fountain
                "5030.2" : "5102", # Beverages Bottles
                "5040" : "5400", # Produce
                "6243" : "6720", # Kitchen
@@ -86,8 +88,19 @@ def lambda_handler(event, context):
         'body': get_secret()
     }
 
-def update_royalty():
-    return
+def update_royalty(year, month, payment_data):
+    auth_client = refresh_session()
+
+    client = QuickBooks(auth_client=auth_client,company_id="1401432085")
+
+    supplier = Vendor.where("DisplayName like 'A Sub Above'")[0]
+    lines = [ [wmc_account_ref(6335), "", payment_data["Royalty"] ],
+              [wmc_account_ref(6105), "", payment_data["Advertising"] ],
+              [wmc_account_ref(6107), "", payment_data["Media"] ],
+              [wmc_account_ref(6106), "", payment_data["CoOp"] ]
+            ]
+
+    return sync_bill(supplier, str(year*100+month), datetime.date(year, month, calendar.monthrange(year, month)[1]), json.dumps(payment_data), lines)
 
 def create_daily_sales(txdate, daily_report):
     auth_client = refresh_session()
@@ -176,6 +189,16 @@ def create_daily_sales(txdate, daily_report):
 
     return new_receipt.save(qb=client)
 
+def enter_online_cc_fee(year, month, payment_data):
+    auth_client = refresh_session()
+
+    client = QuickBooks(auth_client=auth_client,company_id="1401432085")
+
+    supplier = Vendor.where("DisplayName like 'Jersey Mikes%'")[0]
+    lines = [ [wmc_account_ref(6120), "", payment_data["Total Fees"] ] ]
+
+    return sync_bill(supplier, str(year*100+month), datetime.date(year, month, calendar.monthrange(year, month)[1]), json.dumps(payment_data), lines)
+
 def sync_bill(supplier, invoice_num, invoice_date, notes, lines):
     auth_client = refresh_session()
 
@@ -226,8 +249,18 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines):
 
     try:
         bill.save(qb=client)
-    except:
+    except Exception as ex:
         print(bill.to_json())
+        print(ex)
+
+def wmc_account_ref(acctNum):
+    global account_ref
+    if account_ref == None:
+        auth_client = refresh_session()
+        client = QuickBooks(auth_client=auth_client,company_id="1401432085")
+        account_ref = dict(map(lambda x : (x.AcctNum, x.to_ref()),
+             Account.all(max_results=1000)))
+    return account_ref[str(acctNum)]
 
 def account_ref_lookup(gl_account_code):
     global account_ref

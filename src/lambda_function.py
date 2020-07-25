@@ -1,5 +1,6 @@
 import os
 import datetime
+import calendar
 import json
 import qb
 import smtplib, ssl
@@ -24,6 +25,24 @@ def daily_sales_handler(*args, **kwargs):
     journal = dj.getDailySales(["20025"],txdate)
     qb.create_daily_sales(txdate, journal["20025"])
 
+    payment_data = dj.getOnlinePayments(["20025"], txdate.year, txdate.month)
+    qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data["20025"])
+
+    royalty_data = dj.getRoyaltyReport(["20025"], datetime.date(txdate.year, txdate.month, 1),
+                                       datetime.date(txdate.year, txdate.month, calendar.monthrange(txdate.year, txdate.month)[1]))
+    qb.update_royalty(txdate.year, txdate.month, royalty_data["20025"])
+
+    return {
+        'statusCode':200,
+        'body': 'Success'
+    }
+
+def online_cc_fee(*args, **kwargs):
+    txdate = datetime.date.today() - datetime.timedelta(days=1)
+
+    dj = Flexepos()
+    payment_data = dj.getOnlinePayments(["20025"], txdate.year, txdate.month)
+    qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data["20025"])
     return {
         'statusCode':200,
         'body': 'Success'

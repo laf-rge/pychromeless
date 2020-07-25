@@ -1,5 +1,7 @@
 import json
 import os
+import datetime
+import calendar
 from webdriver_wrapper import WebDriverWrapper
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -36,6 +38,55 @@ class Flexepos():
         driver.find_element_by_name("login:j_id24").click()
         return
 
+    """
+    """
+    def getOnlinePayments(self, stores, year, month):
+        span_dates = [datetime.date(year, month, 1), datetime.date(year, month, calendar.monthrange(year, month)[1] ) ]
+        span_date_start = span_dates[0].strftime("%m%d%Y")
+        span_date_end = span_dates[1].strftime("%m%d%Y")
+        store = stores[0]
+        payment_data = {}
+
+        self._login()
+        driver = self._driver._driver
+
+        try:
+            payment_data[store] = {}
+            driver.find_element_by_id("menu:2:j_id23_header").click()
+            driver.find_element_by_id("menu:2:j_id24:1:j_id25").click()
+            sleep(1)
+            driver.find_element_by_id("parameters:store").clear()
+            driver.find_element_by_id("parameters:store").send_keys(store)
+            driver.find_element_by_id("parameters:startDateCalendarInputDate").clear()
+            driver.find_element_by_id("parameters:startDateCalendarInputDate").send_keys(span_date_start)
+            driver.find_element_by_id("parameters:endDateCalendarInputDate").clear()
+            driver.find_element_by_id("parameters:endDateCalendarInputDate").send_keys(span_date_end)
+            driver.find_element_by_id("parameters:submit").click()
+            soup = BeautifulSoup(driver.page_source, features="html.parser")
+            online_table = soup.find('table', attrs = { "id" : "onlineOrdersList" })
+            rows = online_table.find_all('tr')
+            print(len(rows))
+            if len(rows) != 2:
+                payment_data[store]['Tendered'] = None
+                payment_data[store]['Tip'] = None
+                payment_data[store]['Total'] = None
+                payment_data[store]['Interchange Fee'] = None
+                payment_data[store]['Patent Fee'] = None
+                payment_data[store]['ECommerce Fee'] = None
+                payment_data[store]['Total Fees'] = None
+            else:
+                row = [ ele.text.strip() for ele in rows[1].find_all('td') ]
+                payment_data[store]['Tendered'] = row[1]
+                payment_data[store]['Tip'] = row[2]
+                payment_data[store]['Total'] = row[3]
+                payment_data[store]['Interchange Fee'] = row[4]
+                payment_data[store]['Patent Fee'] = row[5]
+                payment_data[store]['ECommerce Fee'] = row[6]
+                payment_data[store]['Total Fees'] = row[7]
+        finally:
+            driver.quit()
+
+        return payment_data
 
     """
     """
@@ -226,6 +277,6 @@ class Flexepos():
             royalty_table =  soup.find('table', attrs = {"id" : "RoyaltyList" })
             rows = royalty_table.find_all("tr")
             row = [ ele.text.strip() for ele in rows[1].find_all('td') ]
-            return row
+            return { row[0] : { 'Net Sales' : row[1], 'Royalty' : row[2], 'Advertising' : row[4], 'CoOp' : row[6], 'Media' : row[8] } }
         finally:
             driver.quit()
