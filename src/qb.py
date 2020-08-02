@@ -97,7 +97,10 @@ def update_royalty(year, month, payment_data):
     lines = [ [wmc_account_ref(6335), "", payment_data["Royalty"] ],
               [wmc_account_ref(6105), "", payment_data["Advertising"] ],
               [wmc_account_ref(6107), "", payment_data["Media"] ],
-              [wmc_account_ref(6106), "", payment_data["CoOp"] ]
+              [wmc_account_ref(6106), "", payment_data["CoOp"]],
+              [wmc_account_ref(2270), "", "-" + str((Decimal(payment_data["Royalty"].replace(',','')) +
+               Decimal(payment_data["Advertising"].replace(',','')) + Decimal(payment_data["Media"].replace(',','')) +
+               Decimal(payment_data["CoOp"].replace(',',''))).quantize(TWOPLACES)) ]
             ]
 
     return sync_bill(supplier, str(year*100+month), datetime.date(year, month, calendar.monthrange(year, month)[1]), json.dumps(payment_data), lines)
