@@ -52,6 +52,7 @@ gl_code_map = { "1700" : "1995", #security deposit
                "6244" : "6730", # Kitchen - Gloves
                "6245" : "6720", # Kitchen - Cleaning Supplies
                "6293" : "5500", # Min Order Charge -> COGS - Delivery
+               "6291" : "5500", # Fule Surcharge -> COGS - Delivery
                "8026" : "6236"} # Sales and Use Tax
 
 gl_code_map_to_cogs = { "1700" : "1995", #security deposit

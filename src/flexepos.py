@@ -20,12 +20,12 @@ class Flexepos():
     def __init__(self):
         self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
         self._parameters = SSMParameterStore(prefix='/prod')['flexepos']
-        self._driver = WebDriverWrapper(download_location='/tmp')
 
 
     """
     """
     def _login(self):
+        self._driver = WebDriverWrapper(download_location='/tmp')
         driver = self._driver._driver
         driver.implicitly_wait(25)
         driver.set_page_load_timeout(45)
@@ -35,7 +35,7 @@ class Flexepos():
         driver.find_element_by_id("login:username").send_keys(self._parameters['user'])
         driver.find_element_by_id("login:password").clear()
         driver.find_element_by_id("login:password").send_keys(self._parameters['password'])
-        driver.find_element_by_name("login:j_id28").click()
+        driver.find_element_by_name("login:j_id29").click()
         return
 
     """
@@ -62,6 +62,7 @@ class Flexepos():
             driver.find_element_by_id("parameters:endDateCalendarInputDate").clear()
             driver.find_element_by_id("parameters:endDateCalendarInputDate").send_keys(span_date_end)
             driver.find_element_by_id("parameters:submit").click()
+            sleep(3)
             soup = BeautifulSoup(driver.page_source, features="html.parser")
             online_table = soup.find('table', attrs = { "id" : "onlineOrdersList" })
             rows = online_table.find_all('tr')
@@ -116,11 +117,12 @@ class Flexepos():
                 if state != checkbox.is_selected():
                     checkbox.click()
             driver.find_element_by_id("parameters:submit").click()
+            sleep(3)
             soup = BeautifulSoup(driver.page_source, features="html.parser")
             totalsales_table = soup.find('table', attrs = { "id" : "TotalSales" })
             rows = totalsales_table.find_all('tr')
             if len(rows) != 6:
-                sales_data[store]['Pre-Discount Sales'] = None 
+                sales_data[store]['Pre-Discount Sales'] = None
                 sales_data[store]['Discounts'] = None
                 sales_data[store]['Donations'] = None
             else:
@@ -221,7 +223,8 @@ class Flexepos():
             sales_data[store]['Payouts'] = payouts
 
         finally:
-            driver.quit()
+            #driver.quit()
+            pass
         return sales_data
 
     """
@@ -273,6 +276,7 @@ class Flexepos():
             driver.find_element_by_id("parameters:endDateCalendarInputDate").send_keys(end_date.strftime("%m%d%Y"))
             driver.find_element_by_id("parameters:submit").click()
             driver.implicitly_wait(0)
+            sleep(2)
             soup = BeautifulSoup(driver.page_source, features="html.parser")
             royalty_table =  soup.find('table', attrs = {"id" : "RoyaltyList" })
             rows = royalty_table.find_all("tr")
