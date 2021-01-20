@@ -15,3 +15,5 @@ bin/
 layer.zip
 build
 deploy
+*.swp
+terraform/.terraform
