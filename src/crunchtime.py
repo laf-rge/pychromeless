@@ -114,7 +114,7 @@ class Crunchtime():
                 elif row[1] == 'Total: ':
                     # send invoice
                     qb.sync_bill(vendor, invoice_num, invoice_date, notes,
-                                 items)
+                                 items, "20025")
                     continue
                 else:
                     # map GL code to WMC accounting code

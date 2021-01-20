@@ -95,103 +95,116 @@ def update_royalty(year, month, payment_data):
     client = QuickBooks(auth_client=auth_client,company_id="1401432085")
 
     supplier = Vendor.where("DisplayName like 'A Sub Above'")[0]
-    lines = [ [wmc_account_ref(6335), "", payment_data["Royalty"] ],
-              [wmc_account_ref(6105), "", payment_data["Advertising"] ],
-              [wmc_account_ref(6107), "", payment_data["Media"] ],
-              [wmc_account_ref(6106), "", payment_data["CoOp"]],
-              [wmc_account_ref(2270), "", "-" + str((Decimal(payment_data["Royalty"].replace(',','')) +
-               Decimal(payment_data["Advertising"].replace(',','')) + Decimal(payment_data["Media"].replace(',','')) +
-               Decimal(payment_data["CoOp"].replace(',',''))).quantize(TWOPLACES)) ]
-            ]
 
-    return sync_bill(supplier, str(year*100+month), datetime.date(year, month, calendar.monthrange(year, month)[1]), json.dumps(payment_data), lines)
+    for store, payment_info in payment_data.items():
+        lines = [ [wmc_account_ref(6335), "", payment_info["Royalty"] ],
+                  [wmc_account_ref(6105), "", payment_info["Advertising"] ],
+                  [wmc_account_ref(6107), "", payment_info["Media"] ],
+                  [wmc_account_ref(6106), "", payment_info["CoOp"]],
+                  [wmc_account_ref(2270), "", "-" + str((Decimal(payment_info["Royalty"].replace(',','')) +
+                   Decimal(payment_info["Advertising"].replace(',','')) + Decimal(payment_info["Media"].replace(',','')) +
+                   Decimal(payment_info["CoOp"].replace(',',''))).quantize(TWOPLACES)) ]
+                ]
 
-def create_daily_sales(txdate, daily_report):
+        sync_bill(supplier, store+str(year*100+month), datetime.date(year, month, calendar.monthrange(year, month)[1]), json.dumps(payment_info), lines, store)
+    return
+
+def create_daily_sales(txdate, daily_reports):
     auth_client = refresh_session()
 
     client = QuickBooks(auth_client=auth_client,company_id="1401432085")
 
     pattern = re.compile("\d+\.\d\d")
 
-    existing_receipt = SalesReceipt.filter(TxnDate=qb_date_format(txdate))
+    store_refs = { x.Name : x.to_ref() for x in Department.all() }
 
-    if len(existing_receipt) == 0:
-        new_receipt = SalesReceipt()
-    else :
-        new_receipt = existing_receipt[0]
-        # clear old lines
-        new_receipt.Line.clear()
+    existing_receipts = { x.DepartmentRef.name if x.DepartmentRef else '20025' : x for x in SalesReceipt.filter(TxnDate=qb_date_format(txdate)) }
+    new_receipts = {}
+
+    for store, sref in store_refs.items():
+        if store in existing_receipts:
+            new_receipts[store] = existing_receipts[store]
+            # clear old lines
+            new_receipts[store].Line.clear()
+        else:
+            new_receipts[store] = SalesReceipt()
+
+    for store, new_receipt in new_receipts.items():
+        if not (store in daily_reports):
+            continue
+        new_receipts[store].DepartmentRef = store_refs[store]
+        new_receipt.TxnDate = qb_date_format(txdate)
+        new_receipt.CustomerRef = Customer.all()[0].to_ref()
+        daily_report = daily_reports[store]
+
+        line_num = 1
+        amount_total = Decimal(0.0)
+        for line_item, line_id in detail_map.items():
+            line_text = daily_report[line_item]
+            line = SalesItemLine()
+            line.LineNum = line_num
+            line.Description = "{} imported from ({})".format(
+                line_item, daily_report[line_item])
+            if daily_report[line_item]:
+                if daily_report[line_item].startswith("N"):
+                    line.Amount = 0
+                else:
+                    line.Amount = atof(daily_report[line_item].strip("$")) * line_id[1]
+                amount_total += Decimal(line.Amount)
+            else:
+                line.Amount = 0
+            line.SalesItemLineDetail = SalesItemLineDetail()
+            item = Item.query(
+                "select * from Item where id = '{}'".format(line_id[0]),client)[0]
+            line.SalesItemLineDetail.ItemRef = item.to_ref()
+            line.SalesItemLineDetail.ServiceDate = None
+            new_receipt.Line.append(line)
+            line_num += 1
 
 
-    new_receipt.TxnDate = qb_date_format(txdate)
-    new_receipt.CustomerRef = Customer.all()[0].to_ref()
-
-    line_num = 1
-    amount_total = Decimal(0.0)
-    for line_item, line_id in detail_map.items():
-        line_text = daily_report[line_item]
+        # Payin
         line = SalesItemLine()
         line.LineNum = line_num
-        line.Description = "{} imported from ({})".format(
-            line_item, daily_report[line_item])
-        if daily_report[line_item]:
-            if daily_report[line_item].startswith("N"):
-                line.Amount = 0
-            else:
-                line.Amount = atof(daily_report[line_item].strip("$")) * line_id[1]
-            amount_total += Decimal(line.Amount)
+        line_num += 1
+        line.Description = daily_report["Payins"].strip()
+        if line.Description.count('\n')>0:
+            amount = Decimal(0)
+            for payin_line in line.Description.split('\n')[1:]:
+                amount = amount + Decimal(atof(pattern.search(payin_line).group()))
+            line.Amount = amount.quantize(TWOPLACES)
+            amount_total += amount
         else:
             line.Amount = 0
         line.SalesItemLineDetail = SalesItemLineDetail()
         item = Item.query(
-            "select * from Item where id = '{}'".format(line_id[0]),client)[0]
+            "select * from Item where id = '{}'".format(43),client)[0]
         line.SalesItemLineDetail.ItemRef = item.to_ref()
         line.SalesItemLineDetail.ServiceDate = None
         new_receipt.Line.append(line)
+
+        # Register Audit
+        line = SalesItemLine()
+        line.LineNum = line_num
         line_num += 1
+        line.Description = daily_report["Bank Deposits"].strip()
+        # test if there was a recorded deposit
+        if line.Description:
+            line.Amount = (Decimal(atof(line.Description.split()[4])) - \
+              Decimal(amount_total).quantize(TWOPLACES))
+        else:
+            line.Amount = 0
+        line.SalesItemLineDetail = SalesItemLineDetail()
+        item = Item.query(
+            "select * from Item where id = '{}'".format(31),client)[0]
+        line.SalesItemLineDetail.ItemRef = item.to_ref()
+        line.SalesItemLineDetail.ServiceDate = None
+        new_receipt.Line.append(line)
 
+        new_receipt.PrivateNote = json.dumps(daily_report, indent=1)
 
-    # Payin
-    line = SalesItemLine()
-    line.LineNum = line_num
-    line_num += 1
-    line.Description = daily_report["Payins"].strip()
-    if line.Description.count('\n')>0:
-        amount = Decimal(0)
-        for payin_line in line.Description.split('\n')[1:]:
-            amount = amount + Decimal(atof(pattern.search(payin_line).group()))
-        line.Amount = amount.quantize(TWOPLACES)
-        amount_total += amount
-    else:
-        line.Amount = 0
-    line.SalesItemLineDetail = SalesItemLineDetail()
-    item = Item.query(
-        "select * from Item where id = '{}'".format(43),client)[0]
-    line.SalesItemLineDetail.ItemRef = item.to_ref()
-    line.SalesItemLineDetail.ServiceDate = None
-    new_receipt.Line.append(line)
+        new_receipt.save(qb=client)
 
-    # Register Audit
-    line = SalesItemLine()
-    line.LineNum = line_num
-    line_num += 1
-    line.Description = daily_report["Bank Deposits"].strip()
-    # test if there was a recorded deposit
-    if line.Description:
-        line.Amount = (Decimal(atof(line.Description.split()[4])) - \
-          Decimal(amount_total).quantize(TWOPLACES))
-    else:
-        line.Amount = 0
-    line.SalesItemLineDetail = SalesItemLineDetail()
-    item = Item.query(
-        "select * from Item where id = '{}'".format(31),client)[0]
-    line.SalesItemLineDetail.ItemRef = item.to_ref()
-    line.SalesItemLineDetail.ServiceDate = None
-    new_receipt.Line.append(line)
-
-    new_receipt.PrivateNote = json.dumps(daily_report, indent=1)
-
-    return new_receipt.save(qb=client)
+    return
 
 def enter_online_cc_fee(year, month, payment_data):
     auth_client = refresh_session()
@@ -199,14 +212,18 @@ def enter_online_cc_fee(year, month, payment_data):
     client = QuickBooks(auth_client=auth_client,company_id="1401432085")
 
     supplier = Vendor.where("DisplayName like 'Jersey Mikes%'")[0]
-    lines = [ [wmc_account_ref(6120), "", payment_data["Total Fees"] ] ]
+    for store, payment_info in payment_data.items():
+        lines = [ [wmc_account_ref(6120), "", payment_data[store]["Total Fees"] ] ]
 
-    return sync_bill(supplier, str(year*100+month), datetime.date(year, month, calendar.monthrange(year, month)[1]), json.dumps(payment_data), lines)
+        sync_bill(supplier, store + str(year*100+month), datetime.date(year, month, calendar.monthrange(year, month)[1]), json.dumps(payment_data[store]), lines, store)
+    return
 
-def sync_bill(supplier, invoice_num, invoice_date, notes, lines):
+def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None):
     auth_client = refresh_session()
 
     client = QuickBooks(auth_client=auth_client,company_id="1401432085")
+
+    store_refs = { x.Name : x.to_ref() for x in Department.all() }
 
     # is this a credit
     if reduce(lambda x, y:x + atof(y[-1]), lines, 0.0) < 0.0:
@@ -230,6 +247,7 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines):
     bill.VendorRef = supplier.to_ref()
 
     bill.PrivateNote = notes
+    bill.DepartmentRef = None if not department else store_refs[department]
 
     if item_sign >0:
         bill.SalesTermRef = supplier.TermRef

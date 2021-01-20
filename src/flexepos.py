@@ -117,7 +117,7 @@ class Flexepos():
                 if state != checkbox.is_selected():
                     checkbox.click()
             driver.find_element_by_id("parameters:submit").click()
-            sleep(3)
+            sleep(4)
             soup = BeautifulSoup(driver.page_source, features="html.parser")
             totalsales_table = soup.find('table', attrs = { "id" : "TotalSales" })
             rows = totalsales_table.find_all('tr')
@@ -182,7 +182,7 @@ class Flexepos():
             driver.find_element_by_id("menu:0:j_id29_header").click()
             driver.find_element_by_id("menu:0:j_id30:9:j_id31").click()
             driver.find_element_by_id("parameters:submit").click()
-            driver.implicitly_wait(0)
+            driver.implicitly_wait(10)
             if len(driver.find_elements_by_id("j_id86:1:j_id100:0:j_id105")) > 0:
                 cctips = driver.find_element_by_id("j_id86:1:j_id100:0:j_id105").text
             else:
