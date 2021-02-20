@@ -223,7 +223,7 @@ class Flexepos():
             sales_data[store]['Payouts'] = payouts
 
         finally:
-            #driver.quit()
+            driver.quit()
             pass
         return sales_data
 
@@ -248,8 +248,8 @@ class Flexepos():
                 Select(driver.find_element_by_id("parameters:journalScope")).select_by_visible_text("Store")
                 driver.find_element_by_id("parameters:submit").click()
                 driver.implicitly_wait(0)
-                if len(driver.find_elements_by_id("j_id77_body")) > 0:
-                    drawer_opens[store_number] = driver.find_element_by_id("j_id77_body").text
+                if len(driver.find_elements_by_id("j_id78_body")) > 0:
+                    drawer_opens[store_number] = driver.find_element_by_id("j_id78_body").text
                 else:
                     drawer_opens[store_number] = "No Jornal Data Found"
                 driver.implicitly_wait(5)

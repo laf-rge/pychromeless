@@ -170,6 +170,8 @@ def create_daily_sales(txdate, daily_reports):
         if line.Description.count('\n')>0:
             amount = Decimal(0)
             for payin_line in line.Description.split('\n')[1:]:
+                if payin_line.startswith("TOTAL"):
+                    continue
                 amount = amount + Decimal(atof(pattern.search(payin_line).group()))
             line.Amount = amount.quantize(TWOPLACES)
             amount_total += amount
