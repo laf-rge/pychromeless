@@ -21,23 +21,23 @@ def invoice_sync_handler(*args, **kwargs):
 
 def daily_sales_handler(*args, **kwargs):
     txdates = [datetime.date.today() - datetime.timedelta(days=1)]
-    #txdates = [datetime.date(2021,1,18)]
-    #txdates = map(partial(datetime.date,2021,1),range(1,31))
+    #txdates = [datetime.date(2021,3,14)]
+    #txdates = map(partial(datetime.date,2021,3),range(29,31))
 
+    dj = Flexepos()
     for txdate in txdates:
         retry = True
         while (retry):
             try:
-                dj = Flexepos()
                 journal = dj.getDailySales(["20025"],txdate)
                 qb.create_daily_sales(txdate, journal)
-                payment_data = dj.getOnlinePayments(["20025"], txdate.year, txdate.month)
-                qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
                 print(txdate)
                 retry = False
             except:
                 print("error "+str(txdate))
                 retry = True
+    payment_data = dj.getOnlinePayments(["20025"], txdate.year, txdate.month)
+    qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
     royalty_data = dj.getRoyaltyReport(["20025"], datetime.date(txdate.year, txdate.month, 1),
          datetime.date(txdate.year, txdate.month, calendar.monthrange(txdate.year, txdate.month)[1]))
     qb.update_royalty(txdate.year, txdate.month, royalty_data)

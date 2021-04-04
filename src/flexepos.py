@@ -276,7 +276,7 @@ class Flexepos():
             driver.find_element_by_id("parameters:endDateCalendarInputDate").send_keys(end_date.strftime("%m%d%Y"))
             driver.find_element_by_id("parameters:submit").click()
             driver.implicitly_wait(0)
-            sleep(2)
+            sleep(8)
             soup = BeautifulSoup(driver.page_source, features="html.parser")
             royalty_table =  soup.find('table', attrs = {"id" : "RoyaltyList" })
             rows = royalty_table.find_all("tr")

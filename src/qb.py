@@ -220,6 +220,45 @@ def enter_online_cc_fee(year, month, payment_data):
         sync_bill(supplier, store + str(year*100+month), datetime.date(year, month, calendar.monthrange(year, month)[1]), json.dumps(payment_data[store]), lines, store)
     return
 
+def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=None):
+    auth_client = refresh_session()
+
+    client = QuickBooks(auth_client=auth_client,company_id="1401432085")
+
+    store_refs = { x.Name : x.to_ref() for x in Department.all() }
+
+    # check if one already exists
+    query = Deposit.filter(TxnDate=qb_date_format(deposit_date))
+    for d in query:
+        if Decimal(d.Line[0].Amount).quantize(TWOPLACES) == Decimal(atof(lines[0][2])).quantize(TWOPLACES):
+            print("Already imported skipping {}".format(deposit_date))
+            return
+    deposit = Deposit()
+    deposit.TxnDate = qb_date_format(deposit_date)
+    deposit.PrivateNote = notes
+    deposit.DepartmentRef = None if not department else store_refs[department]
+    deposit.DepositToAccountRef = wmc_account_ref(1010)
+
+    line_num = 1
+
+    for deposit_line in lines:
+        line = DepositLine()
+        line.DepositLineDetail = DepositLineDetail()
+        line.DepositLineDetail.AccountRef = wmc_account_ref(int(deposit_line[0]))
+        line.DepositLineDetail.Entity = Vendor.filter(DisplayName=supplier)[0].to_ref()
+        line.LineNum = line_num
+        line.Id = line_num
+        line.Amount = Decimal(atof(deposit_line[2])).quantize(TWOPLACES)
+        line.Description = deposit_line[1]
+        line_num += 1
+        deposit.Line.append(line)
+
+    try:
+        deposit.save(qb=client)
+    except Exception as ex:
+        print(deposit.to_json())
+        print(ex)
+
 def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None):
     auth_client = refresh_session()
 

@@ -1,13 +1,14 @@
 // SETTINGS
-provider "aws" {
-  region = var.settings["region"]
-}
-
-provider "lastpass" {
-    version = ">=0.4.2"
-} 
-
 terraform {
+  required_providers {
+    lastpass = {
+      source = "nrkno/lastpass"
+    }
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+  }
   backend "s3" {
     bucket = "wagonermanagementcorp"
     key    = "flexepos/flexepos.tfstate"
@@ -15,4 +16,9 @@ terraform {
     encrypt = true
   }
 }
+
+provider "aws" {
+  region  = "us-east-2"
+}
+
 
