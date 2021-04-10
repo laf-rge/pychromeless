@@ -30,28 +30,31 @@ class SSMParameterStore(object):
     """
     Provide a dictionary-like interface to access AWS SSM Parameter Store
     """
+
     def __init__(self, prefix=None, ssm_client=None, ttl=None):
-        self._prefix = (prefix or '').rstrip('/') + '/'
-        self._client = ssm_client or boto3.client('ssm')
+        self._prefix = (prefix or "").rstrip("/") + "/"
+        self._client = ssm_client or boto3.client("ssm")
         self._keys = None
         self._substores = {}
         self._ttl = ttl
 
     def get(self, name, **kwargs):
-        assert name, 'Name can not be empty'
+        assert name, "Name can not be empty"
         if self._keys is None:
             self.refresh()
 
         abs_key = "%s%s" % (self._prefix, name)
         if name not in self._keys:
-            if 'default' in kwargs:
-                return kwargs['default']
+            if "default" in kwargs:
+                return kwargs["default"]
 
             raise KeyError(name)
-        elif self._keys[name]['type'] == 'prefix':
+        elif self._keys[name]["type"] == "prefix":
             if abs_key not in self._substores:
-                store = self.__class__(prefix=abs_key, ssm_client=self._client, ttl=self._ttl)
-                store._keys = self._keys[name]['children']
+                store = self.__class__(
+                    prefix=abs_key, ssm_client=self._client, ttl=self._ttl
+                )
+                store._keys = self._keys[name]["children"]
                 self._substores[abs_key] = store
 
             return self._substores[abs_key]
@@ -62,7 +65,7 @@ class SSMParameterStore(object):
         self._keys = {}
         self._substores = {}
 
-        paginator = self._client.get_paginator('describe_parameters')
+        paginator = self._client.get_paginator("describe_parameters")
         pager = paginator.paginate(
             ParameterFilters=[
                 dict(Key="Path", Option="Recursive", Values=[self._prefix])
@@ -70,8 +73,8 @@ class SSMParameterStore(object):
         )
 
         for page in pager:
-            for p in page['Parameters']:
-                paths = p['Name'][len(self._prefix):].split('/')
+            for p in page["Parameters"]:
+                paths = p["Name"][len(self._prefix) :].split("/")
                 self._update_keys(self._keys, paths)
 
     @classmethod
@@ -81,11 +84,11 @@ class SSMParameterStore(object):
         # this is a prefix
         if len(paths) > 1:
             if name not in keys:
-                keys[name] = {'type': 'prefix', 'children': {}}
+                keys[name] = {"type": "prefix", "children": {}}
 
-            cls._update_keys(keys[name]['children'], paths[1:])
+            cls._update_keys(keys[name]["children"], paths[1:])
         else:
-            keys[name] = {'type': 'parameter', 'expire': None}
+            keys[name] = {"type": "parameter", "expire": None}
 
     def keys(self):
         if self._keys is None:
@@ -97,23 +100,29 @@ class SSMParameterStore(object):
         entry = self._keys[name]
 
         # simple ttl
-        if self._ttl == False or (entry['expire'] and entry['expire'] <= datetime.datetime.now()):
-            entry.pop('value', None)
+        if self._ttl == False or (
+            entry["expire"] and entry["expire"] <= datetime.datetime.now()
+        ):
+            entry.pop("value", None)
 
-        if 'value' not in entry:
-            parameter = self._client.get_parameter(Name=abs_key, WithDecryption=True)['Parameter']
-            value = parameter['Value']
-            if parameter['Type'] == 'StringList':
-                value = value.split(',')
+        if "value" not in entry:
+            parameter = self._client.get_parameter(Name=abs_key, WithDecryption=True)[
+                "Parameter"
+            ]
+            value = parameter["Value"]
+            if parameter["Type"] == "StringList":
+                value = value.split(",")
 
-            entry['value'] = value
+            entry["value"] = value
 
             if self._ttl:
-                entry['expire'] = datetime.datetime.now() + datetime.timedelta(seconds=self._ttl)
+                entry["expire"] = datetime.datetime.now() + datetime.timedelta(
+                    seconds=self._ttl
+                )
             else:
-                entry['expire'] = None
+                entry["expire"] = None
 
-        return entry['value']
+        return entry["value"]
 
     def __contains__(self, name):
         try:
@@ -132,4 +141,4 @@ class SSMParameterStore(object):
         raise NotImplementedError()
 
     def __repr__(self):
-        return 'ParameterStore[%s]' % self._prefix
+        return "ParameterStore[%s]" % self._prefix

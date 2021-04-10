@@ -17,110 +17,137 @@ from quickbooks.objects import *
 
 # warning! this won't work if we multiply
 TWOPLACES = Decimal(10) ** -2
-setlocale(LC_NUMERIC, '')
+setlocale(LC_NUMERIC, "")
 
-detail_map = OrderedDict([
-    ("Pre-Discount Sales", ("1", 1)), #Sales
-    ("Discounts", ("35", -1)), #Discounts
-    # ("Register Audit (CID)", ("33", -1)), #Pay Out
-    ("House Account", ("24", -1)),
-    ("Online Gift Card", ("38", -1)),
-    ("Gift Card", ("30", -1)),
-    ("Online Credit Card", ("37", -1)),
-    ("InStore Credit Card", ("28",-1)),
-    ("Third Party", ("42", -1)),
-    ("Gift Cards Sold", ("34", 1)),
-    ("Sales Tax", ("15", 1)),
-    ("Donations", ("36", 1)),
-    ("Online CC Tips", ("32", 1)),
-    ("CC Tips", ("32", 1))
-])
+detail_map = OrderedDict(
+    [
+        ("Pre-Discount Sales", ("1", 1)),  # Sales
+        ("Discounts", ("35", -1)),  # Discounts
+        # ("Register Audit (CID)", ("33", -1)), #Pay Out
+        ("House Account", ("24", -1)),
+        ("Online Gift Card", ("38", -1)),
+        ("Gift Card", ("30", -1)),
+        ("Online Credit Card", ("37", -1)),
+        ("InStore Credit Card", ("28", -1)),
+        ("Third Party", ("42", -1)),
+        ("Gift Cards Sold", ("34", 1)),
+        ("Sales Tax", ("15", 1)),
+        ("Donations", ("36", 1)),
+        ("Online CC Tips", ("32", 1)),
+        ("CC Tips", ("32", 1)),
+    ]
+)
 
-gl_code_map = { "1700" : "1995", #security deposit
-               "2400" : "6236", # Sales Tax Payable
-               "4000" : "1301", # Sales (stouborn soda?)
-               "5010" : "1301", # Food Other
-               "5010.1" : "1301", # Bread
-               "5010.2" : "1301", # Chips
-               "5010.3" : "1301", # Cookies
-               "5010.5" : "1301", # Meat
-               "5010.6" : "1301", # Cheese
-               "5020" : "1301", # Paper
-               "5030" : "1301", # Beverages Other
-               "5030.1" : "1301", # Beverages Fountain
-               "5030.2" : "1301", # Beverages Bottles
-               "5040" : "1301", # Produce
-               "6243" : "6720", # Kitchen
-               "6244" : "6730", # Kitchen - Gloves
-               "6245" : "6720", # Kitchen - Cleaning Supplies
-               "6293" : "5500", # Min Order Charge -> COGS - Delivery
-               "6291" : "5500", # Fule Surcharge -> COGS - Delivery
-               "8026" : "6236"} # Sales and Use Tax
+gl_code_map = {
+    "1700": "1995",  # security deposit
+    "2400": "6236",  # Sales Tax Payable
+    "4000": "1301",  # Sales (stouborn soda?)
+    "5010": "1301",  # Food Other
+    "5010.1": "1301",  # Bread
+    "5010.2": "1301",  # Chips
+    "5010.3": "1301",  # Cookies
+    "5010.5": "1301",  # Meat
+    "5010.6": "1301",  # Cheese
+    "5020": "1301",  # Paper
+    "5030": "1301",  # Beverages Other
+    "5030.1": "1301",  # Beverages Fountain
+    "5030.2": "1301",  # Beverages Bottles
+    "5040": "1301",  # Produce
+    "6243": "6720",  # Kitchen
+    "6244": "6730",  # Kitchen - Gloves
+    "6245": "6720",  # Kitchen - Cleaning Supplies
+    "6293": "5500",  # Min Order Charge -> COGS - Delivery
+    "6291": "5500",  # Fule Surcharge -> COGS - Delivery
+    "8026": "6236",
+}  # Sales and Use Tax
 
-gl_code_map_to_cogs = { "1700" : "1995", #security deposit
-               "2400" : "6236", # Sales Tax Payable
-               "4000" : "5102", # Sales (stouborn soda?)
-               "5010" : "5200", # Food Other
-               "5010.1" : "5201", # Bread
-               "5010.2" : "5202", # Chips
-               "5010.3" : "5203", # Cookies
-               "5010.5" : "5204", # Meat
-               "5010.6" : "5205", # Cheese
-               "5020" : "5300", # Paper
-               "5030" : "5100", # Beverages Other
-               "5030.1" : "5101", # Beverages Fountain
-               "5030.2" : "5102", # Beverages Bottles
-               "5040" : "5400", # Produce
-               "6243" : "6720", # Kitchen
-               "6244" : "6730", # Kitchen - Gloves
-               "6245" : "6720", # Kitchen - Cleaning Supplies
-               "6293" : "5500", # Min Order Charge -> COGS - Delivery
-               "8026" : "6236"} # Sales and Use Tax
+gl_code_map_to_cogs = {
+    "1700": "1995",  # security deposit
+    "2400": "6236",  # Sales Tax Payable
+    "4000": "5102",  # Sales (stouborn soda?)
+    "5010": "5200",  # Food Other
+    "5010.1": "5201",  # Bread
+    "5010.2": "5202",  # Chips
+    "5010.3": "5203",  # Cookies
+    "5010.5": "5204",  # Meat
+    "5010.6": "5205",  # Cheese
+    "5020": "5300",  # Paper
+    "5030": "5100",  # Beverages Other
+    "5030.1": "5101",  # Beverages Fountain
+    "5030.2": "5102",  # Beverages Bottles
+    "5040": "5400",  # Produce
+    "6243": "6720",  # Kitchen
+    "6244": "6730",  # Kitchen - Gloves
+    "6245": "6720",  # Kitchen - Cleaning Supplies
+    "6293": "5500",  # Min Order Charge -> COGS - Delivery
+    "8026": "6236",
+}  # Sales and Use Tax
 
 account_ref = None
 
 vendor = None
 
+
 def lambda_handler(event, context):
     auth_client = refresh_session()
 
-    client = QuickBooks(auth_client=auth_client,company_id="1401432085")
+    client = QuickBooks(auth_client=auth_client, company_id="1401432085")
 
-    return {
-        'statusCode': 200,
-        'body': get_secret()
-    }
+    return {"statusCode": 200, "body": get_secret()}
+
 
 def update_royalty(year, month, payment_data):
     auth_client = refresh_session()
 
-    client = QuickBooks(auth_client=auth_client,company_id="1401432085")
+    client = QuickBooks(auth_client=auth_client, company_id="1401432085")
 
     supplier = Vendor.where("DisplayName like 'A Sub Above'")[0]
 
     for store, payment_info in payment_data.items():
-        lines = [ [wmc_account_ref(6335), "", payment_info["Royalty"] ],
-                  [wmc_account_ref(6105), "", payment_info["Advertising"] ],
-                  [wmc_account_ref(6107), "", payment_info["Media"] ],
-                  [wmc_account_ref(6106), "", payment_info["CoOp"]],
-                  [wmc_account_ref(2270), "", "-" + str((Decimal(payment_info["Royalty"].replace(',','')) +
-                   Decimal(payment_info["Advertising"].replace(',','')) + Decimal(payment_info["Media"].replace(',','')) +
-                   Decimal(payment_info["CoOp"].replace(',',''))).quantize(TWOPLACES)) ]
-                ]
+        lines = [
+            [wmc_account_ref(6335), "", payment_info["Royalty"]],
+            [wmc_account_ref(6105), "", payment_info["Advertising"]],
+            [wmc_account_ref(6107), "", payment_info["Media"]],
+            [wmc_account_ref(6106), "", payment_info["CoOp"]],
+            [
+                wmc_account_ref(2270),
+                "",
+                "-"
+                + str(
+                    (
+                        Decimal(payment_info["Royalty"].replace(",", ""))
+                        + Decimal(payment_info["Advertising"].replace(",", ""))
+                        + Decimal(payment_info["Media"].replace(",", ""))
+                        + Decimal(payment_info["CoOp"].replace(",", ""))
+                    ).quantize(TWOPLACES)
+                ),
+            ],
+        ]
 
-        sync_bill(supplier, store+str(year*100+month), datetime.date(year, month, calendar.monthrange(year, month)[1]), json.dumps(payment_info), lines, store)
+        sync_bill(
+            supplier,
+            store + str(year * 100 + month),
+            datetime.date(year, month, calendar.monthrange(year, month)[1]),
+            json.dumps(payment_info),
+            lines,
+            store,
+        )
     return
+
 
 def create_daily_sales(txdate, daily_reports):
     auth_client = refresh_session()
 
-    client = QuickBooks(auth_client=auth_client,company_id="1401432085")
+    client = QuickBooks(auth_client=auth_client, company_id="1401432085")
 
     pattern = re.compile("\d+\.\d\d")
 
-    store_refs = { x.Name : x.to_ref() for x in Department.all() }
+    store_refs = {x.Name: x.to_ref() for x in Department.all()}
 
-    existing_receipts = { x.DepartmentRef.name if x.DepartmentRef else '20025' : x for x in SalesReceipt.filter(TxnDate=qb_date_format(txdate)) }
+    existing_receipts = {
+        x.DepartmentRef.name if x.DepartmentRef else "20025": x
+        for x in SalesReceipt.filter(TxnDate=qb_date_format(txdate))
+    }
     new_receipts = {}
 
     for store, sref in store_refs.items():
@@ -146,7 +173,8 @@ def create_daily_sales(txdate, daily_reports):
             line = SalesItemLine()
             line.LineNum = line_num
             line.Description = "{} imported from ({})".format(
-                line_item, daily_report[line_item])
+                line_item, daily_report[line_item]
+            )
             if daily_report[line_item]:
                 if daily_report[line_item].startswith("N"):
                     line.Amount = 0
@@ -157,21 +185,21 @@ def create_daily_sales(txdate, daily_reports):
                 line.Amount = 0
             line.SalesItemLineDetail = SalesItemLineDetail()
             item = Item.query(
-                "select * from Item where id = '{}'".format(line_id[0]),client)[0]
+                "select * from Item where id = '{}'".format(line_id[0]), client
+            )[0]
             line.SalesItemLineDetail.ItemRef = item.to_ref()
             line.SalesItemLineDetail.ServiceDate = None
             new_receipt.Line.append(line)
             line_num += 1
-
 
         # Payin
         line = SalesItemLine()
         line.LineNum = line_num
         line_num += 1
         line.Description = daily_report["Payins"].strip()
-        if line.Description.count('\n')>0:
+        if line.Description.count("\n") > 0:
             amount = Decimal(0)
-            for payin_line in line.Description.split('\n')[1:]:
+            for payin_line in line.Description.split("\n")[1:]:
                 if payin_line.startswith("TOTAL"):
                     continue
                 amount = amount + Decimal(atof(pattern.search(payin_line).group()))
@@ -180,8 +208,7 @@ def create_daily_sales(txdate, daily_reports):
         else:
             line.Amount = 0
         line.SalesItemLineDetail = SalesItemLineDetail()
-        item = Item.query(
-            "select * from Item where id = '{}'".format(43),client)[0]
+        item = Item.query("select * from Item where id = '{}'".format(43), client)[0]
         line.SalesItemLineDetail.ItemRef = item.to_ref()
         line.SalesItemLineDetail.ServiceDate = None
         new_receipt.Line.append(line)
@@ -193,13 +220,13 @@ def create_daily_sales(txdate, daily_reports):
         line.Description = daily_report["Bank Deposits"].strip()
         # test if there was a recorded deposit
         if line.Description:
-            line.Amount = (Decimal(atof(line.Description.split()[4])) - \
-              Decimal(amount_total).quantize(TWOPLACES))
+            line.Amount = Decimal(atof(line.Description.split()[4])) - Decimal(
+                amount_total
+            ).quantize(TWOPLACES)
         else:
             line.Amount = 0
         line.SalesItemLineDetail = SalesItemLineDetail()
-        item = Item.query(
-            "select * from Item where id = '{}'".format(31),client)[0]
+        item = Item.query("select * from Item where id = '{}'".format(31), client)[0]
         line.SalesItemLineDetail.ItemRef = item.to_ref()
         line.SalesItemLineDetail.ServiceDate = None
         new_receipt.Line.append(line)
@@ -210,30 +237,45 @@ def create_daily_sales(txdate, daily_reports):
 
     return
 
+
 def enter_online_cc_fee(year, month, payment_data):
     auth_client = refresh_session()
 
-    client = QuickBooks(auth_client=auth_client,company_id="1401432085")
+    client = QuickBooks(auth_client=auth_client, company_id="1401432085")
 
     supplier = Vendor.where("DisplayName like 'Jersey Mikes%'")[0]
     for store, payment_info in payment_data.items():
-        lines = [ [wmc_account_ref(6120), "", payment_data[store]["Total Fees"] ] ]
+        lines = [[wmc_account_ref(6120), "", payment_data[store]["Total Fees"]]]
 
-        sync_bill(supplier, store + str(year*100+month), datetime.date(year, month, calendar.monthrange(year, month)[1]), json.dumps(payment_data[store]), lines, store)
+        sync_bill(
+            supplier,
+            store + str(year * 100 + month),
+            datetime.date(year, month, calendar.monthrange(year, month)[1]),
+            json.dumps(payment_data[store]),
+            lines,
+            store,
+        )
     return
+
 
 def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=None):
     auth_client = refresh_session()
 
-    client = QuickBooks(auth_client=auth_client,company_id="1401432085")
+    client = QuickBooks(auth_client=auth_client, company_id="1401432085")
 
-    store_refs = { x.Name : x.to_ref() for x in Department.all() }
+    store_refs = {x.Name: x.to_ref() for x in Department.all()}
 
     # check if one already exists
     query = Deposit.filter(TxnDate=qb_date_format(deposit_date))
     for d in query:
-        if Decimal(d.Line[0].Amount).quantize(TWOPLACES) == Decimal(atof(lines[0][2])).quantize(TWOPLACES):
-            print("Already imported skipping {} {} {}".format(deposit_date, d.Line[0].Amount, lines[0][2]))
+        if Decimal(d.Line[0].Amount).quantize(TWOPLACES) == Decimal(
+            atof(lines[0][2])
+        ).quantize(TWOPLACES):
+            print(
+                "Already imported skipping {} {} {}".format(
+                    deposit_date, d.Line[0].Amount, lines[0][2]
+                )
+            )
             return
     deposit = Deposit()
     deposit.TxnDate = qb_date_format(deposit_date)
@@ -261,15 +303,16 @@ def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=No
         print(deposit.to_json())
         print(ex)
 
+
 def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None):
     auth_client = refresh_session()
 
-    client = QuickBooks(auth_client=auth_client,company_id="1401432085")
+    client = QuickBooks(auth_client=auth_client, company_id="1401432085")
 
-    store_refs = { x.Name : x.to_ref() for x in Department.all() }
+    store_refs = {x.Name: x.to_ref() for x in Department.all()}
 
     # is this a credit
-    if reduce(lambda x, y:x + atof(y[-1]), lines, 0.0) < 0.0:
+    if reduce(lambda x, y: x + atof(y[-1]), lines, 0.0) < 0.0:
         tx_type = VendorCredit
         item_sign = -1
     else:
@@ -279,9 +322,9 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
     # see if the invoice number already exists
     query = tx_type.filter(DocNumber=invoice_num)
     if len(query) == 0:
-        #create the bill
+        # create the bill
         bill = tx_type()
-        bill.DocNumber=invoice_num
+        bill.DocNumber = invoice_num
     else:
         bill = query[0]
 
@@ -292,7 +335,7 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
     bill.PrivateNote = notes
     bill.DepartmentRef = None if not department else store_refs[department]
 
-    if item_sign >0:
+    if item_sign > 0:
         bill.SalesTermRef = supplier.TermRef
     bill.DueDate = None
 
@@ -318,108 +361,110 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
         print(bill.to_json())
         print(ex)
 
+
 def wmc_account_ref(acctNum):
     global account_ref
     if account_ref == None:
         auth_client = refresh_session()
-        client = QuickBooks(auth_client=auth_client,company_id="1401432085")
-        account_ref = dict(map(lambda x : (x.AcctNum, x.to_ref()),
-             Account.all(max_results=1000)))
+        client = QuickBooks(auth_client=auth_client, company_id="1401432085")
+        account_ref = dict(
+            map(lambda x: (x.AcctNum, x.to_ref()), Account.all(max_results=1000))
+        )
     return account_ref[str(acctNum)]
+
 
 def account_ref_lookup(gl_account_code):
     global account_ref
     if account_ref == None:
         auth_client = refresh_session()
-        client = QuickBooks(auth_client=auth_client,company_id="1401432085")
-        account_ref = dict(map(lambda x : (x.AcctNum, x.to_ref()),
-             Account.all(max_results=1000)))
+        client = QuickBooks(auth_client=auth_client, company_id="1401432085")
+        account_ref = dict(
+            map(lambda x: (x.AcctNum, x.to_ref()), Account.all(max_results=1000))
+        )
 
     return account_ref[gl_code_map[gl_account_code]]
+
 
 def vendor_lookup(gl_vendor_name):
     global vendor
     if vendor == None:
         auth_client = refresh_session()
-        client = QuickBooks(auth_client=auth_client,company_id="1401432085")
+        client = QuickBooks(auth_client=auth_client, company_id="1401432085")
         vendor = {
-         'WNEPLS':
-         Vendor.where("DisplayName like 'The Paper%'")[0],
-         'PR-D&D':
-         Vendor.where("DisplayName like 'D&D%'")[0],
-         'PEPSI':
-         Vendor.where("DisplayName like 'Pepsi%'")[0],
-         'SYSLOS':
-         Vendor.where("DisplayName like 'Sysco%'")[0]}
+            "WNEPLS": Vendor.where("DisplayName like 'The Paper%'")[0],
+            "PR-D&D": Vendor.where("DisplayName like 'D&D%'")[0],
+            "PEPSI": Vendor.where("DisplayName like 'Pepsi%'")[0],
+            "SYSLOS": Vendor.where("DisplayName like 'Sysco%'")[0],
+        }
     return vendor[gl_vendor_name]
+
 
 def refresh_session():
     s = json.loads(get_secret())
 
     auth_client = AuthClient(
-    client_id=s['client_id'],
-    client_secret=s['client_secret'],
-    redirect_uri=s['redirect_url'],
-    access_token= s['access_token'],
-    refresh_token= s['refresh_token'],
-    environment="production")
+        client_id=s["client_id"],
+        client_secret=s["client_secret"],
+        redirect_uri=s["redirect_url"],
+        access_token=s["access_token"],
+        refresh_token=s["refresh_token"],
+        environment="production",
+    )
 
     # caution! invalid requests return {"error":"invalid_grant"} quietly
     auth_client.refresh()
-    s['access_token'] = auth_client.access_token
-    s['refresh_token'] = auth_client.refresh_token
+    s["access_token"] = auth_client.access_token
+    s["refresh_token"] = auth_client.refresh_token
     put_secret(json.dumps(s))
     QuickBooks.enable_global()
     return auth_client
+
 
 secret_name = "prod/qbo"
 region_name = "us-east-2"
 
 # Create a Secrets Manager client
 session = boto3.session.Session()
-client = session.client(
-    service_name='secretsmanager',
-    region_name=region_name
-)
+client = session.client(service_name="secretsmanager", region_name=region_name)
+
 
 def get_secret():
     # In this sample we only handle the specific exceptions for the 'GetSecretValue' API.
     # See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
     # We rethrow the exception by default.
     try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId=secret_name
-        )
+        get_secret_value_response = client.get_secret_value(SecretId=secret_name)
     except ClientError as e:
-        if e.response['Error']['Code'] == 'DecryptionFailureException':
+        if e.response["Error"]["Code"] == "DecryptionFailureException":
             # Secrets Manager can't decrypt the protected secret text using the provided KMS key.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
-        elif e.response['Error']['Code'] == 'InternalServiceErrorException':
+        elif e.response["Error"]["Code"] == "InternalServiceErrorException":
             # An error occurred on the server side.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
-        elif e.response['Error']['Code'] == 'InvalidParameterException':
+        elif e.response["Error"]["Code"] == "InvalidParameterException":
             # You provided an invalid value for a parameter.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
-        elif e.response['Error']['Code'] == 'InvalidRequestException':
+        elif e.response["Error"]["Code"] == "InvalidRequestException":
             # You provided a parameter value that is not valid for the current state of the resource.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
-        elif e.response['Error']['Code'] == 'ResourceNotFoundException':
+        elif e.response["Error"]["Code"] == "ResourceNotFoundException":
             # We can't find the resource that you asked for.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
     else:
         # Decrypts secret using the associated KMS CMK.
         # Depending on whether the secret is a string or binary, one of these fields will be populated.
-        if 'SecretString' in get_secret_value_response:
-            return get_secret_value_response['SecretString']
+        if "SecretString" in get_secret_value_response:
+            return get_secret_value_response["SecretString"]
         else:
-            return base64.b64decode(get_secret_value_response['SecretBinary'])
+            return base64.b64decode(get_secret_value_response["SecretBinary"])
+
 
 def put_secret(secret_string):
     put_secret_value_response = client.put_secret_value(
-            SecretId=secret_name, SecretString=secret_string)
-
+        SecretId=secret_name, SecretString=secret_string
+    )
