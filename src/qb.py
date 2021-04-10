@@ -231,7 +231,7 @@ def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=No
     query = Deposit.filter(TxnDate=qb_date_format(deposit_date))
     for d in query:
         if Decimal(d.Line[0].Amount).quantize(TWOPLACES) == Decimal(atof(lines[0][2])).quantize(TWOPLACES):
-            print("Already imported skipping {}".format(deposit_date))
+            print("Already imported skipping {} {} {}".format(deposit_date, d.Line[0].Amount, lines[0][2]))
             return
     deposit = Deposit()
     deposit.TxnDate = qb_date_format(deposit_date)

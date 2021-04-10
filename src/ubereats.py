@@ -22,7 +22,9 @@ class UberEats():
     def __init__(self):
         self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
         self._parameters = SSMParameterStore(prefix='/prod')['ubereats']
-
+        self._month_abbr_to_num = {name: num for num, name in enumerate(calendar.month_abbr) if num}
+        self._month_to_num = {name: num for num, name in enumerate(calendar.month_name) if num}
+        self._day_endings = { 1: 'st', 2: 'nd', 3: 'rd', 21: 'st', 22: 'nd', 23: 'rd', 31: 'st' }
 
     """
     """
@@ -42,7 +44,44 @@ class UberEats():
         sleep(10)
         return
 
-    def get_payment(self):
+    def __get_month_year(self):
+        driver = self._driver._driver
+        month, year = driver.find_element_by_xpath(
+                    '//button[@aria-label="Previous month."]').find_element_by_xpath(
+                    'following-sibling::*').text.split()
+        month = self._month_to_num[month]
+        year = int(year)
+        return month, year
+
+    def _click_date(self, qdate):
+        driver = self._driver._driver
+        driver.find_element_by_xpath('//input[@aria-label="datepicker-input"]').click()
+        qstr = qdate.strftime('Choose %A, %B %-d{} %Y. It\'s available.'.format(self._day_endings.get(qdate.day, "th")))
+        qstr2 = qdate.strftime('Selected start date. %A, %B %-d{} %Y. It\'s available.'.format(self._day_endings.get(qdate.day, "th")))
+
+        driver.find_element_by_xpath('//input[@aria-label="datepicker-input"]').click()
+
+        year = self.__get_month_year()[1]
+        while year != qdate.year:
+            if year > qdate.year:
+                driver.find_element_by_xpath('//button[@aria-label="Previous month."]').click()
+            else:
+                driver.find_element_by_xpath('//button[@aria-label="Next month."]').click()
+            year = self.__get_month_year()[1]
+        month = self.__get_month_year()[0]
+        while month != qdate.month:
+            if month > qdate.month:
+                driver.find_element_by_xpath('//button[@aria-label="Previous month."]').click()
+            else:
+                driver.find_element_by_xpath('//button[@aria-label="Next month."]').click()
+            month = self.__get_month_year()[0]
+        try:
+            driver.find_element_by_xpath('//div[@aria-label="{}"]'.format(qstr)).click()
+        except NoSuchElementException:
+            driver.find_element_by_xpath('//div[@aria-label="{}"]'.format(qstr2)).click()
+        return
+
+    def get_payment(self, qdate =  datetime.date.today() - datetime.timedelta(days = (datetime.date.today().weekday() + 7))):
         try:
             self._login()
             driver = self._driver._driver
@@ -51,7 +90,13 @@ class UberEats():
             notes = ""
             lines = []
 
+            qdate2 = qdate - datetime.timedelta(days = (qdate.weekday() + 7))
+
             sleep(10)
+            self._click_date(qdate2)
+            sleep(3)
+            self._click_date(qdate)
+            sleep(3)
 
             driver.find_element_by_xpath('//div[@tabindex="0"]').click()
             txt = driver.find_element_by_xpath('//div[@tabindex="0"]').find_element_by_xpath('following-sibling::*').text.split('\n')
@@ -70,7 +115,7 @@ class UberEats():
 
             # pay day is always Monday
             result = ['Uber Eats',
-                datetime.date.today() - datetime.timedelta(days = datetime.date.today().weekday()),
+                qdate - datetime.timedelta(days = (qdate.weekday()-8)),
                 notes,
                 lines,
                 '20025']
