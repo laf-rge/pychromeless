@@ -81,7 +81,9 @@ class UberEats():
             driver.find_element_by_xpath('//div[@aria-label="{}"]'.format(qstr2)).click()
         return
 
-    def get_payment(self, qdate =  datetime.date.today() - datetime.timedelta(days = (datetime.date.today().weekday() + 7))):
+    def get_payment(self, qdate = None):
+        if isinstance(qdate, type(None)):
+            qdate = datetime.date.today() - datetime.timedelta(days = (datetime.date.today().weekday() + 7))
         try:
             self._login()
             driver = self._driver._driver

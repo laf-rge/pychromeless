@@ -38,7 +38,9 @@ class Grubhub():
         sleep(4)
         return
 
-    def get_payment(self, qdate =  datetime.date.today() - datetime.timedelta(days = (datetime.date.today().weekday() + 7))):
+    def get_payment(self, qdate = None):
+        if isinstance(qdate, type(None)):
+            qdate = datetime.date.today() - datetime.timedelta(days = (datetime.date.today().weekday() + 7))
         try:
             self._login()
             driver = self._driver._driver
