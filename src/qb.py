@@ -1,18 +1,20 @@
-import json
-import boto3
 import base64
-import re
 import calendar
 import datetime
-from functools import reduce
-from botocore.exceptions import ClientError
-from quickbooks import QuickBooks
-from intuitlib.client import AuthClient
-from quickbooks.objects import *
-from quickbooks.helpers import *
+import json
+import re
 from collections import OrderedDict
-from locale import *
 from decimal import Decimal, getcontext
+from functools import reduce
+from locale import *
+
+import boto3
+from botocore.exceptions import ClientError
+from intuitlib.client import AuthClient
+from quickbooks import QuickBooks
+from quickbooks.helpers import *
+from quickbooks.objects import *
+
 # warning! this won't work if we multiply
 TWOPLACES = Decimal(10) ** -2
 setlocale(LC_NUMERIC, '')

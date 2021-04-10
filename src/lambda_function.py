@@ -1,13 +1,16 @@
-import os
-import datetime
 import calendar
+import datetime
 import json
+import os
+import smtplib
+import ssl
 from functools import partial
-import qb
-import smtplib, ssl
+
 import crunchtime
+import qb
 from flexepos import Flexepos
 from ssm_parameter_store import SSMParameterStore
+
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
     import chromedriver_binary
 
@@ -33,7 +36,7 @@ def daily_sales_handler(*args, **kwargs):
                 qb.create_daily_sales(txdate, journal)
                 print(txdate)
                 retry = False
-            except:
+            except Exception:
                 print("error "+str(txdate))
                 retry = True
     payment_data = dj.getOnlinePayments(["20025"], txdate.year, txdate.month)

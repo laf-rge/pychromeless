@@ -3,6 +3,7 @@ import shutil
 import uuid
 
 from selenium import webdriver
+
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
     import chromedriver_binary
 

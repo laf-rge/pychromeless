@@ -20,9 +20,10 @@
 # ==============================================================================
 # https://medium.com/@nqbao/how-to-use-aws-ssm-parameter-store-easily-in-python-94fda04fea84
 
+import datetime
+
 import boto3
 from botocore.exceptions import ClientError
-import datetime
 
 
 class SSMParameterStore(object):
@@ -118,7 +119,7 @@ class SSMParameterStore(object):
         try:
             self.get(name)
             return True
-        except:
+        except Exception:
             return False
 
     def __getitem__(self, name):
