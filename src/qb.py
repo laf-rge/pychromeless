@@ -4,16 +4,32 @@ import datetime
 import json
 import re
 from collections import OrderedDict
-from decimal import Decimal, getcontext
+from decimal import Decimal
 from functools import reduce
-from locale import *
+from locale import LC_NUMERIC, atof, setlocale
 
 import boto3
 from botocore.exceptions import ClientError
 from intuitlib.client import AuthClient
 from quickbooks import QuickBooks
-from quickbooks.helpers import *
-from quickbooks.objects import *
+from quickbooks.helpers import qb_date_format
+from quickbooks.objects import (
+    Account,
+    AccountBasedExpenseLine,
+    AccountBasedExpenseLineDetail,
+    Bill,
+    Customer,
+    Department,
+    Deposit,
+    DepositLine,
+    DepositLineDetail,
+    Item,
+    SalesItemLine,
+    SalesItemLineDetail,
+    SalesReceipt,
+    Vendor,
+    VendorCredit,
+)
 
 # warning! this won't work if we multiply
 TWOPLACES = Decimal(10) ** -2
@@ -89,17 +105,12 @@ vendor = None
 
 
 def lambda_handler(event, context):
-    auth_client = refresh_session()
-
-    client = QuickBooks(auth_client=auth_client, company_id="1401432085")
-
+    refresh_session()
     return {"statusCode": 200, "body": get_secret()}
 
 
 def update_royalty(year, month, payment_data):
-    auth_client = refresh_session()
-
-    client = QuickBooks(auth_client=auth_client, company_id="1401432085")
+    refresh_session()
 
     supplier = Vendor.where("DisplayName like 'A Sub Above'")[0]
 
@@ -136,11 +147,9 @@ def update_royalty(year, month, payment_data):
 
 
 def create_daily_sales(txdate, daily_reports):
-    auth_client = refresh_session()
+    refresh_session()
 
-    client = QuickBooks(auth_client=auth_client, company_id="1401432085")
-
-    pattern = re.compile("\d+\.\d\d")
+    pattern = re.compile(r"\d+\.\d\d")
 
     store_refs = {x.Name: x.to_ref() for x in Department.all()}
 
@@ -169,7 +178,7 @@ def create_daily_sales(txdate, daily_reports):
         line_num = 1
         amount_total = Decimal(0.0)
         for line_item, line_id in detail_map.items():
-            line_text = daily_report[line_item]
+            daily_report[line_item]
             line = SalesItemLine()
             line.LineNum = line_num
             line.Description = "{} imported from ({})".format(
@@ -184,9 +193,9 @@ def create_daily_sales(txdate, daily_reports):
             else:
                 line.Amount = 0
             line.SalesItemLineDetail = SalesItemLineDetail()
-            item = Item.query(
-                "select * from Item where id = '{}'".format(line_id[0]), client
-            )[0]
+            item = Item.query("select * from Item where id = '{}'".format(line_id[0]))[
+                0
+            ]
             line.SalesItemLineDetail.ItemRef = item.to_ref()
             line.SalesItemLineDetail.ServiceDate = None
             new_receipt.Line.append(line)
@@ -208,7 +217,7 @@ def create_daily_sales(txdate, daily_reports):
         else:
             line.Amount = 0
         line.SalesItemLineDetail = SalesItemLineDetail()
-        item = Item.query("select * from Item where id = '{}'".format(43), client)[0]
+        item = Item.query("select * from Item where id = '{}'".format(43))[0]
         line.SalesItemLineDetail.ItemRef = item.to_ref()
         line.SalesItemLineDetail.ServiceDate = None
         new_receipt.Line.append(line)
@@ -226,22 +235,20 @@ def create_daily_sales(txdate, daily_reports):
         else:
             line.Amount = 0
         line.SalesItemLineDetail = SalesItemLineDetail()
-        item = Item.query("select * from Item where id = '{}'".format(31), client)[0]
+        item = Item.query("select * from Item where id = '{}'".format(31))[0]
         line.SalesItemLineDetail.ItemRef = item.to_ref()
         line.SalesItemLineDetail.ServiceDate = None
         new_receipt.Line.append(line)
 
         new_receipt.PrivateNote = json.dumps(daily_report, indent=1)
 
-        new_receipt.save(qb=client)
+        new_receipt.save()
 
     return
 
 
 def enter_online_cc_fee(year, month, payment_data):
-    auth_client = refresh_session()
-
-    client = QuickBooks(auth_client=auth_client, company_id="1401432085")
+    refresh_session()
 
     supplier = Vendor.where("DisplayName like 'Jersey Mikes%'")[0]
     for store, payment_info in payment_data.items():
@@ -259,9 +266,7 @@ def enter_online_cc_fee(year, month, payment_data):
 
 
 def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=None):
-    auth_client = refresh_session()
-
-    client = QuickBooks(auth_client=auth_client, company_id="1401432085")
+    refresh_session()
 
     store_refs = {x.Name: x.to_ref() for x in Department.all()}
 
@@ -298,16 +303,14 @@ def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=No
         deposit.Line.append(line)
 
     try:
-        deposit.save(qb=client)
+        deposit.save()
     except Exception as ex:
         print(deposit.to_json())
         print(ex)
 
 
 def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None):
-    auth_client = refresh_session()
-
-    client = QuickBooks(auth_client=auth_client, company_id="1401432085")
+    refresh_session()
 
     store_refs = {x.Name: x.to_ref() for x in Department.all()}
 
@@ -356,7 +359,7 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
         bill.Line.append(line)
 
     try:
-        bill.save(qb=client)
+        bill.save()
     except Exception as ex:
         print(bill.to_json())
         print(ex)
@@ -364,9 +367,8 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
 
 def wmc_account_ref(acctNum):
     global account_ref
-    if account_ref == None:
-        auth_client = refresh_session()
-        client = QuickBooks(auth_client=auth_client, company_id="1401432085")
+    if account_ref is None:
+        refresh_session()
         account_ref = dict(
             map(lambda x: (x.AcctNum, x.to_ref()), Account.all(max_results=1000))
         )
@@ -375,9 +377,8 @@ def wmc_account_ref(acctNum):
 
 def account_ref_lookup(gl_account_code):
     global account_ref
-    if account_ref == None:
-        auth_client = refresh_session()
-        client = QuickBooks(auth_client=auth_client, company_id="1401432085")
+    if account_ref is None:
+        refresh_session()
         account_ref = dict(
             map(lambda x: (x.AcctNum, x.to_ref()), Account.all(max_results=1000))
         )
@@ -387,9 +388,8 @@ def account_ref_lookup(gl_account_code):
 
 def vendor_lookup(gl_vendor_name):
     global vendor
-    if vendor == None:
-        auth_client = refresh_session()
-        client = QuickBooks(auth_client=auth_client, company_id="1401432085")
+    if vendor is None:
+        refresh_session()
         vendor = {
             "WNEPLS": Vendor.where("DisplayName like 'The Paper%'")[0],
             "PR-D&D": Vendor.where("DisplayName like 'D&D%'")[0],
@@ -417,6 +417,7 @@ def refresh_session():
     s["refresh_token"] = auth_client.refresh_token
     put_secret(json.dumps(s))
     QuickBooks.enable_global()
+    QuickBooks(auth_client=auth_client, company_id="1401432085")
     return auth_client
 
 
@@ -468,3 +469,4 @@ def put_secret(secret_string):
     put_secret_value_response = client.put_secret_value(
         SecretId=secret_name, SecretString=secret_string
     )
+    return put_secret_value_response

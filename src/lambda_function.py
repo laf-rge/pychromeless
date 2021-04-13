@@ -88,7 +88,9 @@ Cash Drawer Open Report\n\n""".format(
     )
 
     for store, journal in drawer_opens.items():
-        message += "{}: {}\n" "".format(store, journal.count("Cash Drawer Open"))
+        message = "{}{}: {}\n" "".format(
+            message, store, journal.count("Cash Drawer Open")
+        )
     message += "\n\nThanks!\n"
 
     with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
