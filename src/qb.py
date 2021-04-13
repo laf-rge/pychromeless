@@ -265,7 +265,8 @@ def enter_online_cc_fee(year, month, payment_data):
     return
 
 
-def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=None):
+def sync_third_party_deposit(supplier, deposit_date,
+                             notes, lines, department=None):
     refresh_session()
 
     store_refs = {x.Name: x.to_ref() for x in Department.all()}
