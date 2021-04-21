@@ -4,15 +4,32 @@ import json
 import os
 import smtplib
 import ssl
-from functools import partial
-
 import crunchtime
 import qb
+from ubereats import UberEats
+from doordash import Doordash
+from grubhub import Grubhub
+from postmates import Postmates
 from flexepos import Flexepos
 from ssm_parameter_store import SSMParameterStore
 
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
     import chromedriver_binary
+
+
+def third_party_deposit_handler(*args, **kwargs):
+    start_date = datetime.date.today() - datetime.timedelta(days=7)
+    end_date = datetime.date.today()
+    u = UberEats()
+    qb.sync_third_party_deposit(*u.get_payment())
+    d = Doordash()
+    results = d.get_payments(start_date, end_date)
+    p = Postmates()
+    results.extend(p.get_payments(start_date, end_date))
+    g = Grubhub()
+    results.extend(g.get_payments(start_date, end_date))
+    for result in results:
+        qb.sync_third_party_deposit(*result)
 
 
 def invoice_sync_handler(*args, **kwargs):
@@ -22,7 +39,7 @@ def invoice_sync_handler(*args, **kwargs):
 
 
 def daily_sales_handler(*args, **kwargs):
-    txdates = [datetime.date.today() - datetime.timedelta(days=1)]
+    # txdates = [datetime.date.today() - datetime.timedelta(days=1)]
     # txdates = [datetime.date(2021,3,14)]
     # txdates = map(partial(datetime.date,2021,3),range(29,31))
 

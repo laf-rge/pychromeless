@@ -34,24 +34,35 @@ class Grubhub:
         driver.implicitly_wait(25)
         driver.set_page_load_timeout(45)
 
-        driver.get("https://restaurant.grubhub.com/financials/deposit-history/1669366/")
-        driver.find_elements_by_xpath("//input")[0].send_keys(self._parameters["user"])
+        driver.get(
+         "https://restaurant.grubhub.com/financials/deposit-history/1669366/"
+        )
+        driver.find_elements_by_xpath("//input")[0].send_keys(
+         self._parameters["user"]
+        )
         driver.find_elements_by_xpath("//input")[1].send_keys(
             self._parameters["password"] + Keys.ENTER
         )
         sleep(4)
         return
 
-    def get_payment(self, qdate=None):
-        if isinstance(qdate, type(None)):
-            qdate = datetime.date.today() - datetime.timedelta(
+    def get_payments(self, start_date=None, end_date=None):
+        if isinstance(start_date, type(None)):
+            start_date = datetime.date.today() - datetime.timedelta(
                 days=(datetime.date.today().weekday() + 7)
             )
+        if isinstance(end_date, type(None)):
+            end_date = datetime.date.today() - datetime.timedelta(
+                days=(datetime.date.today().weekday() - 7)
+            )
+        if datetime.date.today() - start_date >= datetime.timedelta(days=30):
+            raise ValueError("Dates outside of 30 days is not supported.")
         try:
             self._login()
             driver = self._driver._driver
             driver.find_elements_by_xpath("//button")[1].click()
-            # 0 : today, 1: Yesterday, 2 Last 7 Days, 3 : Last 30 Days, 4 : This Month, 5 : Last Month
+            # 0 : today, 1: Yesterday, 2 Last 7 Days,
+            # 3 : Last 30 Days, 4 : This Month, 5 : Last Month
             driver.find_elements_by_xpath("//li")[3].click()
 
             sleep(5)
@@ -61,7 +72,7 @@ class Grubhub:
             for tr in driver.find_elements_by_xpath("//tr")[1:-1]:
                 notes = ""
                 lines = []
-                tx_date = datetime.datetime.strptime(
+                txdate = datetime.datetime.strptime(
                     tr.text.split()[0], "%m/%d/%y"
                 ).date()
                 tr.click()
@@ -86,7 +97,8 @@ class Grubhub:
                     # this is hard so skip it
                     pass
 
-                results.append(["Grubhub", tx_date, notes, lines, "20025"])
+                if start_date <= txdate <= end_date:
+                    results.append(["Grubhub", txdate, notes, lines, "20025"])
                 driver.find_element_by_xpath(
                     '//div[@class="transactions-order-details-header__info-bar__close"]'
                 ).click()

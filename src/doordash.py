@@ -70,9 +70,9 @@ class Doordash:
             sleep(20)
         finally:
             driver.close()
+        return self._process_payments(start_date, end_date)
 
-    def process_payments(self, start_date, end_date):
-        self.get_payments(start_date, end_date)
+    def _process_payments(self, start_date, end_date):
         filename = glob.glob("/tmp/summary_report_*.zip")[0]
         results = []
         with zipfile.ZipFile(filename) as z:
@@ -93,7 +93,8 @@ class Doordash:
                             ["1260", "SUBTOTAL", row[header.index("SUBTOTAL")]]
                         )
                         lines.append(
-                            ["1260", "TAX_SUBTOTAL", row[header.index("TAX_SUBTOTAL")]]
+                            ["1260", "TAX_SUBTOTAL",
+                             row[header.index("TAX_SUBTOTAL")]]
                         )
                         lines.append(
                             [
@@ -116,17 +117,19 @@ class Doordash:
                                 "-" + row[header.index("adjustments")],
                             ]
                         )
-                        results.append(
-                            [
-                                "Doordash",
-                                datetime.datetime.strptime(
-                                    row[header.index("PAYOUT_DATE")], "%Y-%m-%d"
-                                ),
-                                notes,
-                                lines,
-                                row[header.index("MERCHANT_STORE_ID")],
-                            ]
-                        )
+                        txdate = datetime.datetime.strptime(
+                                 row[header.index("PAYOUT_DATE")],
+                                 "%Y-%m-%d").date()
+                        if start_date <= txdate <= end_date:
+                            results.append(
+                                [
+                                    "Doordash",
+                                    txdate,
+                                    notes,
+                                    lines,
+                                    row[header.index("MERCHANT_STORE_ID")],
+                                ]
+                            )
                     else:
                         header = row
 

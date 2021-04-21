@@ -43,6 +43,7 @@ class Postmates:
         )
         sleep(3)
         driver.get("https://partner.postmates.com/dashboard/home/payments")
+        sleep(2)
         return
 
     def get_payments(self, start_date, end_date):
@@ -59,9 +60,9 @@ class Postmates:
             sleep(20)
         finally:
             driver.close()
+        return self._process_payments(start_date, end_date)
 
-    def process_payments(self, start_date, end_date):
-        self.get_payments(start_date, end_date)
+    def _process_payments(self, start_date, end_date):
         filename = glob.glob("/tmp/Payments.csv")[0]
         results = []
         with open(filename) as f:
