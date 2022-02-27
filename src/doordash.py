@@ -6,6 +6,7 @@ import io
 import json
 import os
 import zipfile
+import sys
 from time import sleep
 
 from bs4 import BeautifulSoup
@@ -44,36 +45,32 @@ class Doordash:
             '//input[@data-anchor-id="IdentityLoginPagePasswordField"]'
         ).send_keys(self._parameters["password"])
         driver.find_element_by_id("login-submit-button").click()
+        input("pause...")
         return
 
     def get_payments(self, start_date, end_date):
-        try:
-            self._login()
-            driver = self._driver._driver
+        self._login()
+        driver = self._driver._driver
 
-            sleep(3)
+        driver.find_elements_by_xpath("//button")[0].click()
+        sleep(8)
+        driver.find_elements_by_xpath("//button")[3].click()
+        driver.find_elements_by_xpath("//input")[0].click()
+        driver.find_elements_by_xpath("//input")[0].send_keys(
+            start_date.strftime("%m/%d/%Y")
+        )
 
-            driver.find_elements_by_xpath("//button")[0].click()
-            sleep(3)
-            driver.find_elements_by_xpath("//button")[3].click()
-            driver.find_elements_by_xpath("//input")[0].click()
-            driver.find_elements_by_xpath("//input")[0].send_keys(
-                start_date.strftime("%m/%d/%Y")
-            )
+        driver.find_element_by_xpath('//input[@placeholder="End"]').click()
+        driver.find_element_by_xpath(
+            '//input[@placeholder="MM/DD/YYYY"]'
+        ).send_keys(end_date.strftime("%m/%d/%Y"))
 
-            driver.find_element_by_xpath('//input[@placeholder="End"]').click()
-            driver.find_element_by_xpath(
-                '//input[@placeholder="MM/DD/YYYY"]'
-            ).send_keys(end_date.strftime("%m/%d/%Y"))
-
-            driver.find_elements_by_xpath("//button")[-1].click()
-            sleep(20)
-        finally:
-            driver.close()
+        driver.find_elements_by_xpath("//button")[-1].click()
+        sleep(10)
         return self._process_payments(start_date, end_date)
 
     def _process_payments(self, start_date, end_date):
-        filename = glob.glob("/tmp/summary_report_*.zip")[0]
+        filename = glob.glob("/tmp/summary*.zip")[0]
         results = []
         with zipfile.ZipFile(filename) as z:
             directory = z.infolist()
@@ -114,7 +111,8 @@ class Doordash:
                             [
                                 "6260",
                                 "adjustments",
-                                "-" + row[header.index("adjustments")],
+                                # are these positive? "-" +
+                                row[header.index("adjustments")],
                             ]
                         )
                         txdate = datetime.datetime.strptime(

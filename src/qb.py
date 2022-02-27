@@ -23,6 +23,9 @@ from quickbooks.objects import (
     Deposit,
     DepositLine,
     DepositLineDetail,
+    JournalEntry,
+    JournalEntryLine,
+    JournalEntryLineDetail,
     Item,
     SalesItemLine,
     SalesItemLineDetail,
@@ -75,6 +78,7 @@ gl_code_map = {
     "6293": "5500",  # Min Order Charge -> COGS - Delivery
     "6291": "5500",  # Fule Surcharge -> COGS - Delivery
     "8026": "6236",
+    "6290": "1301"  # Ops
 }  # Sales and Use Tax
 
 gl_code_map_to_cogs = {
@@ -91,7 +95,7 @@ gl_code_map_to_cogs = {
     "5030": "5100",  # Beverages Other
     "5030.1": "5101",  # Beverages Fountain
     "5030.2": "5102",  # Beverages Bottles
-    "5040": "5400",  # Produce
+    "5040": "5206",  # Produce
     "6243": "6720",  # Kitchen
     "6244": "6730",  # Kitchen - Gloves
     "6245": "6720",  # Kitchen - Cleaning Supplies
@@ -100,6 +104,8 @@ gl_code_map_to_cogs = {
 }  # Sales and Use Tax
 
 account_ref = None
+
+inv_account_ref = None
 
 vendor = None
 
@@ -141,7 +147,7 @@ def update_royalty(year, month, payment_data):
             datetime.date(year, month, calendar.monthrange(year, month)[1]),
             json.dumps(payment_info),
             lines,
-            store,
+            store
         )
     return
 
@@ -260,7 +266,7 @@ def enter_online_cc_fee(year, month, payment_data):
             datetime.date(year, month, calendar.monthrange(year, month)[1]),
             json.dumps(payment_data[store]),
             lines,
-            store,
+            store
         )
     return
 
@@ -366,6 +372,59 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
         print(ex)
 
 
+def sync_inventory(year, month, lines, notes, total, department):
+    refresh_session()
+
+    store_refs = {x.Name: x.to_ref() for x in Department.all()}
+
+    entries = JournalEntry.where(
+        "DocNumber = 'inv-{1}-{0}'".format(str(month).zfill(2),
+                                           year))
+    if len(entries) == 0:
+        # create the JournalEntry
+        jentry = JournalEntry()
+    else:
+        jentry = entries[0]
+    jentry.TxnDate = qb_date_format(
+        datetime.date(year, month, calendar.monthrange(year, month)[1]))
+    jentry.PrivateNote = notes
+
+    # clear the lines
+    jentry.Line = []
+
+    line_num = 1
+
+    for jentry_line in lines:
+        line = JournalEntryLine()
+        line.JournalEntryLineDetail = JournalEntryLineDetail()
+        line.JournalEntryLineDetail.AccountRef = jentry_line[0]
+        line.JournalEntryLineDetail.DepartmentRef = None if not department else store_refs[department]
+        line.JournalEntryLineDetail.PostingType = "Debit"
+        line.LineNum = line_num
+        line.Id = line_num
+        line.Amount = Decimal(atof(jentry_line[1])).quantize(TWOPLACES)
+        line.Description = jentry_line[2]
+        line_num += 1
+        jentry.Line.append(line)
+
+    line = JournalEntryLine()
+    line.JournalEntryLineDetail = JournalEntryLineDetail()
+    line.JournalEntryLineDetail.AccountRef = wmc_account_ref('1301')
+    line.JournalEntryLineDetail.DepartmentRef = None if not department else store_refs[department]
+    line.JournalEntryLineDetail.PostingType = "Credit"
+    line.LineNum = line_num
+    line.Id = line_num
+    line.Amount = Decimal(atof(total)).quantize(TWOPLACES)
+    line_num += 1
+    jentry.Line.append(line)
+
+    try:
+        jentry.save()
+    except Exception as ex:
+        print(jentry.to_json())
+        print(ex)
+
+
 def wmc_account_ref(acctNum):
     global account_ref
     if account_ref is None:
@@ -385,6 +444,17 @@ def account_ref_lookup(gl_account_code):
         )
 
     return account_ref[gl_code_map[gl_account_code]]
+
+
+def inventory_ref_lookup(inv_account_code):
+    global inv_account_ref
+    if inv_account_ref is None:
+        refresh_session()
+        inv_account_ref = dict(
+            map(lambda x: (x.AcctNum, x.to_ref()), Account.all(max_results=1000))
+        )
+
+    return inv_account_ref[gl_code_map_to_cogs[inv_account_code]]
 
 
 def vendor_lookup(gl_vendor_name):

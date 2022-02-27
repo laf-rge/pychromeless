@@ -8,6 +8,10 @@ variable "settings" {
     flexepos_cred   = "4235601104097358741"
     crunchtime_cred = "3333641072972018802"
     email_cred      = "7653141078630413087"
+    doordash_cred   = "3852185866371626650"
+    grubhub_cred    = "6705538157312948204"
+    postmates_cred  = "8128598083756399362"
+    ubereats_cred   = "6840207492185843759"
   }
 }
 

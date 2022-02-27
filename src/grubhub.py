@@ -37,9 +37,11 @@ class Grubhub:
         driver.get(
          "https://restaurant.grubhub.com/financials/deposit-history/1669366/"
         )
+        sleep(3)
         driver.find_elements_by_xpath("//input")[0].send_keys(
          self._parameters["user"]
         )
+        sleep(4)
         driver.find_elements_by_xpath("//input")[1].send_keys(
             self._parameters["password"] + Keys.ENTER
         )
@@ -55,30 +57,36 @@ class Grubhub:
             end_date = datetime.date.today() - datetime.timedelta(
                 days=(datetime.date.today().weekday() - 7)
             )
-        if datetime.date.today() - start_date >= datetime.timedelta(days=30):
-            raise ValueError("Dates outside of 30 days is not supported.")
+        #if datetime.date.today() - start_date >= datetime.timedelta(days=30):
+        #    raise ValueError("Dates outside of 30 days is not supported.")
         try:
             self._login()
+            input("pause")
             driver = self._driver._driver
-            driver.find_elements_by_xpath("//button")[1].click()
-            # 0 : today, 1: Yesterday, 2 Last 7 Days,
-            # 3 : Last 30 Days, 4 : This Month, 5 : Last Month
-            driver.find_elements_by_xpath("//li")[3].click()
+            driver.get(
+             "https://restaurant.grubhub.com/financials/deposit-history/3192172,1669366/"
+            )
+            driver.find_element_by_class_name("gfr-date-picker-input__date-button").click()
+            driver.find_element_by_class_name("last-30-days").click()
 
             sleep(5)
 
             results = []
 
-            for tr in driver.find_elements_by_xpath("//tr")[1:-1]:
+            for tr in driver.find_elements_by_class_name('fin-deposits-table-row')[1:-1]:
                 notes = ""
                 lines = []
                 txdate = datetime.datetime.strptime(
                     tr.text.split()[0], "%m/%d/%y"
                 ).date()
+                store = tr.text.split()[4].strip()
+                print(store)
+                input("pause")
                 tr.click()
                 txt = driver.find_element_by_xpath(
                     '//div[@class="fin-deposit-history-deposit-details__section fin-deposit-history-deposit-details__section--bleed"]'
-                ).text.split("\n")
+                ).text.replace(')', ')\n').replace('Total','Total\n').split("\n")
+                print(txt)
 
                 for i in range(0, len(txt), 2):
                     if i == 0:
@@ -98,14 +106,15 @@ class Grubhub:
                     pass
 
                 if start_date <= txdate <= end_date:
-                    results.append(["Grubhub", txdate, notes, lines, "20025"])
+                    results.append(["Grubhub", txdate, notes, lines, store])
                 driver.find_element_by_xpath(
                     '//div[@class="transactions-order-details-header__info-bar__close"]'
                 ).click()
             return results
 
         finally:
-            driver.close()
+            # driver.close()
+            pass
 
     def convert_num(self, number):
         return number.replace("$", "")

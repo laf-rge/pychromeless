@@ -12,53 +12,60 @@ from grubhub import Grubhub
 from postmates import Postmates
 from flexepos import Flexepos
 from ssm_parameter_store import SSMParameterStore
+from functools import partial
 
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
     import chromedriver_binary
 
+stores = ['20025', '20358']
+
 
 def third_party_deposit_handler(*args, **kwargs):
-    start_date = datetime.date.today() - datetime.timedelta(days=7)
+    start_date = datetime.date.today() - datetime.timedelta(days=14)
     end_date = datetime.date.today()
-    u = UberEats()
-    qb.sync_third_party_deposit(*u.get_payment())
-    d = Doordash()
-    results = d.get_payments(start_date, end_date)
-    p = Postmates()
-    results.extend(p.get_payments(start_date, end_date))
-    g = Grubhub()
-    results.extend(g.get_payments(start_date, end_date))
-    for result in results:
-        qb.sync_third_party_deposit(*result)
+    results = []
+    try:
+        u = UberEats()
+        results.extend(u.get_payments(start_date - datetime.timedelta(days=7), end_date))
+        d = Doordash()
+        results.extend(d.get_payments(start_date, end_date))
+        g = Grubhub()
+        results.extend(g.get_payments(start_date, end_date))
+    finally:
+        for result in results:
+            qb.sync_third_party_deposit(*result)
 
 
 def invoice_sync_handler(*args, **kwargs):
+    yesterday = datetime.date.today() - datetime.timedelta(days=1)
     ct = crunchtime.Crunchtime()
-    ct.process_gl_report()
+    ct.process_gl_report(stores)
+    ct.process_inventory_report(stores, yesterday.year, yesterday.month)
     return {"statusCode": 200, "body": "Success"}
 
 
 def daily_sales_handler(*args, **kwargs):
-    # txdates = [datetime.date.today() - datetime.timedelta(days=1)]
-    # txdates = [datetime.date(2021,3,14)]
-    # txdates = map(partial(datetime.date,2021,3),range(29,31))
+    txdates = [datetime.date.today() - datetime.timedelta(days=1)]
+    # txdates = [datetime.date(2022,2,15)]
+    # txdates = map(partial(datetime.date, 2022, 2), range(1, 15))
 
     dj = Flexepos()
     for txdate in txdates:
         retry = True
         while retry:
             try:
-                journal = dj.getDailySales(["20025"], txdate)
+                journal = dj.getDailySales(stores, txdate)
                 qb.create_daily_sales(txdate, journal)
                 print(txdate)
                 retry = False
-            except Exception:
+            except Exception as ex:
                 print("error " + str(txdate))
+                print(ex)
                 retry = True
-    payment_data = dj.getOnlinePayments(["20025"], txdate.year, txdate.month)
+    payment_data = dj.getOnlinePayments(stores, txdate.year, txdate.month)
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
     royalty_data = dj.getRoyaltyReport(
-        ["20025"],
+        stores,
         datetime.date(txdate.year, txdate.month, 1),
         datetime.date(
             txdate.year, txdate.month, calendar.monthrange(txdate.year, txdate.month)[1]
@@ -72,8 +79,8 @@ def online_cc_fee(*args, **kwargs):
     txdate = datetime.date.today() - datetime.timedelta(days=1)
 
     dj = Flexepos()
-    payment_data = dj.getOnlinePayments(["20025"], txdate.year, txdate.month)
-    qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data["20025"])
+    payment_data = dj.getOnlinePayments(stores, txdate.year, txdate.month)
+    qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
     return {"statusCode": 200, "body": "Success"}
 
 
@@ -92,7 +99,7 @@ def daily_journal_handler(event, context):
     dj = Flexepos()
     drawer_opens = dict()
     drawer_opens = dj.getDailyJournal(
-        ["20025", "20089", "20128", "20210", "20240"], yesterday.strftime("%m%d%Y")
+        stores, yesterday.strftime("%m%d%Y")
     )
     message = """\
 From: {}
