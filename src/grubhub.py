@@ -73,20 +73,19 @@ class Grubhub:
 
             results = []
 
-            for tr in driver.find_elements_by_class_name('fin-deposits-table-row')[1:-1]:
+            for tr in driver.find_elements_by_class_name('fin-deposits-table-row'):
                 notes = ""
                 lines = []
                 txdate = datetime.datetime.strptime(
                     tr.text.split()[0], "%m/%d/%y"
                 ).date()
                 store = tr.text.split()[4].strip()
-                print(store)
-                input("pause")
                 tr.click()
                 txt = driver.find_element_by_xpath(
                     '//div[@class="fin-deposit-history-deposit-details__section fin-deposit-history-deposit-details__section--bleed"]'
                 ).text.replace(')', ')\n').replace('Total','Total\n').split("\n")
                 print(txt)
+                print(txdate)
 
                 for i in range(0, len(txt), 2):
                     if i == 0:
@@ -105,7 +104,7 @@ class Grubhub:
                     # this is hard so skip it
                     pass
 
-                if start_date <= txdate <= end_date:
+                if start_date <= txdate and txdate <= end_date:
                     results.append(["Grubhub", txdate, notes, lines, store])
                 driver.find_element_by_xpath(
                     '//div[@class="transactions-order-details-header__info-bar__close"]'

@@ -29,8 +29,6 @@ def third_party_deposit_handler(*args, **kwargs):
         results.extend(d.get_payments(stores, start_date, end_date))
         u = UberEats()
         results.extend(u.get_payments(start_date - datetime.timedelta(days=7), end_date))
-        d = Doordash()
-        results.extend(d.get_payments(start_date, end_date))
         g = Grubhub()
         results.extend(g.get_payments(start_date, end_date))
     finally:
