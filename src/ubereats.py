@@ -50,16 +50,14 @@ class UberEats:
         driver.implicitly_wait(25)
         driver.set_page_load_timeout(45)
 
-        driver.get(
-            "https://restaurant.uber.com/v2/payments?restaurantUUID=8d6b329b-4976-4ef7-8411-3a416614a726"
-        )
+        driver.get("https://restaurant.uber.com/manager/logout")
         driver.find_element_by_id("useridInput").send_keys(
             self._parameters["user"] + Keys.RETURN
         )
         driver.find_element_by_id("password").send_keys(
             self._parameters["password"] + Keys.RETURN
         )
-        sleep(5)
+        sleep(9)
         # for element, pin in zip(
         #     driver.find_elements_by_xpath("//input"), self._parameters["pin"]
         # ):
@@ -73,7 +71,8 @@ class UberEats:
         month_ele = driver.find_element_by_xpath('//button[@aria-label="Previous month."]'
                                              ).find_element_by_xpath("following-sibling::*")
         month = month_ele.text.split(' ')[0]
-        year = month_ele.text.split(' ')[1]
+        month_ele = month_ele.find_element_by_xpath("following-sibling::*")
+        year = month_ele.text.split(' ')[0]
         month = self._month_to_num[month]
         year = int(year)
         return month, year
@@ -152,7 +151,8 @@ class UberEats:
                 results.extend([self.get_payment(qdate)])
                 qdate = qdate + datetime.timedelta(days=7)
         finally:
-            self._driver._driver.close()
+            #self._driver._driver.close()
+            pass
         return results
 
     def get_payment(self, qdate=None):
