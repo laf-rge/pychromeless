@@ -65,6 +65,7 @@ class Flexepos:
             sleep(1)
             for store in stores:
                 payment_data[store] = {}
+                sleep(3)
                 driver.find_element_by_id("parameters:store").clear()
                 driver.find_element_by_id("parameters:store").send_keys(store)
                 driver.find_element_by_id("parameters:startDateCalendarInputDate").clear()
@@ -286,6 +287,7 @@ class Flexepos:
             driver.find_element_by_id("menu:1:j_id23_header").click()
             driver.find_element_by_id("menu:1:j_id24:4:j_id25").click()
             for store_number in stores:
+                sleep(2)
                 if driver.find_element_by_id("j_id37_switch_off").is_displayed():
                     driver.find_element_by_id("j_id37_switch_off").click()
                 driver.find_element_by_id("parameters:store").clear()
@@ -328,6 +330,7 @@ class Flexepos:
             driver.find_element_by_id("menu:2:j_id23_header").click()
             driver.find_element_by_id("menu:2:j_id24:0:j_id25").click()
             for store in stores:
+                sleep(2)
                 driver.find_element_by_id("parameters:store").clear()
                 driver.find_element_by_id("parameters:store").send_keys(store)
                 driver.find_element_by_id("parameters:startDateCalendarInputDate").click()

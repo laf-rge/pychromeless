@@ -1,5 +1,5 @@
-selenium>=2.53.0
-chromedriver-binary>=2.37.0
+selenium==3.141.0
+chromedriver-binary==2.37.0
 requests-oauthlib>=1.2.0
 python-quickbooks>=0.8.0
 urllib3>=1.24.1

@@ -18,6 +18,9 @@ from selenium.webdriver.support.ui import Select
 from ssm_parameter_store import SSMParameterStore
 from webdriver_wrapper import WebDriverWrapper
 
+store_map = {'20025': '631548',
+             '20358': '23026026'}
+
 
 class Doordash:
     """"""
@@ -36,7 +39,10 @@ class Doordash:
         driver.set_page_load_timeout(45)
 
         driver.get(
-            "https://merchant-portal.doordash.com/merchant/financials?store_id=631548"
+            "https://merchant-portal.doordash.com/merchant/logout"
+        )
+        driver.get(
+            "https://merchant-portal.doordash.com/"
         )
         driver.find_element_by_xpath(
             '//input[@data-anchor-id="IdentityLoginPageEmailField"]'
@@ -48,26 +54,33 @@ class Doordash:
         input("pause...")
         return
 
-    def get_payments(self, start_date, end_date):
+    def get_payments(self, stores, start_date, end_date):
         self._login()
         driver = self._driver._driver
 
-        driver.find_elements_by_xpath("//button")[0].click()
-        sleep(8)
-        driver.find_elements_by_xpath("//button")[3].click()
-        driver.find_elements_by_xpath("//input")[0].click()
-        driver.find_elements_by_xpath("//input")[0].send_keys(
-            start_date.strftime("%m/%d/%Y")
-        )
+        results = []
 
-        driver.find_element_by_xpath('//input[@placeholder="End"]').click()
-        driver.find_element_by_xpath(
-            '//input[@placeholder="MM/DD/YYYY"]'
-        ).send_keys(end_date.strftime("%m/%d/%Y"))
+        for store in stores:
+            driver.get(
+                "https://merchant-portal.doordash.com/merchant/financials?store_id={0}".format(store_map[store])
+            )
+            driver.find_element_by_xpath('//button[@data-anchor-id="ExportButtonDropdown"]').click()
+            sleep(2)
+            driver.find_element_by_xpath('//span[@data-anchor-id="Export Payouts"]').click()
+            driver.find_elements_by_xpath("//input")[0].click()
+            driver.find_elements_by_xpath("//input")[0].send_keys(
+                start_date.strftime("%m/%d/%Y")
+            )
 
-        driver.find_elements_by_xpath("//button")[-1].click()
-        sleep(10)
-        return self._process_payments(start_date, end_date)
+            driver.find_element_by_xpath('//input[@placeholder="End"]').click()
+            driver.find_element_by_xpath(
+                '//input[@placeholder="MM/DD/YYYY"]'
+            ).send_keys(end_date.strftime("%m/%d/%Y"))
+
+            driver.find_elements_by_xpath("//button")[-1].click()
+            sleep(10)
+            results.extend(self._process_payments(start_date, end_date))
+        return results
 
     def _process_payments(self, start_date, end_date):
         filename = glob.glob("/tmp/summary*.zip")[0]

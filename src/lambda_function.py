@@ -25,6 +25,8 @@ def third_party_deposit_handler(*args, **kwargs):
     end_date = datetime.date.today()
     results = []
     try:
+        d = Doordash()
+        results.extend(d.get_payments(stores, start_date, end_date))
         u = UberEats()
         results.extend(u.get_payments(start_date - datetime.timedelta(days=7), end_date))
         d = Doordash()
@@ -51,17 +53,17 @@ def daily_sales_handler(*args, **kwargs):
 
     dj = Flexepos()
     for txdate in txdates:
-        retry = True
+        retry = 5
         while retry:
             try:
                 journal = dj.getDailySales(stores, txdate)
                 qb.create_daily_sales(txdate, journal)
                 print(txdate)
-                retry = False
+                retry = 0
             except Exception as ex:
                 print("error " + str(txdate))
                 print(ex)
-                retry = True
+                retry -= 1
     payment_data = dj.getOnlinePayments(stores, txdate.year, txdate.month)
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
     royalty_data = dj.getRoyaltyReport(

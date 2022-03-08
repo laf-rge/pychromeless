@@ -37,8 +37,8 @@ class WebDriverWrapper:
                 "profile.default_content_setting_values.automatic_downloads": 1,
             }
 
-            # chrome_options.add_experimental_option("prefs", prefs)
-            chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+            if in_aws:
+                chrome_options.add_experimental_option("prefs", prefs)
 
         if in_aws:
             chrome_options.add_argument("--headless")
@@ -66,6 +66,8 @@ class WebDriverWrapper:
             )
 
             chrome_options.binary_location = "/opt/bin/headless-chromium"
+        else:
+            chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
 
         self._driver = webdriver.Chrome(chrome_options=chrome_options)
 
