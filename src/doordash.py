@@ -64,6 +64,85 @@ class Doordash:
             driver.get(
                 "https://merchant-portal.doordash.com/merchant/financials?store_id={0}".format(store_map[store])
             )
+
+            driver.find_element_by_xpath('//div[@data-anchor-id="TimeFrameSelector"]').click()
+            driver.find_element_by_xpath('//label[normalize-space()="Last 30 Days"]').click()
+            driver.find_element_by_xpath('//button[normalize-space()="Apply"]').click()
+            sleep(2)
+            driver.find_element_by_xpath('//div[@data-anchor-id="TimeFrameSelector"]').click()
+            driver.find_element_by_xpath('//label[normalize-space()="Last 30 Days"]').click()
+            driver.find_element_by_xpath('//button[normalize-space()="Apply"]').click()
+            sleep(2)
+
+            header = None
+            # Payout ID, Payout Status, Store, Payout Date, Transaction Dates, Subtotal
+            # Tax, Commission, Fees, Error Charges, Adjustments, Net Payout
+
+            for tr in driver.find_elements_by_tag_name('tr'):
+                row = []
+                for td in tr.find_elements_by_tag_name('td'):
+                    row.append(td.text.replace('$','').replace('-',''))
+                if header:
+                    notes = json.dumps(dict(zip(header, row)))
+                    lines = []
+                    lines.append(
+                      ["1260", "SUBTOTAL", row[header.index("Subtotal")]]
+                    )
+                    lines.append(
+                      ["1260", "TAX_SUBTOTAL",
+                       row[header.index("Tax")]]
+                      )
+                    lines.append(
+                      [
+                       "6261",
+                       "COMMISSION",
+                       "-" + row[header.index("Commission")],
+                      ]
+                    )
+                    lines.append(
+                        [
+                               "6260",
+                               "error charges",
+                               "-" + row[header.index("Error Charges")],
+                           ]
+                    )
+                    lines.append(
+                          [
+                               "6260",
+                               "adjustments",
+                               # are these positive? "-" +
+                               row[header.index("Adjustments")],
+                           ]
+                    )
+                    txdate = datetime.datetime.strptime(
+                             row[header.index("Payout Date")],
+                             "%m/%d/%Y").date()
+                    if start_date <= txdate <= end_date:
+                        results.append(
+                               [
+                                   "Doordash",
+                                   txdate,
+                                   notes,
+                                   lines,
+                                   row[header.index("Store")][-6:-1],
+                               ]
+                        )
+                else:
+                    header = [x.text for x in
+                              tr.find_elements_by_tag_name('th')]
+        return results
+
+
+    def get_payments_old(self, stores, start_date, end_date):
+        self._login()
+        driver = self._driver._driver
+
+        results = []
+
+        for store in stores:
+            driver.get(
+                "https://merchant-portal.doordash.com/merchant/financials?store_id={0}".format(store_map[store])
+            )
             driver.find_element_by_xpath('//button[@data-anchor-id="ExportButtonDropdown"]').click()
             sleep(2)
             driver.find_element_by_xpath('//span[@data-anchor-id="Export Payouts"]').click()
