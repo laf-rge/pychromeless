@@ -17,6 +17,11 @@ from selenium.webdriver.support.ui import Select
 from ssm_parameter_store import SSMParameterStore
 from webdriver_wrapper import WebDriverWrapper
 
+store_map = {
+    '20025': '8d6b329b-4976-4ef7-8411-3a416614a726',
+    '20358': 'ee0492bb-edd6-507a-83eb-1d1427e3ff7d',
+}
+
 
 class UberEats:
     """"""
@@ -51,13 +56,15 @@ class UberEats:
         driver.set_page_load_timeout(45)
 
         driver.get("https://restaurant.uber.com/manager/logout")
+        sleep(5)
+        driver.get("https://restaurant.uber.com/")
         driver.find_element_by_id("useridInput").send_keys(
             self._parameters["user"] + Keys.RETURN
         )
         driver.find_element_by_id("password").send_keys(
             self._parameters["password"] + Keys.RETURN
         )
-        sleep(9)
+        sleep(12)
         # for element, pin in zip(
         #     driver.find_elements_by_xpath("//input"), self._parameters["pin"]
         # ):
@@ -90,7 +97,9 @@ class UberEats:
             )
         )
 
-        driver.find_element_by_xpath('//input[@aria-label="datepicker-input"]').click()
+        sleep(2)
+
+        driver.find_element_by_xpath('//button[@aria-label="datepicker-input"]').click()
 
         sleep(3)
         year = self.__get_month_year()[1]
@@ -137,25 +146,26 @@ class UberEats:
             ).click()
         return
 
-    def get_payments(self, start_date, end_date):
+    def get_payments(self, stores, start_date, end_date):
         if isinstance(start_date, type(None)):
             start_date = datetime.date.today() - datetime.timedelta(
                 days=(datetime.date.today().weekday()+14)
             )
             end_date = datetime.date.today()
-        qdate = start_date
-        results = []
+        for store in stores:
+            qdate = start_date
+            results = []
 
-        try:
-            while qdate < end_date:
-                results.extend([self.get_payment(qdate)])
-                qdate = qdate + datetime.timedelta(days=7)
-        finally:
-            #self._driver._driver.close()
-            pass
+            try:
+                while qdate < end_date:
+                    results.extend([self.get_payment(store, qdate)])
+                    qdate = qdate + datetime.timedelta(days=7)
+            finally:
+                #self._driver._driver.close()
+                pass
         return results
 
-    def get_payment(self, qdate=None):
+    def get_payment(self, store, qdate=None):
         if isinstance(qdate, type(None)):
             qdate = datetime.date.today() - datetime.timedelta(
                 days=(datetime.date.today().weekday() + 7)
@@ -164,7 +174,8 @@ class UberEats:
             self._login()
         driver = self._driver._driver
         driver.get(
-            "https://restaurant.uber.com/v2/payments?restaurantUUID=8d6b329b-4976-4ef7-8411-3a416614a726"
+            "https://restaurant.uber.com/v2/payments?restaurantUUID=" +
+            store_map[store]
         )
 
         notes = ""
@@ -189,17 +200,21 @@ class UberEats:
                 txt[i+1]) for i in range(0, len(txt), 2)
         }
         print(invoice)
-        sleep(10)
+
         # third party
         lines.append(["1260", 'Sales', invoice['Sales']])
+
         # tips
-        if 'Tips' in invoice:
-            lines.append(["2220", 'Sales', invoice['Tips']])
+        if 'Customer contributions' in invoice:
+            lines.append(["2220", 'Customer contributions', invoice['Customer contributions']])
         if 'Customer Refunds' in invoice:
             lines.append(["6260", 'Customer Refunds',
                       invoice['Customer Refunds']])
+        if 'Marketing' in invoice:
+            lines.append(["6101", 'Uber Marketing', invoice['Marketing']])
         lines.append(["6261", 'Uber fees', invoice['Uber fees']])
         notes += str(txt)
+        print(lines)
 
         # pay day is always Monday
         result = [
@@ -207,7 +222,7 @@ class UberEats:
             qdate - datetime.timedelta(days=(qdate.weekday() - 8)),
             notes,
             lines,
-            "20025",
+            store,
         ]
         return result
 

@@ -69,7 +69,7 @@ class Grubhub:
             driver.find_element_by_class_name("gfr-date-picker-input__date-button").click()
             driver.find_element_by_class_name("last-30-days").click()
 
-            sleep(5)
+            sleep(15)
 
             results = []
 
@@ -79,7 +79,7 @@ class Grubhub:
                 txdate = datetime.datetime.strptime(
                     tr.text.split()[0], "%m/%d/%y"
                 ).date()
-                store = tr.text.split()[4].strip()
+                store = tr.text.split()[4].strip(" ()")
                 tr.click()
                 txt = driver.find_element_by_xpath(
                     '//div[@class="fin-deposit-history-deposit-details__section fin-deposit-history-deposit-details__section--bleed"]'

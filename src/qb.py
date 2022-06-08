@@ -378,11 +378,13 @@ def sync_inventory(year, month, lines, notes, total, department):
     store_refs = {x.Name: x.to_ref() for x in Department.all()}
 
     entries = JournalEntry.where(
-        "DocNumber = 'inv-{1}-{0}'".format(str(month).zfill(2),
+        "DocNumber = 'inv-{0}-{2}-{1}'".format(department, str(month).zfill(2),
                                            year))
     if len(entries) == 0:
         # create the JournalEntry
         jentry = JournalEntry()
+        jentry.DocNumber = 'inv-{0}-{2}-{1}'.format(department, str(month).zfill(2),
+                                                 year)
     else:
         jentry = entries[0]
     jentry.TxnDate = qb_date_format(
@@ -403,6 +405,9 @@ def sync_inventory(year, month, lines, notes, total, department):
         line.LineNum = line_num
         line.Id = line_num
         line.Amount = Decimal(atof(jentry_line[1])).quantize(TWOPLACES)
+        if line.Amount < 0:
+            line.JournalEntryLineDetail.PostingType = "Credit"
+            line.Amount = line.Amount * - 1
         line.Description = jentry_line[2]
         line_num += 1
         jentry.Line.append(line)
@@ -465,7 +470,9 @@ def vendor_lookup(gl_vendor_name):
             "WNEPLS": Vendor.where("DisplayName like 'The Paper%'")[0],
             "PR-D&D": Vendor.where("DisplayName like 'D&D%'")[0],
             "PEPSI": Vendor.where("DisplayName like 'Pepsi%'")[0],
-            "SYSLOS": Vendor.where("DisplayName like 'Sysco%'")[0],
+            "SYSLOS": Vendor.where("DisplayName like 'Sysco Foods%'")[0],
+            "GenPro" : Vendor.where("DisplayName like 'General Produce'")[0],
+            "SYSFRA" : Vendor.where("DisplayName like 'Sysco San%'")[0],
         }
     return vendor[gl_vendor_name]
 

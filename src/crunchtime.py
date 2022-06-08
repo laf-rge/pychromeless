@@ -44,6 +44,7 @@ class Crunchtime:
         username_element = driver.find_element_by_xpath('//input[@name="username"]')
         username_element.clear()
         username_element.send_keys(self._parameters["user"])
+        sleep(1)
         password_element = driver.find_element_by_xpath('//input[@name="password"]')
         password_element.clear()
         password_element.send_keys(self._parameters["password"])

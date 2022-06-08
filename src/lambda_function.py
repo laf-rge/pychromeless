@@ -21,14 +21,15 @@ stores = ['20025', '20358']
 
 
 def third_party_deposit_handler(*args, **kwargs):
-    start_date = datetime.date.today() - datetime.timedelta(days=14)
+    start_date = datetime.date.today() - datetime.timedelta(days=28)
     end_date = datetime.date.today()
+    # start_date = datetime.date(2022, 4, 1)
     results = []
     try:
         d = Doordash()
         results.extend(d.get_payments(stores, start_date, end_date))
         u = UberEats()
-        results.extend(u.get_payments(start_date - datetime.timedelta(days=7), end_date))
+        results.extend(u.get_payments(stores, start_date, end_date))
         g = Grubhub()
         results.extend(g.get_payments(start_date, end_date))
     finally:
@@ -46,8 +47,8 @@ def invoice_sync_handler(*args, **kwargs):
 
 def daily_sales_handler(*args, **kwargs):
     txdates = [datetime.date.today() - datetime.timedelta(days=1)]
-    # txdates = [datetime.date(2022,2,15)]
-    # txdates = map(partial(datetime.date, 2022, 2), range(1, 15))
+    # txdates = [datetime.date(2022,4,15)]
+    # txdates = map(partial(datetime.date, 2022, 4), range(6, 31))
 
     dj = Flexepos()
     for txdate in txdates:
@@ -65,7 +66,7 @@ def daily_sales_handler(*args, **kwargs):
     payment_data = dj.getOnlinePayments(stores, txdate.year, txdate.month)
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
     royalty_data = dj.getRoyaltyReport(
-        stores,
+        'wmc',
         datetime.date(txdate.year, txdate.month, 1),
         datetime.date(
             txdate.year, txdate.month, calendar.monthrange(txdate.year, txdate.month)[1]
