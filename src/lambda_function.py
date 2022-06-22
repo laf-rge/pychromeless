@@ -9,7 +9,6 @@ import qb
 from ubereats import UberEats
 from doordash import Doordash
 from grubhub import Grubhub
-from postmates import Postmates
 from flexepos import Flexepos
 from ssm_parameter_store import SSMParameterStore
 from functools import partial

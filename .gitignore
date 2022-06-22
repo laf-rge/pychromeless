@@ -18,3 +18,5 @@ deploy
 *.swp
 terraform/.terraform
 .terraform.lock.hcl
+
+src/.vscode/

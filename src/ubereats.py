@@ -231,4 +231,5 @@ class UberEats:
         if ")" in number:
             return "-" + number[2:-1]
         else:
-            return number[1:]
+            return number.replace('$','')
+

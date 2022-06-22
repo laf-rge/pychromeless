@@ -62,26 +62,29 @@ class Doordash:
 
         for store in stores:
             driver.get(
-                "https://merchant-portal.doordash.com/merchant/financials?store_id={0}".format(store_map[store])
+                "https://merchant-portal.doordash.com/merchant/" +
+                "financials?store_id={0}".format(store_map[store])
             )
 
-            driver.find_element_by_xpath('//div[@data-anchor-id="TimeFrameSelector"]').click()
-            driver.find_element_by_xpath('//label[normalize-space()="Last 30 Days"]').click()
-            driver.find_element_by_xpath('//button[normalize-space()="Apply"]').click()
-            sleep(2)
-            driver.find_element_by_xpath('//div[@data-anchor-id="TimeFrameSelector"]').click()
-            driver.find_element_by_xpath('//label[normalize-space()="Last 30 Days"]').click()
-            driver.find_element_by_xpath('//button[normalize-space()="Apply"]').click()
+            driver.find_element_by_xpath(
+                    '//div[@data-anchor-id="TimeFrameSelector"]').click()
+            driver.find_element_by_xpath(
+                    '//label[normalize-space()="Last 30 Days"]/../..'
+                    ).find_element_by_tag_name('input').click()
+            sleep(1)
+            driver.find_element_by_xpath(
+                    '//button[normalize-space()="Apply"]').click()
             sleep(2)
 
             header = None
-            # Payout ID, Payout Status, Store, Payout Date, Transaction Dates, Subtotal
-            # Tax, Commission, Fees, Error Charges, Adjustments, Net Payout
+            # Payout ID, Payout Status, Store, Payout Date, Transaction Dates,
+            # Subtotal, Tax, Commission, Fees, Error Charges, Adjustments,
+            # Net Payout
 
             for tr in driver.find_elements_by_tag_name('tr'):
                 row = []
                 for td in tr.find_elements_by_tag_name('td'):
-                    row.append(td.text.replace('$','').replace('-',''))
+                    row.append(td.text.replace('$', '').replace('-', ''))
                 if header:
                     notes = json.dumps(dict(zip(header, row)))
                     lines = []
@@ -112,6 +115,13 @@ class Doordash:
                                "adjustments",
                                # are these positive? "-" +
                                row[header.index("Adjustments")],
+                           ]
+                    )
+                    lines.append(
+                          [
+                               "6101",
+                               "marketing fees",
+                                "-" + row[header.index("Fees")],
                            ]
                     )
                     txdate = datetime.datetime.strptime(
