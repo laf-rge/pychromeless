@@ -88,10 +88,6 @@ def daily_journal_handler(*args, **kwargs):
     yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
     receiver_email = parameters["receiver_email"]
     from_email = parameters["from_email"]
-    print(from_email)
-    print(receiver_email)
-    receiver_email = "william@wagonermanagement.com"
-    from_email = "Josiah Info Robot <info@wagonermanagement.com>"
     subject = "Daily Journal Report {}".format(yesterday.strftime("%m/%d/%Y"))
     charset = "UTF-8"
 
@@ -138,5 +134,3 @@ def daily_journal_handler(*args, **kwargs):
         )
 
     return {"statusCode": 200, "body": json.dumps(message)}
-
-daily_journal_handler()
