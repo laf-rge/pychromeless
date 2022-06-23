@@ -7,37 +7,37 @@ variable "settings" {
     s3_bucket       = "wagonermanagementcorp"
     flexepos_cred   = "4235601104097358741"
     crunchtime_cred = "3333641072972018802"
-    email_cred      = "7653141078630413087"
-    doordash_cred   = "3852185866371626650"
-    grubhub_cred    = "6705538157312948204"
-    postmates_cred  = "8128598083756399362"
-    ubereats_cred   = "6840207492185843759"
+    email_cred      = "4748088333140643324"
+    doordash_cred   = "1054641869018106721"
+    grubhub_cred    = "5283817055859461023"
+    postmates_cred  = "2195599698013960340"
+    ubereats_cred   = "9013989643111798146"
   }
 }
 
 locals {
   invoice_sync = {
     prod = {
-      PATH = "/opt/bin"
+      PATH       = "/opt/bin"
       PYTHONPATH = "/var/task/src:/opt/lib"
     }
   }
   daily_sales = {
     prod = {
-      PATH = "/opt/bin"
+      PATH       = "/opt/bin"
       PYTHONPATH = "/var/task/src:/opt/lib"
     }
   }
   daily_journal = {
     prod = {
-      PATH = "/opt/bin"
+      PATH       = "/opt/bin"
       PYTHONPATH = "/var/task/src:/opt/lib"
     }
   }
 
-  lambda_env_invoice_sync      = local.invoice_sync[terraform.workspace]
-  lambda_env_daily_journal     = local.daily_journal[terraform.workspace]
-  lambda_env_daily_sales       = local.daily_sales[terraform.workspace]
+  lambda_env_invoice_sync  = local.invoice_sync[terraform.workspace]
+  lambda_env_daily_journal = local.daily_journal[terraform.workspace]
+  lambda_env_daily_sales   = local.daily_sales[terraform.workspace]
 
   common_tags = {
     Owner      = var.settings["owner"]

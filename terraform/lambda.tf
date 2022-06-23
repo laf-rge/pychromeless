@@ -34,7 +34,7 @@ resource "aws_lambda_function" "invoice_sync" {
   runtime          = "python3.7"
   timeout          = 480
   memory_size      = 960
-  layers = [aws_lambda_layer_version.flexepos_layer.arn]
+  layers           = [aws_lambda_layer_version.flexepos_layer.arn]
 
   environment {
     variables = local.lambda_env_invoice_sync
@@ -55,7 +55,7 @@ resource "aws_lambda_function" "daily_journal" {
   runtime          = "python3.7"
   timeout          = 480
   memory_size      = 960
-  layers = [aws_lambda_layer_version.flexepos_layer.arn]
+  layers           = [aws_lambda_layer_version.flexepos_layer.arn]
 
   environment {
     variables = local.lambda_env_daily_journal
@@ -76,7 +76,7 @@ resource "aws_lambda_function" "daily_sales" {
   runtime          = "python3.7"
   timeout          = 480
   memory_size      = 960
-  layers = [aws_lambda_layer_version.flexepos_layer.arn]
+  layers           = [aws_lambda_layer_version.flexepos_layer.arn]
 
   environment {
     variables = local.lambda_env_daily_sales

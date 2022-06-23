@@ -2,7 +2,7 @@ resource "aws_cloudwatch_event_rule" "flexepos_daily" {
   name                = "flexepos-daily-${terraform.workspace}"
   description         = "Trigger ${terraform.workspace} actions"
   schedule_expression = "cron(0 13 * * ? *)"
-  depends_on = [ aws_lambda_function.invoice_sync ]
+  depends_on          = [aws_lambda_function.invoice_sync]
 }
 
 resource "aws_cloudwatch_event_target" "invoke_invoice_sync" {

@@ -2,8 +2,7 @@ import calendar
 import datetime
 import json
 import os
-import smtplib
-import ssl
+import boto3
 import crunchtime
 import qb
 from ubereats import UberEats
@@ -84,42 +83,60 @@ def online_cc_fee(*args, **kwargs):
     return {"statusCode": 200, "body": "Success"}
 
 
-def daily_journal_handler(event, context):
+def daily_journal_handler(*args, **kwargs):
     parameters = SSMParameterStore(prefix="/prod")["email"]
     yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
-    port = 465
-    password = parameters["password"]
-    user = parameters["user"]
     receiver_email = parameters["receiver_email"]
     from_email = parameters["from_email"]
-    smtp_server = parameters["smtp_server"]
-
-    context = ssl.create_default_context()
+    print(from_email)
+    print(receiver_email)
+    receiver_email = "william@wagonermanagement.com"
+    from_email = "Josiah Info Robot <info@wagonermanagement.com>"
+    subject = "Daily Journal Report {}".format(yesterday.strftime("%m/%d/%Y"))
+    charset = "UTF-8"
 
     dj = Flexepos()
     drawer_opens = dict()
     drawer_opens = dj.getDailyJournal(
         stores, yesterday.strftime("%m%d%Y")
     )
-    message = """\
-From: {}
-To: {}
-Subject: Cash Drawer Open Report {}
 
-
-Cash Drawer Open Report\n\n""".format(
-        from_email, receiver_email, yesterday.strftime("%m/%d/%Y")
-    )
+    client = boto3.client('ses')
+    message = "Wagoner Management Corp.\n\nCash Drawer Opens:\n"
 
     for store, journal in drawer_opens.items():
         message = "{}{}: {}\n" "".format(
             message, store, journal.count("Cash Drawer Open")
         )
-    message += "\n\nThanks!\n"
+    message += "\nThanks!\nJosiah (aka The Robot)"
 
-    with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-        server.login(user, password)
-        server.sendmail(user, receiver_email, message)
-        print(message)
+    response = client.send_email(Destination={
+        'ToAddresses': [
+        receiver_email,
+        ],
+        },
+        Message={
+        'Body': {
+        #'Html': {
+        #'Charset': charset,
+        #'Data': BODY_HTML,
+        #},
+        'Text': {
+        'Charset': charset,
+        'Data': message,
+        },
+        },
+        'Subject': {
+        'Charset': charset,
+        'Data': subject,
+        },
+        },
+        Source=from_email,
+        # # If you are not using a configuration set, comment or delete the
+        # # following line
+        # ConfigurationSetName=CONFIGURATION_SET,
+        )
 
     return {"statusCode": 200, "body": json.dumps(message)}
+
+daily_journal_handler()

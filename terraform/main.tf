@@ -10,15 +10,15 @@ terraform {
     }
   }
   backend "s3" {
-    bucket = "wagonermanagementcorp"
-    key    = "flexepos/flexepos.tfstate"
-    region = "us-east-2"
+    bucket  = "wagonermanagementcorp"
+    key     = "flexepos/flexepos.tfstate"
+    region  = "us-east-2"
     encrypt = true
   }
 }
 
 provider "aws" {
-  region  = "us-east-2"
+  region = "us-east-2"
 }
 
 
