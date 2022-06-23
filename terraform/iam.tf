@@ -70,6 +70,27 @@ resource "aws_iam_policy" "accessssm" {
 EOF
 }
 
+resource "aws_iam_policy" "sendemail" {
+  name = "sendemail"
+  description = "send ses emails"
+
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ses:SendEmail",
+                "ses:SendRawEmail"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+EOF
+}
+
 resource "aws_iam_role_policy_attachment" "accesssecrets-attach" {
   role       = aws_iam_role.flexepos_lambda_role.name
   policy_arn = aws_iam_policy.accesssecrets.arn
@@ -78,6 +99,11 @@ resource "aws_iam_role_policy_attachment" "accesssecrets-attach" {
 resource "aws_iam_role_policy_attachment" "accessssm-attach" {
   role       = aws_iam_role.flexepos_lambda_role.name
   policy_arn = aws_iam_policy.accessssm.arn
+}
+
+resource "aws_iam_role_policy_attachment" "sendmemail-attach" {
+  role       = aws_iam_role.flexepos_lambda_role.name
+  policy_arn = aws_iam_policy.sendemail.arn
 }
 
 resource "aws_iam_role_policy_attachment" "lambda-basic" {

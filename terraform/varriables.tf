@@ -7,10 +7,8 @@ variable "settings" {
     s3_bucket       = "wagonermanagementcorp"
     flexepos_cred   = "4235601104097358741"
     crunchtime_cred = "3333641072972018802"
-    email_cred      = "4748088333140643324"
     doordash_cred   = "1054641869018106721"
     grubhub_cred    = "5283817055859461023"
-    postmates_cred  = "2195599698013960340"
     ubereats_cred   = "9013989643111798146"
   }
 }

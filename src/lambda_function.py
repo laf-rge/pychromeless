@@ -133,4 +133,5 @@ def daily_journal_handler(*args, **kwargs):
         # ConfigurationSetName=CONFIGURATION_SET,
         )
 
-    return {"statusCode": 200, "body": json.dumps(message)}
+    return {"statusCode": 200, "body": response}
+daily_journal_handler()
