@@ -8,3 +8,6 @@ oauthlib>=3.0.1
 botocore>=1.12.134
 boto3
 beautifulsoup4
+wheniwork
+pygments
+openpyxl

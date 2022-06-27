@@ -1,0 +1,132 @@
+import json
+import json
+import datetime
+import os
+import calendar
+import openpyxl
+import boto3
+import flexepos
+from openpyxl.worksheet.dimensions import ColumnDimension, DimensionHolder
+from openpyxl.utils import get_column_letter
+from pygments import highlight
+from pygments.lexers import JsonLexer
+from pygments.formatters import TerminalFormatter
+from wheniwork import WhenIWork
+from ssm_parameter_store import SSMParameterStore
+from io import BytesIO
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+
+def color_print(json_obj):
+    print(highlight(json.dumps(json_obj,indent=2), JsonLexer(), TerminalFormatter()))
+    return
+
+class Tips:
+    """ """
+    def __init__(self):
+        self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
+        self._parameters = SSMParameterStore(prefix="/prod")["wheniwork"]
+        self._a = WhenIWork()
+        self._a.login(self._parameters["user"], self._parameters["password"], self._parameters["key"])
+        self._locations = {}
+        self._stores = {}
+        for location in self._a.get('/locations')['locations']:
+            self._locations[location['id']] = location
+            self._stores[location['name']] = location
+        return
+
+    def getTimes(self, stores, tip_date):
+        span_dates = [
+            datetime.date(tip_date.year, tip_date.month, 1),
+            datetime.date(tip_date.year, tip_date.month, 
+            calendar.monthrange(tip_date.year, tip_date.month)[1]) + datetime.timedelta(days=1)
+        ]
+        self._times = self._a.get('/times',params={"start":span_dates[0].isoformat(),"end":span_dates[1].isoformat()})
+    
+        rv = {}
+        for store in stores:
+            rv[store] = {}
+            for time in list(filter(lambda rtime: rtime['location_id'] == self._stores[store]['id'], self._times['times'])):
+                user_times = rv[store].get(time['user_id'], [] )
+                user_times.append(time)
+                rv[store][time['user_id']] = user_times
+
+        return rv
+    
+    def emailTips(self, stores, tip_date):
+        start_date = datetime.date(tip_date.year,tip_date.month,1)
+        end_date = datetime.date(tip_date.year, tip_date.month, 
+            calendar.monthrange(tip_date.year, tip_date.month)[1])
+        parameters = SSMParameterStore(prefix="/prod")["email"]
+        receiver_email = parameters["receiver_email"]
+        from_email = parameters["from_email"]
+        receiver_email = "William N. Green <william@wagonermanagement.com>"
+        subject = "Tip Spreadsheet for {}".format(tip_date.strftime("%m/%Y"))
+        charset = "UTF-8"
+        output = BytesIO()
+        workbook = openpyxl.Workbook()
+        workbook.remove(workbook.active)
+        f = flexepos.Flexepos()  
+        tip_totals = f.getTips(stores, start_date, end_date)
+        times = self.getTimes(stores, datetime.date(start_date.year, start_date.month,1))
+
+        for store in stores:
+            sheet = workbook.create_sheet(title=store)
+            i = 3
+            sheet.append(["{} - {}".format(store, tip_date.strftime("%B"))] + tip_totals[store][0])
+            sheet.append(["=SUM(B2:K2)"] + tip_totals[store][1])
+            for n in range(1,13):
+                sheet.cell(2,n).number_format = '"$"#,##0.00_-'
+            sheet.append(["Last Name", "First Name", "Hours", "Tip Share"])
+            for user_times in times[store].values():
+                user = self._a.get('/users/{}'.format(user_times[0]['user_id']))['user']
+
+                first_name = user['first_name']
+                last_name = user['last_name']
+                sheet.append([last_name, first_name, 
+                    sum(item['length'] for item in user_times),
+                    '=$A$2 / SUM($C:$C) * $C{}'.format(i + 1)]
+                )
+                sheet.cell(i+1, 4).number_format = '"$"#,##0.00_-'
+                i = i + 1
+            
+            sheet.auto_filter.ref = "A3:D{}".format(i)
+            sheet.auto_filter.add_sort_condition("A3:A{}".format(i))
+            dim_holder = DimensionHolder(worksheet=sheet)
+            for col in range(sheet.min_column, sheet.max_column +1):
+                dim_holder[get_column_letter(col)] = ColumnDimension(sheet, min=col, max=col, bestFit=True)
+            sheet.column_dimensions = dim_holder
+            
+        workbook.save(output)
+
+        msg = MIMEMultipart()
+        msg['Subject'] = subject
+        msg['From'] = from_email
+        msg['To'] = receiver_email
+        part = MIMEText('Attached is the spreadsheet\n\n')
+        msg.attach(part)
+        part = MIMEApplication(output.getvalue())
+        part.add_header('Content-Disposition', 'attachment', filename='tips.xlsx')
+        msg.attach(part)
+
+        client = boto3.client('ses')
+        client.send_raw_email(
+            Source=msg['From'],
+            Destinations=[msg['To']],  ## passed in an array
+            RawMessage={
+            'Data':msg.as_string(),
+            }
+        )
+
+    def getMissingPunches(self):
+        times = self._a.get('/times',
+            params= { "start": (datetime.date.today()-datetime.timedelta(days=20)).isoformat(),
+                "end":(datetime.date.today()-datetime.timedelta(days=1)).isoformat() }
+            )
+        self._users = {}
+        for user in times['users']:
+            self._users[user['id']] = user
+        return list(filter(lambda rtime: rtime['end_time'] is None, times['times']))
+t=Tips()
+t.emailTips(['20025', '20358'], datetime.date(2022,5,1))

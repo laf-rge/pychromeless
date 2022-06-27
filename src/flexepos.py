@@ -49,7 +49,7 @@ class Flexepos:
     def getOnlinePayments(self, stores, year, month):
         span_dates = [
             datetime.date(year, month, 1),
-            datetime.date(year, month, calendar.monthrange(year, month)[1]),
+            datetime.date(year, month, calendar.monthrange(year, month)[1])
         ]
         span_date_start = span_dates[0].strftime("%m%d%Y")
         span_date_end = span_dates[1].strftime("%m%d%Y")
@@ -320,6 +320,42 @@ class Flexepos:
         finally:
             driver.quit()
         return drawer_opens
+
+    """
+    """
+
+    def getTips(self, stores, start_date, end_date):
+        rv = {}
+        try:
+            self._login()
+            driver = self._driver._driver
+            driver.find_element_by_id("menu:0:j_id23_header").click()
+            driver.find_element_by_id("menu:0:j_id24:18:j_id25").click()
+            for store in stores:    
+                driver.find_element_by_id("parameters:store").clear()
+                driver.find_element_by_id("parameters:store").send_keys(store)
+                driver.find_element_by_id("parameters:startDateCalendarInputDate").click()
+                driver.find_element_by_id("parameters:startDateCalendarInputDate").clear()
+                driver.find_element_by_id(
+                    "parameters:startDateCalendarInputDate"
+                ).send_keys(start_date.strftime("%m%d%Y"))
+                driver.find_element_by_id("parameters:endDateCalendarInputDate").click()
+                driver.find_element_by_id("parameters:endDateCalendarInputDate").clear()
+                driver.find_element_by_id("parameters:endDateCalendarInputDate").send_keys(
+                    end_date.strftime("%m%d%Y")
+                )
+                driver.find_element_by_id("parameters:submit").click()
+                driver.implicitly_wait(0)
+                sleep(8)
+                soup = BeautifulSoup(driver.page_source, features="html.parser")
+                tips_table = soup.find("table", attrs={"id": "j_id78"})
+                rows = tips_table.find_all("tr")
+                rv[store] = [[ele.text.strip() for ele in rows[0].find_all('th')[1:]],
+                            [float(x.text.strip()) for x in rows[1].find_all('td')[1:]]]
+                
+        finally:
+            driver.close()
+        return rv
 
     """
     """

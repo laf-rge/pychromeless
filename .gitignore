@@ -20,3 +20,5 @@ terraform/.terraform
 .terraform.lock.hcl
 
 src/.vscode/
+
+.vscode/

@@ -5,6 +5,7 @@ import os
 import boto3
 import crunchtime
 import qb
+from tips import Tips
 from ubereats import UberEats
 from doordash import Doordash
 from grubhub import Grubhub
@@ -104,6 +105,17 @@ def daily_journal_handler(*args, **kwargs):
         message = "{}{}: {}\n" "".format(
             message, store, journal.count("Cash Drawer Open")
         )
+
+    message += "\n\nMissing Punches:\n"
+
+    t = Tips()
+    for time in t.getMissingPunches():
+        user = t._users[time['user_id']]
+        message = "{}{}, {} : {} - {}\n".format(message,
+            user['last_name'], user['first_name'],
+            t._locations[time['location_id']]['name'],
+            time['start_time']
+        )
     message += "\nThanks!\nJosiah (aka The Robot)"
 
     response = client.send_email(Destination={
@@ -134,4 +146,4 @@ def daily_journal_handler(*args, **kwargs):
         )
 
     return {"statusCode": 200, "body": response}
-daily_journal_handler()
+    

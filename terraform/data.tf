@@ -17,3 +17,7 @@ data "lastpass_secret" "grubhub_lp" {
 data "lastpass_secret" "ubereats_lp" {
   id = var.settings.ubereats_cred
 }
+
+data "lastpass_secret" "wheniwork_lp" {
+  id = var.settings.wheniwork_cred
+}

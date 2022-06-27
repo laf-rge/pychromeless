@@ -58,6 +58,24 @@ resource "aws_ssm_parameter" "ubereatspass" {
   value = data.lastpass_secret.ubereats_lp.password
   tags  = local.common_tags
 }
+resource "aws_ssm_parameter" "wheniworkuser" {
+  name  = "/${terraform.workspace}/wheniwork/user"
+  type  = "String"
+  value = data.lastpass_secret.wheniwork_lp.username
+  tags  = local.common_tags
+}
+resource "aws_ssm_parameter" "wheniworkpass" {
+  name  = "/${terraform.workspace}/wheniwork/password"
+  type  = "SecureString"
+  value = data.lastpass_secret.wheniwork_lp.password
+  tags  = local.common_tags
+}
+resource "aws_ssm_parameter" "wheniworkkey" {
+  name  = "/${terraform.workspace}/wheniwork/key"
+  type  = "SecureString"
+  value = data.lastpass_secret.wheniwork_lp.note
+  tags  = local.common_tags
+}
 resource "aws_ssm_parameter" "receiver_email" {
   name  = "/${terraform.workspace}/email/receiver_email"
   type  = "String"
