@@ -116,7 +116,10 @@ def daily_journal_handler(*args, **kwargs):
             t._locations[time['location_id']]['name'],
             time['start_time']
         )
-    message += "\nThanks!\nJosiah (aka The Robot)"
+    message += "\n\nMeal Period Violations:\n"
+    for item in t.getMealPeriodViolations(stores, yesterday):
+            message += (f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n")
+    message += "\n\nThanks!\nJosiah (aka The Robot)"
 
     response = client.send_email(Destination={
         'ToAddresses': [

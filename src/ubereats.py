@@ -152,10 +152,10 @@ class UberEats:
                 days=(datetime.date.today().weekday()+14)
             )
             end_date = datetime.date.today()
+        results = []
         for store in stores:
             qdate = start_date
-            results = []
-
+            
             try:
                 while qdate < end_date:
                     results.extend([self.get_payment(store, qdate)])
