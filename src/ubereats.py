@@ -99,7 +99,7 @@ class UberEats:
 
         sleep(2)
 
-        driver.find_element_by_xpath('//button[@aria-label="datepicker-input"]').click()
+        driver.find_element_by_xpath('//input[@aria-label="Select a date range."]').click()
 
         sleep(3)
         year = self.__get_month_year()[1]

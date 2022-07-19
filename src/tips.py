@@ -18,6 +18,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from collections import defaultdict
+from operator import itemgetter
 
 WHENIWORK_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
 
@@ -153,6 +154,7 @@ class Tips:
 
                 first_name = user['first_name']
                 last_name = user['last_name']
+                hourly_rate = user['hourly_rate']
                 day_dict = defaultdict(list)
                 for time in user_times:
                     day = datetime.datetime.strptime(time['start_time'], WHENIWORK_DATE_FORMAT).date()
@@ -162,6 +164,8 @@ class Tips:
                     day_times[0]['first_name'] = first_name
                     day_times[0]['last_name'] = last_name
                     day_times[0]['store'] = store
+                    day_times[0]['hourly_rate'] = hourly_rate
+                    day_times[0]['day'] = day
                     if len(day_times)==1:
                         if day_hours > 6:
                             mpvs.append(day_times[0])
@@ -175,6 +179,17 @@ class Tips:
                         if break_duration < datetime.timedelta(minutes=30):
                             print(f"WARNING: {day.isoformat()} {last_name}, {first_name} {str(break_duration)} break.")
 
-        return mpvs
+        return sorted(mpvs, key=itemgetter('last_name','first_name'))
 
-        
+    def exportMealPeriodViolations(self, stores, year_month_date, pay_period=0):
+        mpvs = self.getMealPeriodViolations(stores, year_month_date, pay_period)
+        grouped = defaultdict(list)
+        for mpv in mpvs:
+            grouped[f"{mpv['last_name']}, {mpv['first_name']}"].append(mpv)
+
+        print("last_name,first_name,custom_earning_meal_period_violations,personal_note")
+        for g in grouped.values():
+            mpv = g[0]
+            print(f"{mpv['last_name']},{mpv['first_name']}," + 
+             f"{sum(item['hourly_rate'] for item in g)}," +
+             f"\"MPV {', '.join(list(str(item['day'].month) + '/' + str(item['day'].day) for item in g))}\"")
