@@ -79,7 +79,7 @@ resource "aws_ssm_parameter" "wheniworkkey" {
 resource "aws_ssm_parameter" "receiver_email" {
   name  = "/${terraform.workspace}/email/receiver_email"
   type  = "String"
-  value = "info@wagonermanagement.com"
+  value = "info@wagonermanagement.com, james@wagonermanagement.com, lillian@wagonermanagement.com"
   tags  = local.common_tags
 }
 resource "aws_ssm_parameter" "from_email" {

@@ -12,6 +12,7 @@ from grubhub import Grubhub
 from flexepos import Flexepos
 from ssm_parameter_store import SSMParameterStore
 from functools import partial
+from operator import itemgetter
 
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
     import chromedriver_binary
@@ -117,7 +118,7 @@ def daily_journal_handler(*args, **kwargs):
             time['start_time']
         )
     message += "\n\nMeal Period Violations:\n"
-    for item in t.getMealPeriodViolations(stores, yesterday):
+    for item in sorted(t.getMealPeriodViolations(stores, yesterday), key=itemgetter('store', 'start_time')):
             message += (f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n")
     message += "\n\nThanks!\nJosiah (aka The Robot)"
 
