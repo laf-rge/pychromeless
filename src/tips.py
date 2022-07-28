@@ -75,9 +75,8 @@ class Tips:
         end_date = datetime.date(tip_date.year, tip_date.month, 
             calendar.monthrange(tip_date.year, tip_date.month)[1])
         parameters = SSMParameterStore(prefix="/prod")["email"]
-        receiver_email = parameters["receiver_email"]
+        receiver_email = ['info@wagonermanagement.com']
         from_email = parameters["from_email"]
-        receiver_email = "William N. Green <william@wagonermanagement.com>"
         subject = "Tip Spreadsheet for {}".format(tip_date.strftime("%m/%Y"))
         charset = "UTF-8"
         output = BytesIO()
@@ -119,7 +118,7 @@ class Tips:
         msg = MIMEMultipart()
         msg['Subject'] = subject
         msg['From'] = from_email
-        msg['To'] = receiver_email
+        msg['To'] = ", ".join(receiver_email)
         part = MIMEText('Attached is the spreadsheet\n\n')
         msg.attach(part)
         part = MIMEApplication(output.getvalue())
@@ -129,7 +128,7 @@ class Tips:
         client = boto3.client('ses')
         client.send_raw_email(
             Source=msg['From'],
-            Destinations=[msg['To']],  ## passed in an array
+            Destinations=receiver_email,  ## passed in an array
             RawMessage={
             'Data':msg.as_string(),
             }

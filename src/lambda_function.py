@@ -46,7 +46,15 @@ def invoice_sync_handler(*args, **kwargs):
 
 
 def daily_sales_handler(*args, **kwargs):
-    txdates = [datetime.date.today() - datetime.timedelta(days=1)]
+    event = args[0]
+    if 'year' in event:
+        txdates = [ datetime.date(
+            year = int(event['year']),
+            month = int(event['month']),
+            day = int(event['day']))
+        ]
+    else:
+        txdates = [datetime.date.today() - datetime.timedelta(days=1)]
     # txdates = [datetime.date(2022,4,15)]
     # txdates = map(partial(datetime.date, 2022, 4), range(6, 31))
 
@@ -88,7 +96,7 @@ def online_cc_fee(*args, **kwargs):
 def daily_journal_handler(*args, **kwargs):
     parameters = SSMParameterStore(prefix="/prod")["email"]
     yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
-    receiver_email = parameters["receiver_email"]
+    receiver_emails = parameters["receiver_email"].split(', ')
     from_email = parameters["from_email"]
     subject = "Daily Journal Report {}".format(yesterday.strftime("%m/%d/%Y"))
     charset = "UTF-8"
@@ -123,9 +131,7 @@ def daily_journal_handler(*args, **kwargs):
     message += "\n\nThanks!\nJosiah (aka The Robot)"
 
     response = client.send_email(Destination={
-        'ToAddresses': [
-        receiver_email,
-        ],
+        'ToAddresses':  receiver_emails,
         },
         Message={
         'Body': {
@@ -150,4 +156,25 @@ def daily_journal_handler(*args, **kwargs):
         )
 
     return {"statusCode": 200, "body": response}
-    
+
+def email_tips(*args, **kwargs):
+    event = args[0]
+    if 'year' in event:
+        txdate = datetime.date(
+            year = int(event['year']),
+            month = int(event['month']),
+            day = int(event['day']))
+    else:
+        txdates = datetime.date.today() - datetime.timedelta(month=1)
+    retries = 3
+    while retries > 0:
+        try:
+            t = Tips()
+            t.emailTips(stores, txdate)
+            retries = 0
+        except Exception as ex:
+            print(ex)
+        finally:
+            retries = retries-1
+            if retries == 0:
+                raise ex

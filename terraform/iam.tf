@@ -134,3 +134,11 @@ resource "aws_lambda_permission" "flexepos_sales_invoke" {
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.flexepos_daily.arn
 }
+
+resource "aws_lambda_permission" "flexepos_email_invoke" {
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.email_tips.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.flexepos_monthly.arn
+}

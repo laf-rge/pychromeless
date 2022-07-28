@@ -43,7 +43,7 @@ resource "aws_lambda_function" "invoice_sync" {
   tags = local.common_tags
 }
 
-resource "aws_lambda_function" "daily_journal" {
+resource "aws_lambda_function" "email_tips" {
   function_name = "daily-journal-${terraform.workspace}"
   description   = "[${terraform.workspace}] Sends an email report on store operations."
 
@@ -51,14 +51,14 @@ resource "aws_lambda_function" "daily_journal" {
   s3_key           = "artifacts/build.zip"
   source_code_hash = chomp(data.aws_s3_bucket_object.artifacts_build_hash.body)
   role             = aws_iam_role.flexepos_lambda_role.arn
-  handler          = "src.lambda_function.daily_journal_handler"
+  handler          = "src.lambda_function.email_tips_handler"
   runtime          = "python3.7"
   timeout          = 480
   memory_size      = 960
   layers           = [aws_lambda_layer_version.flexepos_layer.arn]
 
   environment {
-    variables = local.lambda_env_daily_journal
+    variables = local.lambda_env_email_tips
   }
 
   tags = local.common_tags
@@ -176,12 +176,7 @@ resource "aws_api_gateway_method" "proxy_email_tips" {
   resource_id   = aws_api_gateway_resource.email_tips_resource.id
   http_method   = "ANY"
   authorization = "NONE"
-    request_parameters   = {
-          "method.request.querystring.day"   = true,
-          "method.request.querystring.month" = true,
-          "method.request.querystring.year"  = true
-        }
-  request_validator_id = "unx39u"
+  request_parameters   = {}
 }
 
 resource "aws_api_gateway_integration" "lambda_email_tips" {
@@ -193,22 +188,7 @@ resource "aws_api_gateway_integration" "lambda_email_tips" {
   type                    = "AWS"
   uri                     = aws_lambda_function.email_tips.invoke_arn
   content_handling        = "CONVERT_TO_TEXT"
-  request_parameters = { 
-    "integration.request.header.X-Amz-Invocation-Type" = "'Event'",
-    "integration.request.querystring.day"              = "method.request.querystring.day",
-    "integration.request.querystring.month"            = "method.request.querystring.month",
-    "integration.request.querystring.year"             = "method.request.querystring.year"
-   }
-   request_templates       = {
-          "application/json" = <<-EOT
-                #set($inputRoot = $input.path('$'))
-                {
-                "year": "$input.params('year')",
-                "month": "$input.params('month')",
-                "day": "$input.params('day')"
-                }
-            EOT
-        }
+  request_parameters = { "integration.request.header.X-Amz-Invocation-Type" = "'Event'" }
 }
 
 resource "aws_api_gateway_method_response" "email_tips_method_response_200"{
@@ -238,27 +218,12 @@ resource "aws_api_gateway_deployment" "josiah" {
 
   rest_api_id = "${aws_api_gateway_rest_api.josiah.id}"
   stage_name  = "test"
-  description = "Deployed at ${timestamp()}"
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 resource "aws_lambda_permission" "apigw" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = "${aws_lambda_function.daily_sales.function_name}"
-  principal     = "apigateway.amazonaws.com"
-
-  # The /*/* portion grants access from any method on any resource
-  # within the API Gateway "REST API".
-  source_arn = "${aws_api_gateway_rest_api.josiah.execution_arn}/*/*"
-}
-
-resource "aws_lambda_permission" "apigw-tips" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = "${aws_lambda_function.email_tips.function_name}"
   principal     = "apigateway.amazonaws.com"
 
   # The /*/* portion grants access from any method on any resource

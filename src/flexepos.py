@@ -103,7 +103,8 @@ class Flexepos:
                     payment_data[store]["Total Fees"] = row[7]
                 driver.find_element_by_id("j_id37_switch_off").click()
         finally:
-            driver.quit()
+            if driver:
+                driver.quit()
 
         return payment_data
 
@@ -274,7 +275,8 @@ class Flexepos:
                 sales_data[store]["Payouts"] = payouts
 
         finally:
-            driver.quit()
+            if driver:
+                driver.quit()
             pass
         return sales_data
 
@@ -283,6 +285,7 @@ class Flexepos:
 
     def getDailyJournal(self, stores, date):
         drawer_opens = {}
+        driver = None
         try:
             self._login()
             driver = self._driver._driver
@@ -318,7 +321,8 @@ class Flexepos:
                 driver.implicitly_wait(5)
             driver.find_element_by_id("j_id3:j_id16").click()
         finally:
-            driver.quit()
+            if driver:
+                driver.quit()
         return drawer_opens
 
     """
@@ -326,6 +330,7 @@ class Flexepos:
 
     def getTips(self, stores, start_date, end_date):
         rv = {}
+        driver = None
         try:
             self._login()
             driver = self._driver._driver
@@ -354,7 +359,8 @@ class Flexepos:
                             [float(x.text.strip()) for x in rows[1].find_all('td')[1:]]]
                 
         finally:
-            driver.close()
+            if driver:
+                driver.quit()
         return rv
 
     """
@@ -362,6 +368,7 @@ class Flexepos:
 
     def getRoyaltyReport(self, group, start_date, end_date):
         royalty_data = {}
+        driver = None
         try:
             self._login()
             driver = self._driver._driver
@@ -393,9 +400,10 @@ class Flexepos:
                         "Net Sales": row[1],
                         "Royalty": row[2],
                         "Advertising": row[4],
-                        "CoOp": row[6],
-                        "Media": row[8],
+                        "CoOp": "0",
+                        "Media": row[6],
                     }
             return royalty_data
         finally:
-            driver.quit()
+            if driver:
+                driver.quit()

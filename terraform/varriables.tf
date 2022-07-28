@@ -33,10 +33,17 @@ locals {
       PYTHONPATH = "/var/task/src:/opt/lib"
     }
   }
+  email_tips = {
+    prod = {
+      PATH       = "/opt/bin"
+      PYTHONPATH = "/var/task/src:/opt/lib"
+    }
+  }
 
   lambda_env_invoice_sync  = local.invoice_sync[terraform.workspace]
   lambda_env_daily_journal = local.daily_journal[terraform.workspace]
   lambda_env_daily_sales   = local.daily_sales[terraform.workspace]
+  lambda_env_email_tips    = local.email_tips[terraform.workspace]
 
   common_tags = {
     Owner      = var.settings["owner"]
