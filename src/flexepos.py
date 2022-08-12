@@ -60,7 +60,9 @@ class Flexepos:
         payment_data = {}
 
         try:
+            sleep(2)
             driver.find_element_by_id("menu:2:j_id23_header").click()
+            sleep(1)
             driver.find_element_by_id("menu:2:j_id24:1:j_id25").click()
             sleep(1)
             for store in stores:

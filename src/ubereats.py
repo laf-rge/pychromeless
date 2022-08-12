@@ -75,6 +75,7 @@ class UberEats:
 
     def __get_month_year(self):
         driver = self._driver._driver
+        sleep(2)
         month_ele = driver.find_element_by_xpath('//button[@aria-label="Previous month."]'
                                              ).find_element_by_xpath("following-sibling::*")
         month = month_ele.text.split(' ')[0]
@@ -191,7 +192,11 @@ class UberEats:
 
         # earnings
         earnings = driver.find_element_by_xpath('//li[@tabindex="-1"]')
+        lis = earnings.find_element_by_xpath('..').find_elements_by_tag_name('li')
+        lis[-2].click()
+        lis[0].click()
         earnings.click()
+        
         txt = earnings.find_element_by_xpath(
             '..').text.split('\n')
         print(txt)
@@ -212,6 +217,10 @@ class UberEats:
                       invoice['Customer Refunds']])
         if 'Marketing' in invoice:
             lines.append(["6101", 'Uber Marketing', invoice['Marketing']])
+        if 'Marketplace Facilitator (MF) Tax' in invoice:
+            lines.append(["2210", 'Marketplace Facilitator Tax', invoice['Marketplace Facilitator (MF) Tax']])
+        if 'Total Taxes' in invoice:
+            lines.append(["1260", 'Total Taxes', invoice['Total Taxes']])
         lines.append(["6261", 'Uber fees', invoice['Uber fees']])
         notes += str(txt)
         print(lines)
