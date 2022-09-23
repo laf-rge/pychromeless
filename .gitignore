@@ -22,3 +22,5 @@ terraform/.terraform
 src/.vscode/
 
 .vscode/
+
+*.xlsx

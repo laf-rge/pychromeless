@@ -1,11 +1,13 @@
 import json
-import json
 import datetime
 import os
 import calendar
 import openpyxl
 import boto3
 import flexepos
+from itertools import islice
+from decimal import Decimal
+from locale import LC_NUMERIC, atof, setlocale
 from openpyxl.worksheet.dimensions import ColumnDimension, DimensionHolder
 from openpyxl.utils import get_column_letter
 from pygments import highlight
@@ -21,6 +23,10 @@ from collections import defaultdict
 from operator import itemgetter
 
 WHENIWORK_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
+
+# warning! this won't work if we multiply
+TWOPLACES = Decimal(10) ** -2
+setlocale(LC_NUMERIC, "")
 
 def color_print(json_obj):
     print(highlight(json.dumps(json_obj,indent=2), JsonLexer(), TerminalFormatter()))
@@ -154,6 +160,8 @@ class Tips:
                 first_name = user['first_name']
                 last_name = user['last_name']
                 hourly_rate = user['hourly_rate']
+                if last_name == "Wagoner" and first_name == "Lillian":
+                        last_name = "Nicholson"
                 day_dict = defaultdict(list)
                 for time in user_times:
                     day = datetime.datetime.strptime(time['start_time'], WHENIWORK_DATE_FORMAT).date()
@@ -161,7 +169,8 @@ class Tips:
                 for day, day_times in day_dict.items():
                     day_hours = sum(i['length'] for i in day_times)
                     day_times[0]['first_name'] = first_name
-                    day_times[0]['last_name'] = last_name
+                    day_times[0]['last_name'] = last_name 
+                    
                     day_times[0]['store'] = store
                     day_times[0]['hourly_rate'] = hourly_rate
                     day_times[0]['day'] = day
@@ -181,14 +190,28 @@ class Tips:
         return sorted(mpvs, key=itemgetter('last_name','first_name'))
 
     def exportMealPeriodViolations(self, stores, year_month_date, pay_period=0):
+        text_csv = []
         mpvs = self.getMealPeriodViolations(stores, year_month_date, pay_period)
         grouped = defaultdict(list)
         for mpv in mpvs:
             grouped[f"{mpv['last_name']}, {mpv['first_name']}"].append(mpv)
 
-        print("last_name,first_name,custom_earning_meal_period_violations,personal_note")
+        text_csv.append("last_name,first_name,title,custom_earning_meal_period_violations,personal_note")
         for g in grouped.values():
             mpv = g[0]
-            print(f"{mpv['last_name']},{mpv['first_name']}," + 
+            text_csv.append(f"{mpv['last_name']},{mpv['first_name']}," + 
+             "Crew (Primary)," +
              f"{sum(item['hourly_rate'] for item in g)}," +
              f"\"MPV {', '.join(list(str(item['day'].month) + '/' + str(item['day'].day) for item in g))}\"")
+        return "\n".join(text_csv)
+
+    def exportTipsTransform(self, tips_stream):
+        text_csv = []
+        workbook = openpyxl.load_workbook(tips_stream, data_only=True)
+        text_csv.append("last_name,first_name,title,paycheck_tips")
+        for sheet_name in workbook.get_sheet_names():
+            worksheet = workbook.get_sheet_by_name(sheet_name)
+            for row in islice(worksheet.rows,3, None):
+                if row[3].value != None: #also test for zero
+                    text_csv.append(f"{row[0].value},{row[1].value},Crew (Primary),{Decimal(row[3].value).quantize(TWOPLACES)}") 
+        return "\n".join(text_csv)

@@ -71,7 +71,7 @@ EOF
 }
 
 resource "aws_iam_policy" "sendemail" {
-  name = "sendemail"
+  name        = "sendemail"
   description = "send ses emails"
 
   policy = <<EOF

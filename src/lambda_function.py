@@ -5,6 +5,9 @@ import os
 import boto3
 import crunchtime
 import qb
+import base64
+import email
+import io
 from tips import Tips
 from ubereats import UberEats
 from doordash import Doordash
@@ -46,7 +49,9 @@ def invoice_sync_handler(*args, **kwargs):
 
 
 def daily_sales_handler(*args, **kwargs):
-    event = args[0]
+    event = {}
+    if args != None and len(args)>0:
+        event = args[0]
     if 'year' in event:
         txdates = [ datetime.date(
             year = int(event['year']),
@@ -157,7 +162,7 @@ def daily_journal_handler(*args, **kwargs):
 
     return {"statusCode": 200, "body": response}
 
-def email_tips(*args, **kwargs):
+def email_tips_handler(*args, **kwargs):
     event = args[0]
     if 'year' in event:
         txdate = datetime.date(
@@ -178,3 +183,76 @@ def email_tips(*args, **kwargs):
             retries = retries-1
             if retries == 0:
                 raise ex
+
+def transform_tips_handler(*args, **kwargs):
+    csv = ""
+    try:
+        event = {}
+        if args != None and len(args)==2:
+            event = args[0]
+            context = args[1]
+        tips_stream = None
+        
+        if 'excel' in kwargs:
+            tips_stream = open("tips-aug.xlsx", "rb")
+        else:
+            # decoding form-data into bytes
+            post_data = base64.b64decode(event["body"])
+            # fetching content-type
+            try:
+                content_type = event["headers"]["Content-Type"]
+            except:
+                content_type = event["headers"]["content-type"]
+            # concate Content-Type: with content_type from event
+            ct = "Content-Type: " + content_type + "\n"
+        
+            # parsing message from bytes
+            msg = email.message_from_bytes(ct.encode() + post_data)
+            
+            # checking if the message is multipart
+            print("Multipart check : ", msg.is_multipart())
+        
+            # if message is multipart
+            if msg.is_multipart():
+                multipart_content = {}
+                # retrieving form-data
+                for part in msg.get_payload():
+                    # checking if filename exist as a part of content-disposition header
+                    if part.get_filename():
+                        # fetching the filename
+                        file_name = part.get_filename()
+                    print(part.get_content_type())
+                    multipart_content[
+                        part.get_param("name", header="content-disposition")
+                    ] = part.get_payload(decode=True)
+                print(multipart_content)
+                tips_stream = io.BytesIO(multipart_content["file"])
+        t = Tips()
+        csv = t.exportTipsTransform(tips_stream)
+    except Exception as e:
+        print(e)
+        return {"statusCode": 400, "body": str(e)}
+    return {"statusCode": 200, 'headers': { "Content-type": "text/csv",
+        'Content-disposition': 'attachment; filename=gusto_upload.csv'},"body": csv}
+
+def get_mpvs_handler(*args, **kwargs):
+    csv = ""
+    year = datetime.date.today().year
+    month = datetime.date.today().month
+    pay_period = 2
+    
+    try:
+        event = {}
+        if args != None and len(args)==2 and event not in kwargs:
+            event = args[0]
+            context = args[1]
+        elif event in kwargs:
+            event = kwargs['event']
+            context = kwargs.get(context)
+        if 'year' in event:
+            try:
+                year = int(event['year']),
+                month = int(event['month'])
+                pay_period = int(event['pay_period']))
+            catch Exception as ex:
+                return {"statusCode": 400, "body": str(e)}
