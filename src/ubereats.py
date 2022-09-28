@@ -58,10 +58,11 @@ class UberEats:
         driver.get("https://restaurant.uber.com/manager/logout")
         sleep(5)
         driver.get("https://restaurant.uber.com/")
-        driver.find_element_by_id("useridInput").send_keys(
+        driver.find_element_by_id("PHONE_NUMBER_or_EMAIL_ADDRESS").send_keys(
             self._parameters["user"] + Keys.RETURN
         )
-        driver.find_element_by_id("password").send_keys(
+        sleep(3)
+        driver.find_element_by_id("PASSWORD").send_keys(
             self._parameters["password"] + Keys.RETURN
         )
         sleep(12)

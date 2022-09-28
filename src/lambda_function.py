@@ -247,12 +247,17 @@ def get_mpvs_handler(*args, **kwargs):
             event = args[0]
             context = args[1]
         elif event in kwargs:
-            event = kwargs['event']
-            context = kwargs.get(context)
+            event = kwargs.get('event', args[0])
+            context = kwargs.get('context', args[1])
         if 'year' in event:
             try:
-                year = int(event['year']),
+                year = int(event['year'])
                 month = int(event['month'])
-                pay_period = int(event['pay_period']))
-            catch Exception as ex:
+                pay_period = int(event['pay_period'])
+            except Exception as ex:
                 return {"statusCode": 400, "body": str(e)}
+    except Exception as e:
+        print(e)
+        return {"statusCode": 400, "body": str(e)}
+    return {"statusCode": 200, 'headers': { "Content-type": "text/csv",
+        'Content-disposition': 'attachment; filename=gusto_upload.csv'},"body": csv}

@@ -127,7 +127,8 @@ class Doordash:
                     txdate = datetime.datetime.strptime(
                              row[header.index("Payout Date")],
                              "%m/%d/%Y").date()
-                    if start_date <= txdate <= end_date:
+                    pending = row[header.index("Payout Status")] == "Pending"
+                    if start_date <= txdate <= end_date and not pending:
                         results.append(
                                [
                                    "Doordash",

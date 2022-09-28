@@ -127,6 +127,27 @@ resource "aws_lambda_function" "transform_tips" {
   tags = local.common_tags
 }
 
+resource "aws_lambda_function" "get_mpvs" {
+  function_name = "transform_tips-${terraform.workspace}"
+  description   = "[${terraform.workspace}] Returns MPVs for a specific pay period or the whole month."
+
+  s3_bucket        = var.settings["s3_bucket"]
+  s3_key           = "artifacts/build.zip"
+  source_code_hash = chomp(data.aws_s3_bucket_object.artifacts_build_hash.body)
+  role             = aws_iam_role.flexepos_lambda_role.arn
+  handler          = "src.lambda_function.transform_tips_handler"
+  runtime          = "python3.7"
+  timeout          = 480
+  memory_size      = 960
+  layers           = [aws_lambda_layer_version.flexepos_layer.arn]
+
+  environment {
+    variables = local.lambda_env_transform_tips
+  }
+
+  tags = local.common_tags
+}
+
 resource "aws_api_gateway_method" "proxy_root" {
   rest_api_id   = aws_api_gateway_rest_api.josiah.id
   resource_id   = aws_api_gateway_rest_api.josiah.root_resource_id
