@@ -184,6 +184,39 @@ def email_tips_handler(*args, **kwargs):
             if retries == 0:
                 raise ex
 
+def jls_extract_def(event):
+    # decoding form-data into bytes
+    post_data = base64.b64decode(event["body"])
+    # fetching content-type
+    try:
+        content_type = event["headers"]["Content-Type"]
+    except:
+        content_type = event["headers"]["content-type"]
+    # concate Content-Type: with content_type from event
+    ct = "Content-Type: " + content_type + "\n"
+    
+    # parsing message from bytes
+    msg = email.message_from_bytes(ct.encode() + post_data)
+    
+    # checking if the message is multipart
+    print("Multipart check : ", msg.is_multipart())
+    multipart_content = {}
+    # if message is multipart
+    if msg.is_multipart():
+        
+        # retrieving form-data
+        for part in msg.get_payload():
+            # checking if filename exist as a part of content-disposition header
+            if part.get_filename():
+                # fetching the filename
+                file_name = part.get_filename()
+            print(part.get_content_type())
+            multipart_content[
+                part.get_param("name", header="content-disposition")
+            ] = part.get_payload(decode=True)
+    return multipart_content
+
+
 def transform_tips_handler(*args, **kwargs):
     csv = ""
     try:
@@ -196,37 +229,8 @@ def transform_tips_handler(*args, **kwargs):
         if 'excel' in kwargs:
             tips_stream = open("tips-aug.xlsx", "rb")
         else:
-            # decoding form-data into bytes
-            post_data = base64.b64decode(event["body"])
-            # fetching content-type
-            try:
-                content_type = event["headers"]["Content-Type"]
-            except:
-                content_type = event["headers"]["content-type"]
-            # concate Content-Type: with content_type from event
-            ct = "Content-Type: " + content_type + "\n"
-        
-            # parsing message from bytes
-            msg = email.message_from_bytes(ct.encode() + post_data)
-            
-            # checking if the message is multipart
-            print("Multipart check : ", msg.is_multipart())
-        
-            # if message is multipart
-            if msg.is_multipart():
-                multipart_content = {}
-                # retrieving form-data
-                for part in msg.get_payload():
-                    # checking if filename exist as a part of content-disposition header
-                    if part.get_filename():
-                        # fetching the filename
-                        file_name = part.get_filename()
-                    print(part.get_content_type())
-                    multipart_content[
-                        part.get_param("name", header="content-disposition")
-                    ] = part.get_payload(decode=True)
-                print(multipart_content)
-                tips_stream = io.BytesIO(multipart_content["file"])
+            multipart_content = jls_extract_def(event) 
+            tips_stream = io.BytesIO(multipart_content.get["file", None])
         t = Tips()
         csv = t.exportTipsTransform(tips_stream)
     except Exception as e:
@@ -243,21 +247,21 @@ def get_mpvs_handler(*args, **kwargs):
     
     try:
         event = {}
-        if args != None and len(args)==2 and event not in kwargs:
+        if args != None and len(args)==2:
             event = args[0]
             context = args[1]
-        elif event in kwargs:
-            event = kwargs.get('event', args[0])
-            context = kwargs.get('context', args[1])
-        if 'year' in event:
+        multipart_content = jls_extract_def(event)
+        if 'year' in multipart_content:
             try:
-                year = int(event['year'])
-                month = int(event['month'])
-                pay_period = int(event['pay_period'])
+                year = int(multipart_content['year'])
+                month = int(multipart_content['month'])
+                pay_period = int(multipart_content['pay_period'])
             except Exception as ex:
                 return {"statusCode": 400, "body": str(e)}
+        t = Tips()
+        csv = t.exportMealPeriodViolations(stores, datetime.date(year, month, 5), pay_period)
     except Exception as e:
         print(e)
         return {"statusCode": 400, "body": str(e)}
     return {"statusCode": 200, 'headers': { "Content-type": "text/csv",
-        'Content-disposition': 'attachment; filename=gusto_upload.csv'},"body": csv}
+        'Content-disposition': 'attachment; filename=gusto_upload_tips.csv'},"body": csv}
