@@ -163,15 +163,17 @@ def daily_journal_handler(*args, **kwargs):
     return {"statusCode": 200, "body": response}
 
 def email_tips_handler(*args, **kwargs):
-    event = args[0]
+    event = {}
+    if len(args) == 2 :
+        event = args[0]
     if 'year' in event:
         txdate = datetime.date(
-            year = int(event['year']),
-            month = int(event['month']),
-            day = int(event['day']))
+            int(event['year']),
+            int(event['month']),
+            int(event['day']))
     else:
-        txdates = datetime.date.today() - datetime.timedelta(month=1)
-    retries = 3
+        txdate = datetime.date.today().replace(day=1) - datetime.timedelta(days=1)
+    retries = 1
     while retries > 0:
         try:
             t = Tips()

@@ -40,7 +40,7 @@ class Crunchtime:
         driver.set_page_load_timeout(45)
 
         driver.get("https://jerseymikes.net-chef.com/ceslogin/auto/logout.ct")
-        driver.get("https://jerseymikes.net-chef.com")
+        driver.get("https://jerseymikes.net-chef.com/standalone/modern.ct#Login")
         username_element = driver.find_element_by_xpath('//input[@name="username"]')
         username_element.clear()
         username_element.send_keys(self._parameters["user"])

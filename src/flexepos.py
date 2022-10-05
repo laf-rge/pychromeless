@@ -38,9 +38,8 @@ class Flexepos:
         driver.find_element_by_id("login:username").send_keys(self._parameters["user"])
         driver.find_element_by_id("login:password").clear()
         driver.find_element_by_id("login:password").send_keys(
-            self._parameters["password"]
+            self._parameters["password"] + Keys.ENTER
         )
-        driver.find_element_by_name("login:j_id29").click()
         return
 
     """
@@ -62,7 +61,7 @@ class Flexepos:
         try:
             sleep(2)
             driver.find_element_by_id("menu:2:j_id23_header").click()
-            sleep(1)
+            sleep(2)
             driver.find_element_by_id("menu:2:j_id24:1:j_id25").click()
             sleep(1)
             for store in stores:
@@ -291,7 +290,9 @@ class Flexepos:
         try:
             self._login()
             driver = self._driver._driver
+            sleep(2)
             driver.find_element_by_id("menu:1:j_id23_header").click()
+            sleep(2)
             driver.find_element_by_id("menu:1:j_id24:4:j_id25").click()
             for store_number in stores:
                 sleep(2)
@@ -375,6 +376,7 @@ class Flexepos:
             self._login()
             driver = self._driver._driver
             driver.find_element_by_id("menu:2:j_id23_header").click()
+            sleep(2)
             driver.find_element_by_id("menu:2:j_id24:0:j_id25").click()
             driver.find_element_by_id("search:searchType:1").click()
             driver.find_element_by_id("parameters:group").clear()
