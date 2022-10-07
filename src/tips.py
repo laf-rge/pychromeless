@@ -199,10 +199,13 @@ class Tips:
         text_csv.append("last_name,first_name,title,custom_earning_meal_period_violations,personal_note")
         for g in grouped.values():
             mpv = g[0]
-            text_csv.append(f"{mpv['last_name']},{mpv['first_name']}," + 
-             "Crew (Primary)," +
-             f"{sum(item['hourly_rate'] for item in g)}," +
-             f"\"MPV {', '.join(list(str(item['day'].month) + '/' + str(item['day'].day) for item in g))}\"")
+            t= f"{mpv['last_name']},{mpv['first_name']}," +\
+                "Crew (Primary)," +\
+                f"{sum(item['hourly_rate'] for item in g)}," +\
+                f"\"MPV {', '.join(list(str(item['day'].month) + '/' + str(item['day'].day) for item in g))}\""
+            if pay_period == 0:
+                t+= f",\"{mpv['store']}\""
+            text_csv.append(t)
         return "\n".join(text_csv)
 
     def exportTipsTransform(self, tips_stream):

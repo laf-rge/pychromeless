@@ -375,6 +375,7 @@ class Flexepos:
         try:
             self._login()
             driver = self._driver._driver
+            sleep(2)
             driver.find_element_by_id("menu:2:j_id23_header").click()
             sleep(2)
             driver.find_element_by_id("menu:2:j_id24:0:j_id25").click()
