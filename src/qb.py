@@ -144,7 +144,7 @@ def update_royalty(year, month, payment_data):
 
         sync_bill(
             supplier,
-            store + str(year * 100 + month),
+            "royalty" + store + str(year * 100 + month),
             datetime.date(year, month, calendar.monthrange(year, month)[1]),
             json.dumps(payment_info),
             lines,
@@ -263,7 +263,7 @@ def enter_online_cc_fee(year, month, payment_data):
 
         sync_bill(
             supplier,
-            store + str(year * 100 + month),
+            "cc" + store + str(year * 100 + month),
             datetime.date(year, month, calendar.monthrange(year, month)[1]),
             json.dumps(payment_data[store]),
             lines,
@@ -323,7 +323,7 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
     store_refs = {x.Name: x.to_ref() for x in Department.all()}
 
     # is this a credit
-    if reduce(lambda x, y: x + atof(y[-1]), lines, 0.0) < 0.0:
+    if reduce(lambda x, y: x + atof(y[-1]), lines, 0.0) < -1.0:
         tx_type = VendorCredit
         item_sign = -1
     else:

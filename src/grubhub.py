@@ -66,6 +66,7 @@ class Grubhub:
             driver.get(
              "https://restaurant.grubhub.com/financials/deposit-history/3192172,1669366/"
             )
+            sleep(2)
             driver.find_element_by_class_name("date-picker-input__date-button").click()
             driver.find_element_by_class_name("izMEFT").click()
 

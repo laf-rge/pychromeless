@@ -72,6 +72,7 @@ class UberEats:
         #     element.send_keys(pin)
         # driver.find_element_by_xpath("//button").click()
         # sleep(10)
+        input("pause...")
         return
 
     def __get_month_year(self):
