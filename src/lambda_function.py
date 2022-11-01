@@ -232,7 +232,7 @@ def transform_tips_handler(*args, **kwargs):
             tips_stream = open("tips-aug.xlsx", "rb")
         else:
             multipart_content = jls_extract_def(event) 
-            tips_stream = io.BytesIO(multipart_content.get["file", None])
+            tips_stream = io.BytesIO(multipart_content.get("file", None))
         t = Tips()
         csv = t.exportTipsTransform(tips_stream)
     except Exception as e:

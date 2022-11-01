@@ -215,6 +215,6 @@ class Tips:
         for sheet_name in workbook.get_sheet_names():
             worksheet = workbook.get_sheet_by_name(sheet_name)
             for row in islice(worksheet.rows,3, None):
-                if row[3].value != None: #also test for zero
+                if row[3].value != None and Decimal(row[3].value).quantize(TWOPLACES) > 0.0:
                     text_csv.append(f"{row[0].value},{row[1].value},Crew (Primary),{Decimal(row[3].value).quantize(TWOPLACES)}") 
         return "\n".join(text_csv)

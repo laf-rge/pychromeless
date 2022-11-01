@@ -67,7 +67,7 @@ class Doordash:
             )
 
             driver.find_element_by_xpath(
-                    '//div[@data-anchor-id="TimeFrameSelector"]').click()
+                    '//button[@data-anchor-id="TimeFrameSelector"]').click()
             driver.find_element_by_xpath(
                     '//label[normalize-space()="Last 30 Days"]/../..'
                     ).find_element_by_tag_name('input').click()
