@@ -77,7 +77,7 @@ gl_code_map = {
     "6245": "6720",  # Kitchen - Cleaning Supplies
     "6293": "5500",  # Min Order Charge -> COGS - Delivery
     "6291": "5500",  # Fule Surcharge -> COGS - Delivery
-    "6340": "9998",  # Ops: Miscellaneous
+    "6340": "5500",  # Ops: Miscellaneous
     "8026": "6236",
     "6290": "1301"  # Ops
 }  # Sales and Use Tax
@@ -102,7 +102,7 @@ gl_code_map_to_cogs = {
     "6244": "6730",  # Kitchen - Gloves
     "6245": "6720",  # Kitchen - Cleaning Supplies
     "6293": "5500",  # Min Order Charge -> COGS - Delivery
-    "6340": "9998",  # Ops: Miscellaneous
+    "6340": "5500",  # Ops: Miscellaneous
     "8026": "6236",
 }  # Sales and Use Tax
 

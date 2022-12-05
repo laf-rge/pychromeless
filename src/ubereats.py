@@ -89,64 +89,68 @@ class UberEats:
 
     def _click_date(self, qdate):
         driver = self._driver._driver
-        qstr = qdate.strftime(
-            "Choose %A, %B %-d{} %Y. It's available.".format(
-                self._day_endings.get(qdate.day, "th")
+        start_date = driver.find_element_by_xpath('//input[@aria-label="Select a date range."]').get_attribute('value').split()[0]
+        while start_date != str(qdate).replace('-','/'):
+            qstr = qdate.strftime(
+                "Choose %A, %B %-d{} %Y. It's available.".format(
+                    self._day_endings.get(qdate.day, "th")
+                )
             )
-        )
-        qstr2 = qdate.strftime(
-            "Selected start date. %A, %B %-d{} %Y. It's available.".format(
-                self._day_endings.get(qdate.day, "th")
+            qstr2 = qdate.strftime(
+                "Selected start date. %A, %B %-d{} %Y. It's available.".format(
+                    self._day_endings.get(qdate.day, "th")
+                )
             )
-        )
 
-        sleep(2)
+            sleep(2)
 
-        driver.find_element_by_xpath('//input[@aria-label="Select a date range."]').click()
+            driver.find_element_by_xpath('//input[@aria-label="Select a date range."]').click()
 
-        sleep(3)
-        year = self.__get_month_year()[1]
-        while year != qdate.year:
-            if year > qdate.year:
-                print("moving back a month - year search")
-                driver.find_element_by_xpath(
-                    '//button[@aria-label="Previous month."]'
-                ).click()
-            elif year < qdate.year:
-                print("moving forward a month - year search")
-                driver.find_element_by_xpath(
-                     '//button[@aria-label="Next month."]'
-                ).click()
-            else:
-                break
+            sleep(3)
             year = self.__get_month_year()[1]
-        month = self.__get_month_year()[0]
-        try:
-            while month != qdate.month:
-                if month > qdate.month:
-                    print("going back a month - month search")
+            while year != qdate.year:
+                if year > qdate.year:
+                    print("moving back a month - year search")
                     driver.find_element_by_xpath(
                         '//button[@aria-label="Previous month."]'
                     ).click()
-                else:
-                    print("going forward a month - month search")
+                elif year < qdate.year:
+                    print("moving forward a month - year search")
                     driver.find_element_by_xpath(
                         '//button[@aria-label="Next month."]'
                     ).click()
-                month = self.__get_month_year()[0]
-        except Exception:
-            print("month search failed trying anyway")
-            pass
-        try:
-            print('//div[@aria-label="{}"]'.format(qstr))
-            driver.find_element_by_xpath('//div[@aria-label="{}"]'.format(qstr)).click()
-        except NoSuchElementException:
-            print('oops')
-            print(
-                '//div[@aria-label="{}"]'.format(qstr2))
-            driver.find_element_by_xpath(
-                '//div[@aria-label="{}"]'.format(qstr2)
-            ).click()
+                else:
+                    break
+                year = self.__get_month_year()[1]
+            month = self.__get_month_year()[0]
+            try:
+                while month != qdate.month:
+                    if month > qdate.month:
+                        print("going back a month - month search")
+                        driver.find_element_by_xpath(
+                            '//button[@aria-label="Previous month."]'
+                        ).click()
+                    else:
+                        print("going forward a month - month search")
+                        driver.find_element_by_xpath(
+                            '//button[@aria-label="Next month."]'
+                        ).click()
+                    month = self.__get_month_year()[0]
+            except Exception:
+                print("month search failed trying anyway")
+                pass
+            try:
+                print('//div[@aria-label="{}"]'.format(qstr))
+                driver.find_element_by_xpath('//div[@aria-label="{}"]'.format(qstr)).click()
+            except NoSuchElementException:
+                print('oops')
+                print(
+                    '//div[@aria-label="{}"]'.format(qstr2))
+                driver.find_element_by_xpath(
+                    '//div[@aria-label="{}"]'.format(qstr2)
+                ).click()
+            start_date = driver.find_element_by_xpath('//input[@aria-label="Select a date range."]').get_attribute('value').split()[0]
+        
         return
 
     def get_payments(self, stores, start_date, end_date):

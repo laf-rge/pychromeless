@@ -38,6 +38,7 @@ def third_party_deposit_handler(*args, **kwargs):
     finally:
         for result in results:
             qb.sync_third_party_deposit(*result)
+            print(result)
 
 
 def invoice_sync_handler(*args, **kwargs):
