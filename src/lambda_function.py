@@ -45,7 +45,11 @@ def invoice_sync_handler(*args, **kwargs):
     yesterday = datetime.date.today() - datetime.timedelta(days=1)
     ct = crunchtime.Crunchtime()
     ct.process_gl_report(stores)
-    ct.process_inventory_report(stores, yesterday.year, yesterday.month)
+    if yesterday.day < 6:
+        last_month = datetime.date.today() - datetime.timedelta(days=7)
+        ct.process_inventory_report(stores, last_month.year, last_month.month)
+    else:
+        ct.process_inventory_report(stores, yesterday.year, yesterday.month)
     return {"statusCode": 200, "body": "Success"}
 
 
