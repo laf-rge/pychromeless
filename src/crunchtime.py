@@ -44,13 +44,15 @@ class Crunchtime:
         username_element = driver.find_element_by_xpath('//input[@name="username"]')
         username_element.clear()
         username_element.send_keys(self._parameters["user"])
-        sleep(1)
+        sleep(3)
         password_element = driver.find_element_by_xpath('//input[@name="password"]')
         password_element.clear()
         password_element.send_keys(self._parameters["password"])
+        sleep(6)
         driver.find_element_by_xpath('//button[@tabindex="3"]').click()
-        sleep(2)
+        sleep(3)
         driver.find_element_by_xpath('//input[@name="locationId"]').click()
+        sleep(3)
         driver.find_element_by_xpath('//input[@name="locationId"]').send_keys(store)
         driver.find_element_by_xpath('//input[@name="locationId"]').send_keys(Keys.ENTER)
         driver.find_element_by_xpath('//input[@name="locationId"]').send_keys(Keys.ENTER)
@@ -64,9 +66,10 @@ class Crunchtime:
         driver = self._driver._driver
         try:
             driver.get("https://jerseymikes.net-chef.com/ncext/index.ct#inventoryMenu~actualtheoreticalcost?parentModule=inventoryMenu")
-            sleep(10)
+            sleep(15)
             actions = ActionChains(driver)
             actions.send_keys(Keys.ARROW_DOWN, Keys.ENTER)
+            sleep(10)
             element = driver.find_element_by_css_selector(
                 '[ces-selenium-id="combo_startDate"')
             element.click()
@@ -106,17 +109,19 @@ class Crunchtime:
             driver.get(
                 "https://jerseymikes.net-chef.com/ncext/index.ct#purchasingMenu~purchasesByGL?parentModule=purchasingMenu"
             )
-            sleep(10)
+            sleep(20)
             self._export(driver, True)
         finally:
             driver.quit()
         return
 
     def _export(self, driver, export_combo):
-        driver.find_element_by_css_selector(
+        elem = driver.find_element_by_css_selector(
             "[ces-selenium-id='toolbar_filtersBar']"
-        ).find_element_by_css_selector("[ces-selenium-id='button']").click()
-        sleep(2)
+        ).find_element_by_css_selector("[ces-selenium-id='button']")
+        sleep(24)
+        elem.click()
+        sleep(6)
         export = driver.find_element_by_css_selector(
             "[ces-selenium-id='tool_export']"
         )
