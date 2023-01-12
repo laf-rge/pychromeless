@@ -159,12 +159,15 @@ class UberEats:
                 days=(datetime.date.today().weekday()+14)
             )
             end_date = datetime.date.today()
+        end_date = end_date - datetime.timedelta(
+                days=end_date.weekday())
         results = []
         for store in stores:
             qdate = start_date
             
             try:
                 while qdate < end_date:
+                    print(qdate)
                     results.extend([self.get_payment(store, qdate)])
                     qdate = qdate + datetime.timedelta(days=7)
             finally:
@@ -177,6 +180,8 @@ class UberEats:
             qdate = datetime.date.today() - datetime.timedelta(
                 days=(datetime.date.today().weekday() + 7)
             )
+        else:
+            qdate = qdate - datetime.timedelta(days=(qdate.weekday()))
         if not self._driver:
             self._login()
         driver = self._driver._driver
@@ -184,7 +189,7 @@ class UberEats:
             "https://restaurant.uber.com/v2/payments?restaurantUUID=" +
             store_map[store]
         )
-
+        print("**",qdate)
         notes = ""
         lines = []
 
