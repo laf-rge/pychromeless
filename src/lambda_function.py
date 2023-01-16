@@ -29,6 +29,8 @@ def third_party_deposit_handler(*args, **kwargs):
     # start_date = datetime.date(2022, 4, 1)
     results = []
     try:
+        dj = Flexepos()
+        results.extend(dj.getGiftCardACH(stores, start_date, end_date))
         d = Doordash()
         results.extend(d.get_payments(stores, start_date, end_date))
         u = UberEats()
