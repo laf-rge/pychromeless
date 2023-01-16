@@ -16,6 +16,7 @@ from webdriver_wrapper import WebDriverWrapper
 """
 """
 
+onDay = lambda weekdate, weekday: weekdate + datetime.timedelta(days=(weekday-weekdate.weekday())%7)
 
 class Flexepos:
     """"""
@@ -368,7 +369,6 @@ class Flexepos:
 
     """
     """
-
     def getRoyaltyReport(self, group, start_date, end_date):
         royalty_data = {}
         driver = None
@@ -412,3 +412,81 @@ class Flexepos:
         finally:
             if driver:
                 driver.quit()
+    
+    """
+    The gift card periods are Thursday to Wednesday with funding on Friday's. Comparing your 
+    debits/credits each Friday with the GC report on Flexepos should help you reconcile.
+
+    You are including the online gift cards. Online payments are paid by Anne Sheehan in the 
+    corporate accounting department (copied). Tickets with “99” are online/app orders.
+
+    Online credit card and gift card payments are an ACH transaction made by the corporate 
+    office. So, yes, any tickets with a “00” in the middle are online tickets.
+    
+    The $12.50 are monthly fees.
+
+    using the gift card report in Flexepos
+
+    Add the instore amounts minus the gift cards redeemed. 
+
+    Should the online ammount get minused from the JM online deposit?
+    No, since the online gift card entry is charged minus to online credit card   
+    [ store, txdate, sold, instore, online]
+    """
+    def getGiftCardACH(self, stores, start_date, end_date):
+        if end_date <= start_date:
+            raise Exception("End date can not be before start date.")
+        
+        try:
+            self._login()
+            driver = self._driver._driver
+            # navigate to gift card report
+            sleep(2)
+            driver.find_element_by_id("menu:0:j_id23_header").click()
+            sleep(2)
+            driver.find_element_by_id("menu:0:j_id24:10:j_id25").click()
+            sleep(2)
+            step_date = onDay(start_date, 4) #always Friday
+            results = []
+            while step_date < end_date:
+                period_end= step_date - datetime.timedelta(days=2)
+                period_start = period_end - datetime.timedelta(days=6)
+                for store in stores:
+                    notes = str(datetime.date.today())
+                    lines = []
+                    search_ele = driver.find_element_by_id("j_id37_body")
+                    if not search_ele.is_displayed():
+                        driver.find_element_by_id("j_id37_header").click()
+                        
+                    driver.find_element_by_id("parameters:store").clear()
+                    driver.find_element_by_id("parameters:store").send_keys(store)
+                    driver.find_element_by_id("parameters:startDateCalendarInputDate").click()
+                    driver.find_element_by_id("parameters:startDateCalendarInputDate").clear()
+                    driver.find_element_by_id(
+                        "parameters:startDateCalendarInputDate"
+                    ).send_keys(period_start.strftime("%m%d%Y"))
+                    driver.find_element_by_id("parameters:endDateCalendarInputDate").click()
+                    driver.find_element_by_id("parameters:endDateCalendarInputDate").clear()
+                    driver.find_element_by_id("parameters:endDateCalendarInputDate").send_keys(
+                        period_end.strftime("%m%d%Y")
+                    )
+                    
+                    Select(driver.find_element_by_id('parameters:GroupByList')).select_by_index(1)
+                    driver.find_element_by_id("parameters:submit").click()
+                    driver.implicitly_wait(0)
+                    sleep(8) 
+                    soup = BeautifulSoup(driver.page_source, features="html.parser")
+                   
+                    giftcardsales = soup.find("table" , attrs={"id": "j_id125"})
+                    if giftcardsales:
+                        lines.append(["1230", "sold", "-" + giftcardsales.find_all("tr")[4].find_all("td")[2].text.strip()])
+                    giftcardredeemed = soup.find("table" , attrs={"id": "j_id176"})
+                    
+                    lines.append(["1230", "instore", giftcardredeemed.find_all("tr")[1].find_all("td")[-3].text.strip()])               
+                    results.append(["Jersey Mikes Franchise System", step_date, notes, lines, store])
+                step_date = step_date + datetime.timedelta(days=7)
+            return results
+        finally:
+            if driver:
+                driver.quit()
+
