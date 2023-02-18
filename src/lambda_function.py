@@ -50,6 +50,7 @@ def invoice_sync_handler(*args, **kwargs):
     if yesterday.day < 6:
         last_month = datetime.date.today() - datetime.timedelta(days=7)
         ct.process_inventory_report(stores, last_month.year, last_month.month)
+        #ct.process_inventory_report(stores, 2023, 1)
     else:
         ct.process_inventory_report(stores, yesterday.year, yesterday.month)
     return {"statusCode": 200, "body": "Success"}

@@ -56,7 +56,7 @@ class Crunchtime:
         driver.find_element_by_xpath('//input[@name="locationId"]').send_keys(store)
         driver.find_element_by_xpath('//input[@name="locationId"]').send_keys(Keys.ENTER)
         driver.find_element_by_xpath('//input[@name="locationId"]').send_keys(Keys.ENTER)
-        sleep(2)
+        sleep(10)
         ActionChains(driver).send_keys(Keys.ESCAPE).perform()
         sleep(2)
         return
@@ -119,7 +119,7 @@ class Crunchtime:
         elem = driver.find_element_by_css_selector(
             "[ces-selenium-id='toolbar_filtersBar']"
         ).find_element_by_css_selector("[ces-selenium-id='button']")
-        sleep(24)
+        sleep(10)
         elem.click()
         sleep(6)
         export = driver.find_element_by_css_selector(
