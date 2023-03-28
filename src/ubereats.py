@@ -149,6 +149,7 @@ class UberEats:
                 driver.find_element_by_xpath(
                     '//div[@aria-label="{}"]'.format(qstr2)
                 ).click()
+                return
             start_date = driver.find_element_by_xpath('//input[@aria-label="Select a date range."]').get_attribute('value').split()[0]
         
         return

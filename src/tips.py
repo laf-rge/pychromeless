@@ -160,8 +160,6 @@ class Tips:
                 first_name = user['first_name']
                 last_name = user['last_name']
                 hourly_rate = user['hourly_rate']
-                if last_name == "Wagoner" and first_name == "Lillian":
-                        last_name = "Nicholson"
                 day_dict = defaultdict(list)
                 for time in user_times:
                     day = datetime.datetime.strptime(time['start_time'], WHENIWORK_DATE_FORMAT).date()

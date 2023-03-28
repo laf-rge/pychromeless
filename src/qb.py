@@ -283,7 +283,8 @@ def sync_third_party_deposit(supplier, deposit_date,
     # check if one already exists
     query = Deposit.filter(TxnDate=qb_date_format(deposit_date))
     for d in query:
-        if Decimal(d.Line[0].Amount).quantize(TWOPLACES) == Decimal(
+        if d.DepartmentRef == None if not department else store_refs[department] and Decimal(
+            d.Line[0].Amount).quantize(TWOPLACES) == Decimal(
             atof(lines[0][2])
         ).quantize(TWOPLACES):
             print(
@@ -325,7 +326,7 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
     store_refs = {x.Name: x.to_ref() for x in Department.all()}
 
     # is this a credit
-    if reduce(lambda x, y: x + atof(y[-1]), lines, 0.0) < -1.0:
+    if reduce(lambda x, y: x + atof(y[-1]), lines, 0.0) < -0.08:
         tx_type = VendorCredit
         item_sign = -1
     else:
