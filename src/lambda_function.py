@@ -30,13 +30,13 @@ def third_party_deposit_handler(*args, **kwargs):
     results = []
     try:
         dj = Flexepos()
-        #results.extend(dj.getGiftCardACH(stores, start_date, end_date))
+        results.extend(dj.getGiftCardACH(stores, start_date, end_date))
         d = Doordash()
-        #results.extend(d.get_payments(stores, start_date, end_date))
+        results.extend(d.get_payments(stores, start_date, end_date))
         u = UberEats()
         results.extend(u.get_payments(stores, start_date, end_date))
         g = Grubhub()
-        #results.extend(g.get_payments(start_date, end_date))
+        results.extend(g.get_payments(start_date, end_date))
     finally:
         for result in results:
             qb.sync_third_party_deposit(*result)
