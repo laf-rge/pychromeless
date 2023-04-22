@@ -10,7 +10,8 @@ from selenium.common.exceptions import NoAlertPresentException, NoSuchElementExc
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support.ui import Select, WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 import qb
 from ssm_parameter_store import SSMParameterStore
@@ -44,21 +45,19 @@ class Crunchtime:
         username_element = driver.find_element_by_xpath('//input[@name="username"]')
         username_element.clear()
         username_element.send_keys(self._parameters["user"])
-        sleep(3)
+        WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
         password_element = driver.find_element_by_xpath('//input[@name="password"]')
         password_element.clear()
         password_element.send_keys(self._parameters["password"])
-        sleep(6)
+        WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
         driver.find_element_by_xpath('//button[@tabindex="3"]').click()
-        sleep(3)
-        driver.find_element_by_xpath('//input[@name="locationId"]').click()
-        sleep(3)
+        WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
+        WebDriverWait(driver, 10).until(lambda driver: driver.switch_to.active_element == driver.find_element_by_xpath('//input[@name="locationId"]'))
         driver.find_element_by_xpath('//input[@name="locationId"]').send_keys(store)
         driver.find_element_by_xpath('//input[@name="locationId"]').send_keys(Keys.ENTER)
         driver.find_element_by_xpath('//input[@name="locationId"]').send_keys(Keys.ENTER)
-        sleep(10)
+        WebDriverWait(driver, 10).until(lambda driver: driver.switch_to.active_element.tag_name == 'div')
         ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-        sleep(2)
         return
 
     def get_inventory_report(self, store, year, month):

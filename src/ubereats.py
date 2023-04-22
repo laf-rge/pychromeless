@@ -10,6 +10,7 @@ from time import sleep
 
 from bs4 import BeautifulSoup
 from selenium.common.exceptions import NoAlertPresentException, NoSuchElementException
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
@@ -91,23 +92,22 @@ class UberEats:
         driver = self._driver._driver
         start_date = driver.find_element_by_xpath('//input[@aria-label="Select a date range."]').get_attribute('value').split()[0]
         while start_date != str(qdate).replace('-','/'):
-            qstr = qdate.strftime(
-                "Choose %A, %B %-d{} %Y. It's available.".format(
-                    self._day_endings.get(qdate.day, "th")
-                )
-            )
-            qstr2 = qdate.strftime(
-                "Selected start date. %A, %B %-d{} %Y. It's available.".format(
-                    self._day_endings.get(qdate.day, "th")
-                )
-            )
 
+            date_text = qdate.strftime("%A, %B %-d{} %Y. It's available.".format(
+                    self._day_endings.get(qdate.day, "th")))
+
+            ActionChains(driver).send_keys(Keys.ESCAPE).perform()
             sleep(2)
 
             driver.find_element_by_xpath('//input[@aria-label="Select a date range."]').click()
 
-            sleep(3)
-            year = self.__get_month_year()[1]
+            while (True):
+                try:
+                    sleep(5)
+                    year = self.__get_month_year()[1]
+                    break
+                except:
+                    pass
             while year != qdate.year:
                 if year > qdate.year:
                     print("moving back a month - year search")
@@ -139,19 +139,9 @@ class UberEats:
             except Exception:
                 print("month search failed trying anyway")
                 pass
-            try:
-                print('//div[@aria-label="{}"]'.format(qstr))
-                driver.find_element_by_xpath('//div[@aria-label="{}"]'.format(qstr)).click()
-            except NoSuchElementException:
-                print('oops')
-                print(
-                    '//div[@aria-label="{}"]'.format(qstr2))
-                driver.find_element_by_xpath(
-                    '//div[@aria-label="{}"]'.format(qstr2)
-                ).click()
-                return
-            start_date = driver.find_element_by_xpath('//input[@aria-label="Select a date range."]').get_attribute('value').split()[0]
-        
+            print('//div[contains(@aria-label, "{}")]'.format(date_text))
+            driver.find_element_by_xpath('//div[contains(@aria-label, "{}")]'.format(date_text))
+            return
         return
 
     def get_payments(self, stores, start_date, end_date):
