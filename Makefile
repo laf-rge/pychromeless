@@ -41,6 +41,7 @@ build-lambda-package: clean fetch-dependencies			## prepares zip archive for AWS
 	cp -r bin build/.
 	cp -r lib build/.
 	pip install -r requirements.txt -t build/lib/.
+	pyclean build/
 	cd build; zip -9qr layer.zip . 
 	mv build/layer.zip deploy/ 
 	rm -rf build

@@ -44,13 +44,13 @@ class Doordash:
         driver.get(
             "https://merchant-portal.doordash.com/"
         )
-        driver.find_element_by_xpath(
+        driver.find_element(By.XPATH, 
             '//input[@data-anchor-id="IdentityLoginPageEmailField"]'
         ).send_keys(self._parameters["user"])
-        driver.find_element_by_xpath(
+        driver.find_element(By.XPATH, 
             '//input[@data-anchor-id="IdentityLoginPagePasswordField"]'
         ).send_keys(self._parameters["password"])
-        driver.find_element_by_id("login-submit-button").click()
+        driver.find_element(By.ID, "login-submit-button").click()
         input("pause...")
         return
 
@@ -60,87 +60,86 @@ class Doordash:
 
         results = []
 
-        for store in stores:
-            driver.get(
-                "https://merchant-portal.doordash.com/merchant/" +
-                "financials?store_id={0}".format(store_map[store])
-            )
+        
+        driver.get(
+            "https://merchant-portal.doordash.com/merchant/financials?business_id=1431"
+        )
 
-            driver.find_element_by_xpath(
-                    '//button[@data-anchor-id="TimeFrameSelector"]').click()
-            driver.find_element_by_xpath(
-                    '//label[normalize-space()="Last 30 Days"]/../..'
-                    ).find_element_by_tag_name('input').click()
-            sleep(1)
-            driver.find_element_by_xpath(
-                    '//button[normalize-space()="Apply"]').click()
-            sleep(2)
+        driver.find_element(By.XPATH, 
+                '//button[@data-anchor-id="TimeFrameSelector"]').click()
+        driver.find_element(By.XPATH, 
+                '//label[normalize-space()="Last 30 Days"]/../..'
+                ).find_element(By.TAG_NAME, 'input').click()
+        sleep(1)
+        driver.find_element(By.XPATH, 
+                '//button[normalize-space()="Apply"]').click()
+        sleep(2)
 
-            header = None
-            # Payout ID, Payout Status, Store, Payout Date, Transaction Dates,
-            # Subtotal, Tax, Commission, Fees, Error Charges, Adjustments,
-            # Net Payout
+        header = None
+        # Payout ID, Status, Store, Payout Date, Transaction Dates,
+        # Subtotal, Tax, Commission, Fees, Error Charges, Adjustments,
+        # Net Payout
 
-            for tr in driver.find_elements_by_tag_name('tr'):
-                row = []
-                for td in tr.find_elements_by_tag_name('td'):
-                    row.append(td.text.replace('$', '').replace('-', ''))
-                if header:
-                    notes = json.dumps(dict(zip(header, row)))
-                    lines = []
-                    lines.append(
-                      ["1260", "SUBTOTAL", row[header.index("Subtotal")]]
+        for tr in driver.find_elements(By.TAG_NAME, 'tr'):
+            row = []
+            for td in tr.find_elements(By.TAG_NAME, 'td'):
+                row.append(td.text.replace('$', '').replace('-', ''))
+            if header:
+                notes = json.dumps(dict(zip(header, row)))
+                lines = []
+                lines.append(
+                    ["1260", "SUBTOTAL", row[header.index("Subtotal")]]
+                )
+                lines.append(
+                    ["1260", "TAX_SUBTOTAL",
+                    row[header.index("Tax")]]
                     )
-                    lines.append(
-                      ["1260", "TAX_SUBTOTAL",
-                       row[header.index("Tax")]]
-                      )
-                    lines.append(
-                      [
-                       "6261",
-                       "COMMISSION",
-                       "-" + row[header.index("Commission")],
-                      ]
-                    )
-                    lines.append(
+                lines.append(
+                    [
+                    "6261",
+                    "COMMISSION",
+                    "-" + row[header.index("Commission")],
+                    ]
+                )
+                lines.append(
+                    [
+                            "6260",
+                            "error charges",
+                            "-" + row[header.index("Error Charges")],
+                        ]
+                )
+                lines.append(
                         [
-                               "6260",
-                               "error charges",
-                               "-" + row[header.index("Error Charges")],
-                           ]
+                            "6260",
+                            "adjustments",
+                            # are these positive? "-" +
+                            row[header.index("Adjustments")],
+                        ]
+                )
+                lines.append(
+                        [
+                            "6101",
+                            "marketing fees",
+                            "-" + row[header.index("Fees")],
+                        ]
+                )
+                txdate = datetime.datetime.strptime(
+                            row[header.index("Payout Date")],
+                            "%m/%d/%Y").date()
+                pending = row[header.index("Status")] == "Pending"
+                if start_date <= txdate <= end_date and not pending:
+                    results.append(
+                            [
+                                "Doordash",
+                                txdate,
+                                notes,
+                                lines,
+                                row[header.index("Store")][-6:-1]
+                            ]
                     )
-                    lines.append(
-                          [
-                               "6260",
-                               "adjustments",
-                               # are these positive? "-" +
-                               row[header.index("Adjustments")],
-                           ]
-                    )
-                    lines.append(
-                          [
-                               "6101",
-                               "marketing fees",
-                                "-" + row[header.index("Fees")],
-                           ]
-                    )
-                    txdate = datetime.datetime.strptime(
-                             row[header.index("Payout Date")],
-                             "%m/%d/%Y").date()
-                    pending = row[header.index("Payout Status")] == "Pending"
-                    if start_date <= txdate <= end_date and not pending:
-                        results.append(
-                               [
-                                   "Doordash",
-                                   txdate,
-                                   notes,
-                                   lines,
-                                   row[header.index("Store")][-6:-1],
-                               ]
-                        )
-                else:
-                    header = [x.text for x in
-                              tr.find_elements_by_tag_name('th')]
+            else:
+                header = [x.text for x in
+                            tr.find_elements(By.TAG_NAME, 'th')]
         return results
 
 
@@ -154,20 +153,20 @@ class Doordash:
             driver.get(
                 "https://merchant-portal.doordash.com/merchant/financials?store_id={0}".format(store_map[store])
             )
-            driver.find_element_by_xpath('//button[@data-anchor-id="ExportButtonDropdown"]').click()
+            driver.find_element(By.XPATH, '//button[@data-anchor-id="ExportButtonDropdown"]').click()
             sleep(2)
-            driver.find_element_by_xpath('//span[@data-anchor-id="Export Payouts"]').click()
-            driver.find_elements_by_xpath("//input")[0].click()
-            driver.find_elements_by_xpath("//input")[0].send_keys(
+            driver.find_element(By.XPATH, '//span[@data-anchor-id="Export Payouts"]').click()
+            driver.find_elements(By.XPATH, "//input")[0].click()
+            driver.find_elements(By.XPATH, "//input")[0].send_keys(
                 start_date.strftime("%m/%d/%Y")
             )
 
-            driver.find_element_by_xpath('//input[@placeholder="End"]').click()
-            driver.find_element_by_xpath(
+            driver.find_element(By.XPATH, '//input[@placeholder="End"]').click()
+            driver.find_element(By.XPATH, 
                 '//input[@placeholder="MM/DD/YYYY"]'
             ).send_keys(end_date.strftime("%m/%d/%Y"))
 
-            driver.find_elements_by_xpath("//button")[-1].click()
+            driver.find_elements(By.XPATH, "//button")[-1].click()
             sleep(10)
             results.extend(self._process_payments(start_date, end_date))
         return results

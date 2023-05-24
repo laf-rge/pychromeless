@@ -35,10 +35,10 @@ class Postmates:
         driver.set_page_load_timeout(45)
 
         driver.get("https://partner.postmates.com/dashboard/home/payments")
-        driver.find_element_by_xpath('//input[@name="email"]').send_keys(
+        driver.find_element(By.XPATH, '//input[@name="email"]').send_keys(
             self._parameters["user"]
         )
-        driver.find_element_by_xpath('//input[@name="password"]').send_keys(
+        driver.find_element(By.XPATH, '//input[@name="password"]').send_keys(
             self._parameters["password"] + Keys.ENTER
         )
         sleep(3)
@@ -52,11 +52,11 @@ class Postmates:
             driver = self._driver._driver
 
             # click calendar
-            driver.find_element_by_xpath('//button[@class="button grayscale"]').click()
+            driver.find_element(By.XPATH, '//button[@class="button grayscale"]').click()
             # click 1 month
-            driver.find_element_by_xpath('//button[@class="button grayscale"]').click()
+            driver.find_element(By.XPATH, '//button[@class="button grayscale"]').click()
             # click download CSV
-            driver.find_elements_by_xpath('//button[@class="button button"]')[1].click()
+            driver.find_elements(By.XPATH, '//button[@class="button button"]')[1].click()
             sleep(20)
         finally:
             driver.close()

@@ -59,19 +59,19 @@ class UberEats:
         driver.get("https://restaurant.uber.com/manager/logout")
         sleep(5)
         driver.get("https://restaurant.uber.com/")
-        driver.find_element_by_id("PHONE_NUMBER_or_EMAIL_ADDRESS").send_keys(
+        driver.find_element(By.ID, "PHONE_NUMBER_or_EMAIL_ADDRESS").send_keys(
             self._parameters["user"] + Keys.RETURN
         )
         sleep(3)
-        driver.find_element_by_id("PASSWORD").send_keys(
+        driver.find_element(By.ID, "PASSWORD").send_keys(
             self._parameters["password"] + Keys.RETURN
         )
         sleep(12)
         # for element, pin in zip(
-        #     driver.find_elements_by_xpath("//input"), self._parameters["pin"]
+        #     driver.find_elements(By.XPATH, "//input"), self._parameters["pin"]
         # ):
         #     element.send_keys(pin)
-        # driver.find_element_by_xpath("//button").click()
+        # driver.find_element(By.XPATH, "//button").click()
         # sleep(10)
         input("pause...")
         return
@@ -79,10 +79,10 @@ class UberEats:
     def __get_month_year(self):
         driver = self._driver._driver
         sleep(2)
-        month_ele = driver.find_element_by_xpath('//button[@aria-label="Previous month."]'
-                                             ).find_element_by_xpath("following-sibling::*")
+        month_ele = driver.find_element(By.XPATH, '//button[@aria-label="Previous month."]'
+                                             ).find_element(By.XPATH, "following-sibling::*")
         month = month_ele.text.split(' ')[0]
-        month_ele = month_ele.find_element_by_xpath("following-sibling::*")
+        month_ele = month_ele.find_element(By.XPATH, "following-sibling::*")
         year = month_ele.text.split(' ')[0]
         month = self._month_to_num[month]
         year = int(year)
@@ -90,7 +90,7 @@ class UberEats:
 
     def _click_date(self, qdate):
         driver = self._driver._driver
-        start_date = driver.find_element_by_xpath('//input[@aria-label="Select a date range."]').get_attribute('value').split()[0]
+        start_date = driver.find_element(By.XPATH, '//input[@aria-label="Select a date range."]').get_attribute('value').split()[0]
         while start_date != str(qdate).replace('-','/'):
 
             date_text = qdate.strftime("%A, %B %-d{} %Y. It's available.".format(
@@ -99,7 +99,7 @@ class UberEats:
             ActionChains(driver).send_keys(Keys.ESCAPE).perform()
             sleep(2)
 
-            driver.find_element_by_xpath('//input[@aria-label="Select a date range."]').click()
+            driver.find_element(By.XPATH, '//input[@aria-label="Select a date range."]').click()
 
             while (True):
                 try:
@@ -107,16 +107,17 @@ class UberEats:
                     year = self.__get_month_year()[1]
                     break
                 except:
+                    print("get year failed")
                     pass
             while year != qdate.year:
                 if year > qdate.year:
                     print("moving back a month - year search")
-                    driver.find_element_by_xpath(
+                    driver.find_element(By.XPATH, 
                         '//button[@aria-label="Previous month."]'
                     ).click()
                 elif year < qdate.year:
                     print("moving forward a month - year search")
-                    driver.find_element_by_xpath(
+                    driver.find_element(By.XPATH, 
                         '//button[@aria-label="Next month."]'
                     ).click()
                 else:
@@ -127,12 +128,12 @@ class UberEats:
                 while month != qdate.month:
                     if month > qdate.month:
                         print("going back a month - month search")
-                        driver.find_element_by_xpath(
+                        driver.find_element(By.XPATH, 
                             '//button[@aria-label="Previous month."]'
                         ).click()
                     else:
                         print("going forward a month - month search")
-                        driver.find_element_by_xpath(
+                        driver.find_element(By.XPATH, 
                             '//button[@aria-label="Next month."]'
                         ).click()
                     month = self.__get_month_year()[0]
@@ -140,7 +141,7 @@ class UberEats:
                 print("month search failed trying anyway")
                 pass
             print('//div[contains(@aria-label, "{}")]'.format(date_text))
-            driver.find_element_by_xpath('//div[contains(@aria-label, "{}")]'.format(date_text))
+            driver.find_element(By.XPATH, '//div[contains(@aria-label, "{}")]'.format(date_text)).click()
             return
         return
 
@@ -193,13 +194,13 @@ class UberEats:
         sleep(3)
 
         # earnings
-        earnings = driver.find_element_by_xpath('//li[@tabindex="-1"]')
-        lis = earnings.find_element_by_xpath('..').find_elements_by_tag_name('li')
+        earnings = driver.find_element(By.XPATH, '//li[@tabindex="-1"]')
+        lis = earnings.find_element(By.XPATH, '..').find_elements(By.TAG_NAME, 'li')
         lis[-2].click()
         lis[0].click()
         earnings.click()
         
-        txt = earnings.find_element_by_xpath(
+        txt = earnings.find_element(By.XPATH, 
             '..').text.split('\n')
         print(txt)
         invoice = {

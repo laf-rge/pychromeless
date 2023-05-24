@@ -10,9 +10,9 @@ from decimal import Decimal
 from locale import LC_NUMERIC, atof, setlocale
 from openpyxl.worksheet.dimensions import ColumnDimension, DimensionHolder
 from openpyxl.utils import get_column_letter
-from pygments import highlight
-from pygments.lexers import JsonLexer
-from pygments.formatters import TerminalFormatter
+#from pygments import highlight
+#from pygments.lexers import JsonLexer
+#from pygments.formatters import TerminalFormatter
 from wheniwork import WhenIWork
 from ssm_parameter_store import SSMParameterStore
 from io import BytesIO
@@ -28,9 +28,9 @@ WHENIWORK_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
 TWOPLACES = Decimal(10) ** -2
 setlocale(LC_NUMERIC, "")
 
-def color_print(json_obj):
-    print(highlight(json.dumps(json_obj,indent=2), JsonLexer(), TerminalFormatter()))
-    return
+#def color_print(json_obj):
+#    print(highlight(json.dumps(json_obj,indent=2), JsonLexer(), TerminalFormatter()))
+#    return
 
 class Tips:
     """ """

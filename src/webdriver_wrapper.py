@@ -78,19 +78,19 @@ class WebDriverWrapper:
         self._driver.get(url)
 
     def set_input_value(self, xpath, value):
-        elem_send = self._driver.find_element_by_xpath(xpath)
+        elem_send = self._driver.find_element(By.XPATH, xpath)
         elem_send.send_keys(value)
 
     def click(self, xpath):
-        elem_click = self._driver.find_element_by_xpath(xpath)
+        elem_click = self._driver.find_element(By.XPATH, xpath)
         elem_click.click()
 
     def get_inner_html(self, xpath):
-        elem_value = self._driver.find_element_by_xpath(xpath)
+        elem_value = self._driver.find_element(By.XPATH, xpath)
         return elem_value.get_attribute("innerHTML")
 
     def find(self, xpath):
-        return self._driver.find_element_by_xpath(xpath)
+        return self._driver.find_element(By.XPATH, xpath)
 
     def close(self):
         # Close webdriver connection

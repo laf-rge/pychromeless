@@ -38,11 +38,11 @@ class Grubhub:
          "https://restaurant.grubhub.com/financials/deposit-history/1669366/"
         )
         sleep(3)
-        driver.find_elements_by_xpath("//input")[0].send_keys(
+        driver.find_elements(By.XPATH, "//input")[0].send_keys(
          self._parameters["user"]
         )
         sleep(4)
-        #driver.find_elements_by_xpath("//input")[1].send_keys(
+        #driver.find_elements(By.XPATH, "//input")[1].send_keys(
         #    self._parameters["password"] + Keys.ENTER
         #)
         sleep(4)
@@ -67,14 +67,14 @@ class Grubhub:
              "https://restaurant.grubhub.com/financials/deposit-history/3192172,1669366/"
             )
             sleep(2)
-            driver.find_element_by_class_name("date-picker-input__date-button").click()
+            driver.find_element(By.CLASS_NAME, "date-picker-input__date-button").click()
             driver.find_element(By.LINK_TEXT, "Last 30 days").click()
 
             sleep(15)
 
             results = []
 
-            for tr in driver.find_elements_by_class_name('fin-deposits-table-row'):
+            for tr in driver.find_elements(By.CLASS_NAME, 'fin-deposits-table-row'):
                 notes = ""
                 lines = []
                 txdate = datetime.datetime.strptime(
@@ -82,7 +82,7 @@ class Grubhub:
                 ).date()
                 store = tr.text.split()[4].strip(" ()")
                 tr.click()
-                txt = driver.find_element_by_xpath(
+                txt = driver.find_element(By.XPATH, 
                     '//div[@class="fin-deposit-history-deposit-details__section fin-deposit-history-deposit-details__section--bleed"]'
                 ).text.replace(')', ')\n').replace('Total','Total\n').split("\n")
                 print(txt)
@@ -96,18 +96,18 @@ class Grubhub:
                     else:
                         lines.append(["6261", txt[i], self.convert_num(txt[i + 1])])
 
-                refunds = driver.find_elements_by_xpath("//h5")[0]
+                refunds = driver.find_elements(By.XPATH, "//h5")[0]
                 if refunds.text.split()[0] == "Refunds":
                     # lines.append(['6260',txt[i],self.convert_num(txt[i+1])])
                     notes += str(
-                        refunds.find_element_by_xpath("following-sibling::*").text
+                        refunds.find_element(By.XPATH, "following-sibling::*").text
                     )
                     # this is hard so skip it
                     pass
 
                 if start_date <= txdate and txdate <= end_date:
                     results.append(["Grubhub", txdate, notes, lines, store])
-                driver.find_element_by_xpath(
+                driver.find_element(By.XPATH, 
                     '//div[@class="transactions-order-details-header__info-bar__close"]'
                 ).click()
             return results

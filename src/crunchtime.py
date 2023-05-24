@@ -42,20 +42,20 @@ class Crunchtime:
 
         driver.get("https://jerseymikes.net-chef.com/ceslogin/auto/logout.ct")
         driver.get("https://jerseymikes.net-chef.com/standalone/modern.ct#Login")
-        username_element = driver.find_element_by_xpath('//input[@name="username"]')
+        username_element = driver.find_element(By.XPATH, '//input[@name="username"]')
         username_element.clear()
         username_element.send_keys(self._parameters["user"])
         WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
-        password_element = driver.find_element_by_xpath('//input[@name="password"]')
+        password_element = driver.find_element(By.XPATH, '//input[@name="password"]')
         password_element.clear()
         password_element.send_keys(self._parameters["password"])
         WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
-        driver.find_element_by_xpath('//button[@tabindex="3"]').click()
+        driver.find_element(By.XPATH, '//button[@tabindex="3"]').click()
         WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
-        WebDriverWait(driver, 10).until(lambda driver: driver.switch_to.active_element == driver.find_element_by_xpath('//input[@name="locationId"]'))
-        driver.find_element_by_xpath('//input[@name="locationId"]').send_keys(store)
-        driver.find_element_by_xpath('//input[@name="locationId"]').send_keys(Keys.ENTER)
-        driver.find_element_by_xpath('//input[@name="locationId"]').send_keys(Keys.ENTER)
+        WebDriverWait(driver, 10).until(lambda driver: driver.switch_to.active_element == driver.find_element(By.XPATH, '//input[@name="locationId"]'))
+        driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(store)
+        driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(Keys.ENTER)
+        driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(Keys.ENTER)
         WebDriverWait(driver, 10).until(lambda driver: driver.switch_to.active_element.tag_name == 'div')
         ActionChains(driver).send_keys(Keys.ESCAPE).perform()
         return
@@ -69,7 +69,7 @@ class Crunchtime:
             actions = ActionChains(driver)
             actions.send_keys(Keys.ARROW_DOWN, Keys.ENTER)
             sleep(10)
-            element = driver.find_element_by_css_selector(
+            element = driver.find_element(By.CSS_SELECTOR, 
                 '[ces-selenium-id="combo_startDate"')
             element.click()
             loop_detection = 0
@@ -81,7 +81,7 @@ class Crunchtime:
                 element.click()
                 loop_detection += 1
             element.click()
-            element = driver.find_element_by_css_selector(
+            element = driver.find_element(By.CSS_SELECTOR, 
                 '[ces-selenium-id="combo_endDate"]')
             element.click()
             loop_detection = 0
@@ -115,13 +115,13 @@ class Crunchtime:
         return
 
     def _export(self, driver, export_combo):
-        elem = driver.find_element_by_css_selector(
+        elem = driver.find_element(By.CSS_SELECTOR, 
             "[ces-selenium-id='toolbar_filtersBar']"
-        ).find_element_by_css_selector("[ces-selenium-id='button']")
+        ).find_element(By.CSS_SELECTOR, "[ces-selenium-id='button']")
         sleep(10)
         elem.click()
         sleep(6)
-        export = driver.find_element_by_css_selector(
+        export = driver.find_element(By.CSS_SELECTOR, 
             "[ces-selenium-id='tool_export']"
         )
         if export.get_attribute('data-qtip') == "Nothing to Export.":
@@ -129,24 +129,24 @@ class Crunchtime:
             return
         export.click()
         # set to CSV
-        element = driver.find_element_by_css_selector(
+        element = driver.find_element(By.CSS_SELECTOR, 
             "[ces-selenium-id='combobox_exportFormat'"
         )
         element_id = "{0}-inputEl".format(element.get_property("id"))
-        element.find_element_by_id(element_id).send_keys(Keys.ARROW_DOWN)
-        element.find_element_by_id(element_id).send_keys(Keys.ARROW_DOWN)
-        element.find_element_by_id(element_id).send_keys(Keys.ARROW_DOWN)
-        element.find_element_by_id(element_id).send_keys(Keys.ENTER)
+        element.find_element(By.ID, element_id).send_keys(Keys.ARROW_DOWN)
+        element.find_element(By.ID, element_id).send_keys(Keys.ARROW_DOWN)
+        element.find_element(By.ID, element_id).send_keys(Keys.ARROW_DOWN)
+        element.find_element(By.ID, element_id).send_keys(Keys.ENTER)
         # set export
         if export_combo:
-            element = driver.find_element_by_css_selector(
+            element = driver.find_element(By.CSS_SELECTOR, 
                 "[ces-selenium-id='combobox_multiExportCombo'"
             )
             element_id = "{0}-inputEl".format(element.get_property("id"))
-            element.find_element_by_id(element_id).send_keys(Keys.ARROW_DOWN)
-            element.find_element_by_id(element_id).send_keys(Keys.ARROW_DOWN)
-            element.find_element_by_id(element_id).send_keys(Keys.ENTER)
-        element.find_element_by_id(element_id).send_keys(Keys.ENTER)
+            element.find_element(By.ID, element_id).send_keys(Keys.ARROW_DOWN)
+            element.find_element(By.ID, element_id).send_keys(Keys.ARROW_DOWN)
+            element.find_element(By.ID, element_id).send_keys(Keys.ENTER)
+        element.find_element(By.ID, element_id).send_keys(Keys.ENTER)
         sleep(5)
 
     def process_inventory_report(self, stores, year, month):

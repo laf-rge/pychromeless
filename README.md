@@ -49,11 +49,11 @@ clicking to download. This will replace all `target='_blank'` with `target='_sel
 
 ```python
 # Navigate to download page
-driver._driver.find_element_by_xpath('//a[@href="/downloads/"]').click()
+driver._driver.find_element(By.XPATH, '//a[@href="/downloads/"]').click()
 # Enable headless chrome file download
 driver.enable_download_in_headless_chrome()
 # Click the download link
-driver._driver.find_element_by_class_name("btn").click()
+driver._driver.find_element(By.CLASS_NAME, "btn").click()
 ```
 
 ## Building and uploading the distributable package
