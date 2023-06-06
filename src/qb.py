@@ -507,7 +507,7 @@ def refresh_session():
     CLIENT = QuickBooks(auth_client=AUTH_CLIENT,  
         company_id="1401432085"
     )
-    return 
+    return CLIENT
     
 
 secret_name = "prod/qbo"

@@ -220,10 +220,10 @@ class UberEats:
                       invoice['Customer Refunds']])
         if 'Marketing' in invoice:
             lines.append(["6101", 'Uber Marketing', invoice['Marketing']])
-        if 'Marketplace Facilitator (MF) Tax' in invoice:
-            lines.append(["2210", 'Marketplace Facilitator Tax', invoice['Marketplace Facilitator (MF) Tax']])
-        if 'Total Taxes' in invoice:
-            lines.append(["1260", 'Total Taxes', invoice['Total Taxes']])
+        #if 'Marketplace Facilitator (MF) Tax' in invoice:
+        #    lines.append(["2210", 'Marketplace Facilitator Tax', invoice['Marketplace Facilitator (MF) Tax']])
+        #if 'Total Taxes' in invoice:
+        #    lines.append(["1260", 'Total Taxes', invoice['Total Taxes']])
         lines.append(["6261", 'Uber fees', invoice['Uber fees']])
         notes += str(txt)
         print(lines)

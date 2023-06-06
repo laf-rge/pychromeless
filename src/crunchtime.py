@@ -65,10 +65,7 @@ class Crunchtime:
         driver = self._driver._driver
         try:
             driver.get("https://jerseymikes.net-chef.com/ncext/index.ct#inventoryMenu~actualtheoreticalcost?parentModule=inventoryMenu")
-            sleep(15)
-            actions = ActionChains(driver)
-            actions.send_keys(Keys.ARROW_DOWN, Keys.ENTER)
-            sleep(10)
+            sleep(3)
             element = driver.find_element(By.CSS_SELECTOR, 
                 '[ces-selenium-id="combo_startDate"')
             element.click()
@@ -77,10 +74,10 @@ class Crunchtime:
                    driver.switch_to.active_element.get_attribute(
                     'value') != '{0}/01/{1}'.format(
                         str(month).zfill(2), year)):
+                actions = ActionChains(driver)
+                actions.move_to_element(element).click().send_keys(Keys.ARROW_DOWN).send_keys(Keys.RETURN)
                 actions.perform()
-                element.click()
                 loop_detection += 1
-            element.click()
             element = driver.find_element(By.CSS_SELECTOR, 
                 '[ces-selenium-id="combo_endDate"]')
             element.click()
@@ -93,10 +90,9 @@ class Crunchtime:
                     and driver.switch_to.active_element.get_attribute(
                         "value")[6:] != year
                   ):
+                actions.move_to_element(element).click().send_keys(Keys.ARROW_DOWN).send_keys(Keys.RETURN)
                 actions.perform()
-                element.click()
                 loop_detection += 1
-            element.click()
             self._export(driver, False)
         finally:
             driver.quit()

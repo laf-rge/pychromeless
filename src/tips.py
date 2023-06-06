@@ -46,7 +46,7 @@ class Tips:
             self._stores[location['name']] = location
         return
 
-    def getTimes(self, stores, year_month_date, pay_period=0):
+    def payperiod_dates(self, pay_period, year_month_date):
         if pay_period == 0 :
             span_dates = [
                 datetime.date(year_month_date.year, year_month_date.month, 1),
@@ -64,6 +64,10 @@ class Tips:
             ]
         else:
             raise ValueError(f"pay_period must be set to 0 for entire month or 1 or 2 not {pay_period}")
+        return span_dates
+
+    def getTimes(self, stores, year_month_date, pay_period=0):
+        span_dates = self.payperiod_dates(pay_period, year_month_date)
         self._times = self._a.get('/times',params={"start":span_dates[0].isoformat(),"end":span_dates[1].isoformat()})
     
         rv = {}
@@ -76,26 +80,24 @@ class Tips:
 
         return rv
     
-    def emailTips(self, stores, tip_date):
-        start_date = datetime.date(tip_date.year,tip_date.month,1)
-        end_date = datetime.date(tip_date.year, tip_date.month, 
-            calendar.monthrange(tip_date.year, tip_date.month)[1])
+    def emailTips(self, stores, tip_date, pay_period=0):
+        span_dates = self.payperiod_dates(pay_period, tip_date)
         parameters = SSMParameterStore(prefix="/prod")["email"]
         receiver_email = ['info@wagonermanagement.com']
         from_email = parameters["from_email"]
-        subject = "Tip Spreadsheet for {}".format(tip_date.strftime("%m/%Y"))
+        subject = "Tip Spreadsheet for {} pp {}".format(tip_date.strftime("%m/%Y"), pay_period)
         charset = "UTF-8"
         output = BytesIO()
         workbook = openpyxl.Workbook()
         workbook.remove(workbook.active)
         f = flexepos.Flexepos()  
-        tip_totals = f.getTips(stores, start_date, end_date)
-        times = self.getTimes(stores, datetime.date(start_date.year, start_date.month, 1))
+        tip_totals = f.getTips(stores, span_dates[0], span_dates[1])
+        times = self.getTimes(stores, datetime.date(tip_date.year, tip_date.month, 1), pay_period)
 
         for store in stores:
             sheet = workbook.create_sheet(title=store)
             i = 3
-            sheet.append(["{} - {}".format(store, tip_date.strftime("%B"))] + tip_totals[store][0])
+            sheet.append(["{} - {} pp {}".format(store, tip_date.strftime("%B"), pay_period)] + tip_totals[store][0])
             sheet.append(["=SUM(B2:K2)"] + tip_totals[store][1])
             for n in range(1,13):
                 sheet.cell(2,n).number_format = '"$"#,##0.00_-'

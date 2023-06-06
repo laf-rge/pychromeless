@@ -20,7 +20,7 @@ from operator import itemgetter
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
     import chromedriver_binary
 
-stores = ['20025', '20358']
+stores = ['20358']
 
 
 def third_party_deposit_handler(*args, **kwargs):
@@ -170,28 +170,19 @@ def daily_journal_handler(*args, **kwargs):
     return {"statusCode": 200, "body": response}
 
 def email_tips_handler(*args, **kwargs):
+    year = datetime.date.today().year
+    month = datetime.date.today().month
+    pay_period = 0
+    
     event = {}
-    if len(args) == 2 :
+    if args != None and len(args)>0:
         event = args[0]
     if 'year' in event:
-        txdate = datetime.date(
-            int(event['year']),
-            int(event['month']),
-            int(event['day']))
-    else:
-        txdate = datetime.date.today().replace(day=1) - datetime.timedelta(days=1)
-    retries = 1
-    while retries > 0:
-        try:
-            t = Tips()
-            t.emailTips(stores, txdate)
-            retries = 0
-        except Exception as ex:
-            print(ex)
-        finally:
-            retries = retries-1
-            if retries == 0:
-                raise ex
+        year = int(event['year'])
+        month = int(event['month'])
+        pay_period = int(event['day'])
+    t = Tips()
+    t.emailTips(stores, datetime.date(year, month, 5), pay_period)
 
 def jls_extract_def(event):
     # decoding form-data into bytes
