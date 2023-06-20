@@ -145,7 +145,7 @@ class Tips:
     def getMissingPunches(self):
         times = self._a.get('/times',
             params= { "start": (datetime.date.today()-datetime.timedelta(days=20)).isoformat(),
-                "end":(datetime.date.today()-datetime.timedelta(days=1)).isoformat() }
+                "end":(datetime.datetime.now()).isoformat() }
             )
         self._users = {}
         for user in times['users']:
