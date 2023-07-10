@@ -1,3 +1,7 @@
+data "aws_ecr_repository" "wmc_ecr" {
+  name = "wmc"
+}
+
 data "aws_ecr_image" "wmc_image" {
   repository_name = "wmc"
   most_recent       = true
@@ -15,7 +19,7 @@ resource "aws_lambda_function" "invoice_sync" {
 
   role             = aws_iam_role.flexepos_lambda_role.arn
   package_type     = "Image"
-  image_uri        = "262877227567.dkr.ecr.us-east-2.amazonaws.com/wmc@${data.aws_ecr_image.wmc_image.id}"
+  image_uri        = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.invoice_sync_handler"]
   }
@@ -35,7 +39,7 @@ resource "aws_lambda_function" "daily_journal" {
 
   role             = aws_iam_role.flexepos_lambda_role.arn
   package_type     = "Image"
-  image_uri        = "262877227567.dkr.ecr.us-east-2.amazonaws.com/wmc:latest"
+  image_uri        = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.daily_journal_handler"]
   }
@@ -55,7 +59,7 @@ resource "aws_lambda_function" "daily_sales" {
 
   role             = aws_iam_role.flexepos_lambda_role.arn
   package_type     = "Image"
-  image_uri        = "262877227567.dkr.ecr.us-east-2.amazonaws.com/wmc:latest"
+  image_uri        = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.daily_sales_handler"]
   }
@@ -75,7 +79,7 @@ resource "aws_lambda_function" "email_tips" {
 
   role             = aws_iam_role.flexepos_lambda_role.arn
   package_type     = "Image"
-  image_uri        = "262877227567.dkr.ecr.us-east-2.amazonaws.com/wmc:latest"
+  image_uri        = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.email_tips_handler"]
   }
@@ -95,7 +99,7 @@ resource "aws_lambda_function" "transform_tips" {
 
   role             = aws_iam_role.flexepos_lambda_role.arn
   package_type     = "Image"
-  image_uri        = "262877227567.dkr.ecr.us-east-2.amazonaws.com/wmc:latest"
+  image_uri        = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.transform_tips_handler"]
   }
@@ -115,7 +119,7 @@ resource "aws_lambda_function" "get_mpvs" {
 
   role             = aws_iam_role.flexepos_lambda_role.arn
   package_type     = "Image"
-  image_uri        = "262877227567.dkr.ecr.us-east-2.amazonaws.com/wmc:latest"
+  image_uri        = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.get_mpvs_handler"]
   }
