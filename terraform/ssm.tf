@@ -79,7 +79,7 @@ resource "aws_ssm_parameter" "wheniworkkey" {
 resource "aws_ssm_parameter" "receiver_email" {
   name  = "/${terraform.workspace}/email/receiver_email"
   type  = "String"
-  value = "info@wagonermanagement.com, james@wagonermanagement.com, lillian@wagonermanagement.com"
+  value = "info@wagonermanagement.com, baguirre@wagonermanagement.com, lillian@wagonermanagement.com"
   tags  = local.common_tags
 }
 resource "aws_ssm_parameter" "from_email" {
@@ -87,4 +87,11 @@ resource "aws_ssm_parameter" "from_email" {
   type  = "String"
   value = "Josiah Info Robot <info@wagonermanagement.com>"
   tags  = local.common_tags
+}
+
+resource "aws_ssm_parameter" "gdrive_json" {
+  name = "/${terraform.workspace}/gcp/gdrive"
+  type = "SecureString"
+  value = data.lastpass_secret.gdrive_json.note
+  tags = local.common_tags
 }

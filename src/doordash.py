@@ -128,13 +128,14 @@ class Doordash:
                             "%m/%d/%Y").date()
                 pending = row[header.index("Status")] == "Pending"
                 if start_date <= txdate <= end_date and not pending:
+                    store = ""
                     results.append(
                             [
                                 "Doordash",
                                 txdate,
                                 notes,
                                 lines,
-                                row[header.index("Store")][-6:-1]
+                                row[header.index("Store")].replace(")","")[-5:]
                             ]
                     )
             else:

@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from selenium.common.exceptions import NoAlertPresentException, NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support.ui import Select, WebDriverWait
 
 from ssm_parameter_store import SSMParameterStore
 from webdriver_wrapper import WebDriverWrapper
@@ -287,12 +287,13 @@ class Flexepos:
     """
     """
 
-    def getDailyJournal(self, stores, date):
+    def getDailyJournal(self, stores, qdate):
         drawer_opens = {}
         driver = None
         try:
             self._login()
             driver = self._driver._driver
+            driver.set_page_load_timeout(60)
             sleep(2)
             driver.find_element(By.ID, "menu:1:j_id23_header").click()
             sleep(2)
@@ -311,13 +312,13 @@ class Flexepos:
                 ).clear()
                 driver.find_element(By.ID, 
                     "parameters:startDateCalendarInputDate"
-                ).send_keys(date)
+                ).send_keys(qdate)
                 driver.find_element(By.ID, "parameters:journalScope").click()
                 Select(
                     driver.find_element(By.ID, "parameters:journalScope")
                 ).select_by_visible_text("Store")
                 driver.find_element(By.ID, "parameters:submit").click()
-                driver.implicitly_wait(0)
+                WebDriverWait(driver, 45)
                 if len(driver.find_elements(By.ID, "j_id78_body")) > 0:
                     drawer_opens[store_number] = driver.find_element(By.ID, 
                         "j_id78_body"
@@ -491,4 +492,17 @@ class Flexepos:
         finally:
             if driver:
                 driver.quit()
+
+    def getDailyJournalExport(self, stores, start_date, end_date):
+        qdate = end_date
+        while qdate >= start_date:
+            try:
+                daily_journal = self.getDailyJournal(stores, qdate.strftime("%m%d%Y"))
+            except:
+                sleep(1)
+                continue
+            for store in stores:
+                with open("/Users/wgreen/Google Drive/Shared drives/Wagoner Management Corp./Sales Tax/Journal/{0}-{1}_daily_journal.txt".format(str(qdate), store), "w") as fileout:
+                    fileout.write(daily_journal[store])
+            qdate = qdate - datetime.timedelta(days = 1)
 

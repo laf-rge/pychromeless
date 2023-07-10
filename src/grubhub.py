@@ -42,9 +42,9 @@ class Grubhub:
          self._parameters["user"]
         )
         sleep(4)
-        #driver.find_elements(By.XPATH, "//input")[1].send_keys(
-        #    self._parameters["password"] + Keys.ENTER
-        #)
+        driver.find_elements(By.XPATH, "//input")[1].send_keys(
+            self._parameters["password"] + Keys.ENTER
+        )
         sleep(4)
         return
 

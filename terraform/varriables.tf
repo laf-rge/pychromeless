@@ -11,6 +11,7 @@ variable "settings" {
     grubhub_cred    = "5283817055859461023"
     ubereats_cred   = "9013989643111798146"
     wheniwork_cred  = "365398016520677143"
+    gdrive_cred     = "7947566868788776566"
   }
 }
 

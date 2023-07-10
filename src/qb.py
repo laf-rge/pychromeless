@@ -559,3 +559,45 @@ def put_secret(secret_string):
         SecretId=secret_name, SecretString=secret_string
     )
     return put_secret_value_response
+
+def bill_export():
+    refresh_session()
+    store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
+    for qb_data_type in [VendorCredit, Bill, SalesReceipt, Deposit, JournalEntry]:
+        with open("purchase_{0}_journal.json".format(qb_data_type.__name__), "w") as fileout:
+            fileout.write("[")
+            query_count = qb_data_type.count(where_clause="TxnDate > '2020-06-01' AND TxnDate < '2023-06-07'", qb=CLIENT)
+            r_count=1
+            while r_count<query_count:
+                bills = qb_data_type.where(where_clause="TxnDate >= '2020-06-01' AND TxnDate < '2023-06-07'",
+                    order_by='TxnDate', start_position=r_count, max_results=1000, qb=CLIENT)
+                for bill in bills:
+                    if not hasattr(bill, 'DepartmentRef') or bill.DepartmentRef is None or bill.DepartmentRef.name in (None, 'WMC', '20025'):
+                        fileout.write(bill.to_json())
+                        fileout.write(',\n')
+                    r_count+=1
+            fileout.write("]")
+    
+def fix_deposit():
+    refresh_session()
+    store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
+    qb_data_type = Deposit
+    modify_queue = []
+    with open("purchase_{0}_journal.json".format(qb_data_type.__name__), "w") as fileout:
+        fileout.write("[")
+        query_count = qb_data_type.count(where_clause="TxnDate >= '2022-01-01' AND TxnDate < '2023-01-01'", qb=CLIENT)
+        r_count=1
+        while r_count<query_count:
+            bills = qb_data_type.where(where_clause="TxnDate >= '2022-01-01' AND TxnDate < '2023-01-01'",
+                order_by='TxnDate', start_position=r_count, max_results=1000, qb=CLIENT)
+            for bill in bills:
+                if not hasattr(bill, 'DepartmentRef') or bill.DepartmentRef is None or bill.DepartmentRef.name == '20025':
+                    if hasattr(bill.Line[0], 'DepositLineDetail') and bill.Line[0].DepositLineDetail.AccountRef.name=="1230 Other Current Assets:Gift Cards":
+                        if '20358' in bill.Line[0].Description:
+                            print(bill.Line[0].Description,bill.DepartmentRef.name)
+                            modify_queue.append(bill)
+                r_count+=1
+        for bill in modify_queue:
+            bill.DepartmentRef = store_refs['20358']
+            #bill.save(qb=CLIENT)
+        

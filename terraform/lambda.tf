@@ -1,11 +1,6 @@
-data "aws_s3_bucket_object" "artifacts_build_hash" {
-  bucket = var.settings["s3_bucket"]
-  key    = "artifacts/build.zip.base64sha256"
-}
-
-data "aws_s3_bucket_object" "artifacts_layer_hash" {
-  bucket = var.settings["s3_bucket"]
-  key    = "artifacts/layer.zip.base64sha256"
+data "aws_ecr_image" "wmc_image" {
+  repository_name = "wmc"
+  most_recent       = true
 }
 
 data "aws_caller_identity" "current" {
@@ -14,27 +9,18 @@ data "aws_caller_identity" "current" {
   # the "source_account" on the permission resource.
 }
 
-resource "aws_lambda_layer_version" "flexepos_layer" {
-  layer_name          = "flexepos_layer_${terraform.workspace}"
-  s3_bucket           = var.settings["s3_bucket"]
-  s3_key              = "artifacts/layer.zip"
-  source_code_hash    = chomp(data.aws_s3_bucket_object.artifacts_layer_hash.body)
-  compatible_runtimes = ["python3.7", "python3.6"]
-}
-
 resource "aws_lambda_function" "invoice_sync" {
   function_name = "invoice-sync-${terraform.workspace}"
   description   = "[${terraform.workspace}] Syncs the last 30 days of invoices from CrunchTime into Quickbooks"
 
-  s3_bucket        = var.settings["s3_bucket"]
-  s3_key           = "artifacts/build.zip"
-  source_code_hash = chomp(data.aws_s3_bucket_object.artifacts_build_hash.body)
   role             = aws_iam_role.flexepos_lambda_role.arn
-  handler          = "src.lambda_function.invoice_sync_handler"
-  runtime          = "python3.7"
+  package_type     = "Image"
+  image_uri        = "262877227567.dkr.ecr.us-east-2.amazonaws.com/wmc@${data.aws_ecr_image.wmc_image.id}"
+  image_config {
+    command = ["lambda_function.invoice_sync_handler"]
+  }
   timeout          = 480
   memory_size      = 960
-  layers           = [aws_lambda_layer_version.flexepos_layer.arn]
 
   environment {
     variables = local.lambda_env_invoice_sync
@@ -47,15 +33,14 @@ resource "aws_lambda_function" "daily_journal" {
   function_name = "daily-journal-${terraform.workspace}"
   description   = "[${terraform.workspace}] Sends an email report on store operations."
 
-  s3_bucket        = var.settings["s3_bucket"]
-  s3_key           = "artifacts/build.zip"
-  source_code_hash = chomp(data.aws_s3_bucket_object.artifacts_build_hash.body)
   role             = aws_iam_role.flexepos_lambda_role.arn
-  handler          = "src.lambda_function.daily_journal_handler"
-  runtime          = "python3.7"
+  package_type     = "Image"
+  image_uri        = "262877227567.dkr.ecr.us-east-2.amazonaws.com/wmc:latest"
+  image_config {
+    command = ["lambda_function.daily_journal_handler"]
+  }
   timeout          = 480
   memory_size      = 960
-  layers           = [aws_lambda_layer_version.flexepos_layer.arn]
 
   environment {
     variables = local.lambda_env_daily_journal
@@ -68,15 +53,14 @@ resource "aws_lambda_function" "daily_sales" {
   function_name = "daily-sales-${terraform.workspace}"
   description   = "[${terraform.workspace}] Enters daily sales for yesterday."
 
-  s3_bucket        = var.settings["s3_bucket"]
-  s3_key           = "artifacts/build.zip"
-  source_code_hash = chomp(data.aws_s3_bucket_object.artifacts_build_hash.body)
   role             = aws_iam_role.flexepos_lambda_role.arn
-  handler          = "src.lambda_function.daily_sales_handler"
-  runtime          = "python3.7"
+  package_type     = "Image"
+  image_uri        = "262877227567.dkr.ecr.us-east-2.amazonaws.com/wmc:latest"
+  image_config {
+    command = ["lambda_function.daily_sales_handler"]
+  }
   timeout          = 480
   memory_size      = 960
-  layers           = [aws_lambda_layer_version.flexepos_layer.arn]
 
   environment {
     variables = local.lambda_env_daily_sales
@@ -89,15 +73,14 @@ resource "aws_lambda_function" "email_tips" {
   function_name = "email-tips-${terraform.workspace}"
   description   = "[${terraform.workspace}] Emails tips spreadsheet."
 
-  s3_bucket        = var.settings["s3_bucket"]
-  s3_key           = "artifacts/build.zip"
-  source_code_hash = chomp(data.aws_s3_bucket_object.artifacts_build_hash.body)
   role             = aws_iam_role.flexepos_lambda_role.arn
-  handler          = "src.lambda_function.email_tips_handler"
-  runtime          = "python3.7"
+  package_type     = "Image"
+  image_uri        = "262877227567.dkr.ecr.us-east-2.amazonaws.com/wmc:latest"
+  image_config {
+    command = ["lambda_function.email_tips_handler"]
+  }
   timeout          = 480
   memory_size      = 960
-  layers           = [aws_lambda_layer_version.flexepos_layer.arn]
 
   environment {
     variables = local.lambda_env_email_tips
@@ -110,15 +93,14 @@ resource "aws_lambda_function" "transform_tips" {
   function_name = "transform_tips-${terraform.workspace}"
   description   = "[${terraform.workspace}] Takes the excel tip spreadsheet and returns the Gusto CSV for import."
 
-  s3_bucket        = var.settings["s3_bucket"]
-  s3_key           = "artifacts/build.zip"
-  source_code_hash = chomp(data.aws_s3_bucket_object.artifacts_build_hash.body)
   role             = aws_iam_role.flexepos_lambda_role.arn
-  handler          = "src.lambda_function.transform_tips_handler"
-  runtime          = "python3.7"
+  package_type     = "Image"
+  image_uri        = "262877227567.dkr.ecr.us-east-2.amazonaws.com/wmc:latest"
+  image_config {
+    command = ["lambda_function.transform_tips_handler"]
+  }
   timeout          = 480
   memory_size      = 960
-  layers           = [aws_lambda_layer_version.flexepos_layer.arn]
 
   environment {
     variables = local.lambda_env_transform_tips
@@ -131,15 +113,14 @@ resource "aws_lambda_function" "get_mpvs" {
   function_name = "get-mpvs-${terraform.workspace}"
   description   = "[${terraform.workspace}] Returns MPVs for a specific pay period or the whole month."
 
-  s3_bucket        = var.settings["s3_bucket"]
-  s3_key           = "artifacts/build.zip"
-  source_code_hash = chomp(data.aws_s3_bucket_object.artifacts_build_hash.body)
   role             = aws_iam_role.flexepos_lambda_role.arn
-  handler          = "src.lambda_function.get_mpvs_handler"
-  runtime          = "python3.7"
+  package_type     = "Image"
+  image_uri        = "262877227567.dkr.ecr.us-east-2.amazonaws.com/wmc:latest"
+  image_config {
+    command = ["lambda_function.get_mpvs_handler"]
+  }
   timeout          = 480
   memory_size      = 960
-  layers           = [aws_lambda_layer_version.flexepos_layer.arn]
 
   environment {
     variables = local.lambda_env_get_mpvs

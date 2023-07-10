@@ -8,6 +8,7 @@ import qb
 import base64
 import email
 import io
+from wmcgdrive import WMCGdrive
 from tips import Tips
 from ubereats import UberEats
 from doordash import Doordash
@@ -20,7 +21,7 @@ from operator import itemgetter
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
     import chromedriver_binary
 
-stores = ['20358']
+stores = ['20358', '20395']
 
 
 def third_party_deposit_handler(*args, **kwargs):
@@ -49,9 +50,9 @@ def invoice_sync_handler(*args, **kwargs):
     ct.process_gl_report(stores)
     if yesterday.day < 6:
         last_month = datetime.date.today() - datetime.timedelta(days=7)
-        ct.process_inventory_report(stores, last_month.year, last_month.month)
+        ct.process_inventory_report(['20358'], last_month.year, last_month.month)
     else:
-        ct.process_inventory_report(stores, yesterday.year, yesterday.month)
+        ct.process_inventory_report(['20358'], yesterday.year, yesterday.month)
     return {"statusCode": 200, "body": "Success"}
 
 
@@ -118,6 +119,10 @@ def daily_journal_handler(*args, **kwargs):
     drawer_opens = dj.getDailyJournal(
         stores, yesterday.strftime("%m%d%Y")
     )
+
+    gdrive = WMCGdrive()
+    for store in stores:
+        gdrive.upload("{0}-{1}_daily_journal.txt".format(str(yesterday.date()), store), drawer_opens[store].encode('utf-8'), 'text/plain')
 
     client = boto3.client('ses')
     message = "Wagoner Management Corp.\n\nCash Drawer Opens:\n"
