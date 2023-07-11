@@ -64,7 +64,7 @@ class Grubhub:
             input("pause")
             driver = self._driver._driver
             driver.get(
-             "https://restaurant.grubhub.com/financials/deposit-history/3192172,1669366/"
+             "https://restaurant.grubhub.com/financials/deposit-history/3192172,6177240/"
             )
             sleep(2)
             driver.find_element(By.CLASS_NAME, "date-picker-input__date-button").click()

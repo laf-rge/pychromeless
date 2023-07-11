@@ -21,6 +21,7 @@ from webdriver_wrapper import WebDriverWrapper
 store_map = {
     '20025': '8d6b329b-4976-4ef7-8411-3a416614a726',
     '20358': 'ee0492bb-edd6-507a-83eb-1d1427e3ff7d',
+    '20395': '8fdc747c-dd18-491f-8c3a-317b1b4cab3c',
 }
 
 
