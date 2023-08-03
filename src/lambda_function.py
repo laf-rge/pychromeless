@@ -35,9 +35,13 @@ def third_party_deposit_handler(*args, **kwargs):
         d = Doordash()
         results.extend(d.get_payments(stores, start_date, end_date))
         u = UberEats()
-        results.extend(u.get_payments(stores, start_date, end_date))
+        #results.extend(u.get_payments(stores, start_date, end_date))
+        results.extend(u.get_payments(['20358'], start_date, end_date))
+        results.extend(u.get_payments(['20395'], datetime.date(2023,7,10), end_date))
         g = Grubhub()
         results.extend(g.get_payments(start_date, end_date))
+        e = ezcater.EZCater()
+        results.extend(u.get_payments(stores, start_date, end_Date))
     finally:
         for result in results:
             qb.sync_third_party_deposit(*result)
@@ -50,9 +54,9 @@ def invoice_sync_handler(*args, **kwargs):
     ct.process_gl_report(stores)
     if yesterday.day < 6:
         last_month = datetime.date.today() - datetime.timedelta(days=7)
-        ct.process_inventory_report(['20358'], last_month.year, last_month.month)
+        ct.process_inventory_report(stores, last_month.year, last_month.month)
     else:
-        ct.process_inventory_report(['20358'], yesterday.year, yesterday.month)
+        ct.process_inventory_report(stores, yesterday.year, yesterday.month)
     return {"statusCode": 200, "body": "Success"}
 
 
@@ -189,7 +193,7 @@ def email_tips_handler(*args, **kwargs):
     t = Tips()
     t.emailTips(stores, datetime.date(year, month, 5), pay_period)
 
-def jls_extract_def(event):
+def decode_upload(event):
     # decoding form-data into bytes
     post_data = base64.b64decode(event["body"])
     # fetching content-type
@@ -234,7 +238,7 @@ def transform_tips_handler(*args, **kwargs):
         if 'excel' in kwargs:
             tips_stream = open("tips-aug.xlsx", "rb")
         else:
-            multipart_content = jls_extract_def(event) 
+            multipart_content = decode_upload(event) 
             tips_stream = io.BytesIO(multipart_content.get("file", None))
         t = Tips()
         csv = t.exportTipsTransform(tips_stream)
@@ -242,7 +246,7 @@ def transform_tips_handler(*args, **kwargs):
         print(e)
         return {"statusCode": 400, "body": str(e)}
     return {"statusCode": 200, 'headers': { "Content-type": "text/csv",
-        'Content-disposition': 'attachment; filename=gusto_upload.csv'},"body": csv}
+        'Content-disposition': 'attachment; filename=gusto_upload_tips.csv'},"body": csv}
 
 def get_mpvs_handler(*args, **kwargs):
     csv = ""
@@ -255,7 +259,7 @@ def get_mpvs_handler(*args, **kwargs):
         if args != None and len(args)==2:
             event = args[0]
             context = args[1]
-        multipart_content = jls_extract_def(event)
+        multipart_content = decode_upload(event)
         if 'year' in multipart_content:
             try:
                 year = int(multipart_content['year'])
@@ -269,4 +273,4 @@ def get_mpvs_handler(*args, **kwargs):
         print(e)
         return {"statusCode": 400, "body": str(e)}
     return {"statusCode": 200, 'headers': { "Content-type": "text/csv",
-        'Content-disposition': 'attachment; filename=gusto_upload_tips.csv'},"body": csv}
+        'Content-disposition': 'attachment; filename=gusto_upload_mpvs.csv'},"body": csv}

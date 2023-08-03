@@ -92,6 +92,7 @@ class UberEats:
     def _click_date(self, qdate):
         driver = self._driver._driver
         start_date = driver.find_element(By.XPATH, '//input[@aria-label="Select a date range."]').get_attribute('value').split()[0]
+        driver.find_element(By.XPATH, '//input[@aria-label="Select a date range."]')
         while start_date != str(qdate).replace('-','/'):
 
             date_text = qdate.strftime("%A, %B %-d{} %Y. It's available.".format(
@@ -143,6 +144,7 @@ class UberEats:
                 pass
             print('//div[contains(@aria-label, "{}")]'.format(date_text))
             driver.find_element(By.XPATH, '//div[contains(@aria-label, "{}")]'.format(date_text)).click()
+            ActionChains(driver).send_keys(Keys.ESCAPE).perform()
             return
         return
 
@@ -168,32 +170,11 @@ class UberEats:
                 pass
         return results
 
-    def get_payment(self, store, qdate=None):
-        if isinstance(qdate, type(None)):
-            qdate = datetime.date.today() - datetime.timedelta(
-                days=(datetime.date.today().weekday() + 7)
-            )
-        else:
-            qdate = qdate - datetime.timedelta(days=(qdate.weekday()))
-        if not self._driver:
-            self._login()
-        driver = self._driver._driver
-        driver.get(
-            "https://restaurant.uber.com/v2/payments?restaurantUUID=" +
-            store_map[store]
-        )
-        print("**",qdate)
+    def extract_deposit(self, driver, store, qdate):
         notes = ""
         lines = []
-
-        qdate2 = qdate - datetime.timedelta(days=(qdate.weekday() + 7))
-
-        sleep(3)
-        self._click_date(qdate2)
-        sleep(3)
-        self._click_date(qdate)
-        sleep(3)
-
+        # see what dates we are examining
+        report_start, report_end = driver.find_element(By.XPATH, '//input[@aria-label="Select a date range."]').get_attribute('value').split("–")
         # earnings
         earnings = driver.find_element(By.XPATH, '//li[@tabindex="-1"]')
         lis = earnings.find_element(By.XPATH, '..').find_elements(By.TAG_NAME, 'li')
@@ -209,10 +190,10 @@ class UberEats:
                 txt[i+1]) for i in range(0, len(txt), 2)
         }
         print(invoice)
-
+        
         # third party
         lines.append(["1260", 'Sales', invoice['Sales']])
-
+        
         # tips
         if 'Customer contributions' in invoice:
             lines.append(["2220", 'Customer contributions', invoice['Customer contributions']])
@@ -228,7 +209,7 @@ class UberEats:
         lines.append(["6261", 'Uber fees', invoice['Uber fees']])
         notes += str(txt)
         print(lines)
-
+        
         # pay day is always Monday
         result = [
             "Uber Eats",
@@ -237,6 +218,34 @@ class UberEats:
             lines,
             store,
         ]
+        print(report_start, report_end, qdate, qdate-datetime.timedelta(days=(qdate.weekday() - 8)))
+        return result
+
+    def get_payment(self, store, qdate=None):
+        if isinstance(qdate, type(None)):
+            qdate = datetime.date.today() - datetime.timedelta(
+                days=(datetime.date.today().weekday() + 7)
+            )
+        else:
+            qdate = qdate - datetime.timedelta(days=(qdate.weekday()))
+        if not self._driver:
+            self._login()
+        driver = self._driver._driver
+        driver.get(
+            "https://restaurant.uber.com/v2/payments?restaurantUUID=" +
+            store_map[store]
+        )
+        print("**",qdate)
+
+        qdate2 = qdate - datetime.timedelta(days=(qdate.weekday() + 7))
+
+        sleep(3)
+        self._click_date(qdate2)
+        sleep(3)
+        self._click_date(qdate)
+        sleep(3)
+
+        result = self.extract_deposit(driver, store, qdate)
         return result
 
 

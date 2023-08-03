@@ -500,7 +500,8 @@ class Flexepos:
         while qdate >= start_date:
             try:
                 daily_journal = self.getDailyJournal(stores, qdate.strftime("%m%d%Y"))
-            except:
+            except Exception as ex:
+                print(ex)
                 sleep(1)
                 continue
             for store in stores:

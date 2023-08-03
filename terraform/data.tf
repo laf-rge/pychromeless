@@ -1,3 +1,7 @@
+data "lastpass_secret" "ezcater_lp" {
+  id = var.settings.ezcater_cred
+}
+
 data "lastpass_secret" "flexepos_lp" {
   id = var.settings.flexepos_cred
 }

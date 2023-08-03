@@ -479,6 +479,7 @@ def vendor_lookup(gl_vendor_name):
             "GenPro" : Vendor.where("DisplayName like 'General Produce'", qb=CLIENT)[0],
             "SYSFRA" : Vendor.where("DisplayName like 'Sysco San%'", qb=CLIENT)[0],
             "SYSSAC" : Vendor.where("DisplayName like 'Sysco Sac%'", qb=CLIENT)[0],
+            "SAL"   : Vendor.where("DisplayName like 'Sala%'", qb=CLIENT)[0],
         }
     return vendor[gl_vendor_name]
 

@@ -215,15 +215,19 @@ class Crunchtime:
                             and invoice_date.year >= 2020
                         ):
                             vendor = qb.vendor_lookup("PAPER")
+                        elif i[3].strip() in ['20358', '20395']:
+                            #hotfix for store to store
+                            vendor = None
                         else:
                             vendor = qb.vendor_lookup(i[3].strip())
                         notes = notes_header + "\n" + row[2]
                         continue
                     elif row[1] == "Total: ":
                         # send invoice
-                        qb.sync_bill(
-                            vendor, invoice_num, invoice_date, notes, items, str(store)
-                        )
+                        if vendor: #skip if store to store
+                            qb.sync_bill(
+                                vendor, invoice_num, invoice_date, notes, items, str(store)
+                            )
                         continue
                     else:
                         # map GL code to WMC accounting code

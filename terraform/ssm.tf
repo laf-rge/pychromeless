@@ -1,3 +1,15 @@
+resource "aws_ssm_parameter" "ezuser" {
+  name  = "/${terraform.workspace}/ezcater/user"
+  type  = "String"
+  value = data.lastpass_secret.ezcater_lp.username
+  tags  = local.common_tags
+}
+resource "aws_ssm_parameter" "ezpass" {
+  name  = "/${terraform.workspace}/ezcater/password"
+  type  = "SecureString"
+  value = data.lastpass_secret.ezcater_lp.password
+  tags  = local.common_tags
+}
 resource "aws_ssm_parameter" "fpuser" {
   name  = "/${terraform.workspace}/flexepos/user"
   type  = "String"
