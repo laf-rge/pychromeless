@@ -8,15 +8,24 @@ import qb
 import base64
 import email
 import io
+import re
 from wmcgdrive import WMCGdrive
 from tips import Tips
 from ubereats import UberEats
 from doordash import Doordash
 from grubhub import Grubhub
 from flexepos import Flexepos
+from ezcater import EZCater
 from ssm_parameter_store import SSMParameterStore
 from functools import partial
 from operator import itemgetter
+from decimal import Decimal
+from locale import LC_NUMERIC, atof, setlocale
+
+# warning! this won't work if we multiply
+TWOPLACES = Decimal(10) ** -2
+setlocale(LC_NUMERIC, "")
+pattern = re.compile(r"\d+\.\d\d")
 
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
     import chromedriver_binary
@@ -40,8 +49,8 @@ def third_party_deposit_handler(*args, **kwargs):
         results.extend(u.get_payments(['20395'], datetime.date(2023,7,10), end_date))
         g = Grubhub()
         results.extend(g.get_payments(start_date, end_date))
-        e = ezcater.EZCater()
-        results.extend(u.get_payments(stores, start_date, end_Date))
+        e = EZCater()
+        results.extend(e.get_payments(stores, start_date, end_date))
     finally:
         for result in results:
             qb.sync_third_party_deposit(*result)
@@ -84,6 +93,36 @@ def daily_sales_handler(*args, **kwargs):
                 qb.create_daily_sales(txdate, journal)
                 print(txdate)
                 retry = 0
+                subject = ""
+                message = ""
+                for store in stores:
+                    if journal[store]["Bank Deposits"] is None or journal[store]["Bank Deposits"] == "":
+                        subject += f"{store} "
+                        message += f"{store} is missing a deposit for {str(txdate)}\n"
+                    payins = journal[store]["Payins"].strip()
+                    if payins.count("\n") > 0:
+                        amount = Decimal(0)
+                        for payin_line in payins.split("\n")[1:]:
+                            if payin_line.startswith("TOTAL"):
+                                continue
+                            amount = amount + Decimal(atof(pattern.search(payin_line).group()))
+                        if amount.quantize(TWOPLACES) > Decimal(150):
+                            send_email(f"High pay-in detected {store}", f"{store} - ${amount.quantize(TWOPLACES)}\n{payins}")
+                    else:
+                        line.Amount = 0
+                if subject != "":
+                    subject += f" missing deposit for {str(txdate)}"
+                    send_email(subject, f"""
+Folks,
+I couldn't find a depsoit for the following dates for these stores:
+{message}
+Please correct this and re-run.
+
+Thanks,
+Josiah
+(aka The Robot)""")
+
+
             except Exception as ex:
                 print("error " + str(txdate))
                 print(ex)
@@ -109,49 +148,17 @@ def online_cc_fee(*args, **kwargs):
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
     return {"statusCode": 200, "body": "Success"}
 
-
-def daily_journal_handler(*args, **kwargs):
+def send_email(subject, message, recipients = None):
     parameters = SSMParameterStore(prefix="/prod")["email"]
-    yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
-    receiver_emails = parameters["receiver_email"].split(', ')
     from_email = parameters["from_email"]
-    subject = "Daily Journal Report {}".format(yesterday.strftime("%m/%d/%Y"))
+    #overwrite the recipients if provided
+    if recipients is not None:
+        receiver_emails = recipients
+    else:
+        receiver_emails = parameters["receiver_email"].split(', ')
     charset = "UTF-8"
-
-    dj = Flexepos()
-    drawer_opens = dict()
-    drawer_opens = dj.getDailyJournal(
-        stores, yesterday.strftime("%m%d%Y")
-    )
-
-    gdrive = WMCGdrive()
-    for store in stores:
-        gdrive.upload("{0}-{1}_daily_journal.txt".format(str(yesterday.date()), store), drawer_opens[store].encode('utf-8'), 'text/plain')
-
     client = boto3.client('ses')
-    message = "Wagoner Management Corp.\n\nCash Drawer Opens:\n"
-
-    for store, journal in drawer_opens.items():
-        message = "{}{}: {}\n" "".format(
-            message, store, journal.count("Cash Drawer Open")
-        )
-
-    message += "\n\nMissing Punches:\n"
-
-    t = Tips()
-    for time in t.getMissingPunches():
-        user = t._users[time['user_id']]
-        message = "{}{}, {} : {} - {}\n".format(message,
-            user['last_name'], user['first_name'],
-            t._locations[time['location_id']]['name'],
-            time['start_time']
-        )
-    message += "\n\nMeal Period Violations:\n"
-    for item in sorted(t.getMealPeriodViolations(stores, yesterday), key=itemgetter('store', 'start_time')):
-            message += (f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n")
-    message += "\n\nThanks!\nJosiah (aka The Robot)"
-
-    response = client.send_email(Destination={
+    return client.send_email(Destination={
         'ToAddresses':  receiver_emails,
         },
         Message={
@@ -175,6 +182,45 @@ def daily_journal_handler(*args, **kwargs):
         # # following line
         # ConfigurationSetName=CONFIGURATION_SET,
         )
+
+def daily_journal_handler(*args, **kwargs):
+    yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
+    
+    subject = "Daily Journal Report {}".format(yesterday.strftime("%m/%d/%Y"))
+
+    dj = Flexepos()
+    drawer_opens = dict()
+    drawer_opens = dj.getDailyJournal(
+        stores, yesterday.strftime("%m%d%Y")
+    )
+
+    gdrive = WMCGdrive()
+    for store in stores:
+        gdrive.upload("{0}-{1}_daily_journal.txt".format(str(yesterday.date()), store), drawer_opens[store].encode('utf-8'), 'text/plain')
+
+    message = "Wagoner Management Corp.\n\nCash Drawer Opens:\n"
+
+    for store, journal in drawer_opens.items():
+        message = "{}{}: {}\n" "".format(
+            message, store, journal.count("Cash Drawer Open")
+        )
+
+    message += "\n\nMissing Punches:\n"
+
+    t = Tips()
+    for time in t.getMissingPunches():
+        user = t._users[time['user_id']]
+        message = "{}{}, {} : {} - {}\n".format(message,
+            user['last_name'], user['first_name'],
+            t._locations[time['location_id']]['name'],
+            time['start_time']
+        )
+    message += "\n\nMeal Period Violations:\n"
+    for item in sorted(t.getMealPeriodViolations(stores, yesterday), key=itemgetter('store', 'start_time')):
+            message += (f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n")
+    message += "\n\nThanks!\nJosiah (aka The Robot)"
+
+    response = send_email(subject, message)
 
     return {"statusCode": 200, "body": response}
 

@@ -90,8 +90,9 @@ class Tips:
         output = BytesIO()
         workbook = openpyxl.Workbook()
         workbook.remove(workbook.active)
-        f = flexepos.Flexepos()  
-        tip_totals = f.getTips(stores, span_dates[0], span_dates[1])
+        f = flexepos.Flexepos()
+        # remove the non inclusive dates as flexepos is inclusive on the end
+        tip_totals = f.getTips(stores, span_dates[0], span_dates[1] - datetime.timedelta(days=1))
         times = self.getTimes(stores, datetime.date(tip_date.year, tip_date.month, 1), pay_period)
 
         for store in stores:
