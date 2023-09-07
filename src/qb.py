@@ -60,7 +60,7 @@ detail_map = OrderedDict(
 )
 
 gl_code_map = {
-    "1700": "1995",  # security deposit
+    "1700": "1980",  # security deposit
     "2400": "6236",  # Sales Tax Payable
     "4000": "1301",  # Sales (stouborn soda?)
     "5010": "1301",  # Food Other
