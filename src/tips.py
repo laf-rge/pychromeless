@@ -68,7 +68,11 @@ class Tips:
 
     def getTimes(self, stores, year_month_date, pay_period=0):
         span_dates = self.payperiod_dates(pay_period, year_month_date)
-        self._times = self._a.get('/times',params={"start":span_dates[0].isoformat(),"end":span_dates[1].isoformat()})
+        self._times = self._a.get('/times',params={
+            "start":span_dates[0].isoformat(),
+            "end":span_dates[1].isoformat(),
+            "location_id": ",".join([str(self._stores[key]['id']) for key in stores if key in self._stores])
+            })
     
         rv = {}
         for store in stores:
@@ -79,7 +83,66 @@ class Tips:
                 rv[store][time['user_id']] = user_times
 
         return rv
-    
+
+    def attendanceReport(self, stores, start_date, end_date):
+        self._shifts = self._a.get('/shifts', params={
+            "start":start_date.isoformat(),
+            "end":end_date.isoformat(),
+            "location_id": ",".join([str(self._stores[key]['id']) for key in stores if key in self._stores])
+            })
+
+        self._times = self._a.get('/times',params={
+            "start":start_date.isoformat(),
+            "end":end_date.isoformat(),
+            "location_id": ",".join([str(self._stores[key]['id']) for key in stores if key in self._stores])
+            })
+
+        text_csv = []
+
+        text_csv.append('Store,Name,Shift Time,Clock-in Time,Late/Early,Type'.split(','))
+
+        shift_lookup = {entry['id']: entry for entry in self._shifts['shifts']}
+        users_lookup = {entry['id']: entry for entry in self._shifts['users']}
+        done = defaultdict(list)
+        for time in self._times['times']:
+            if time['shift_id'] in shift_lookup:
+                shift_start = datetime.datetime.strptime(shift_lookup[time['shift_id']]['start_time'],  WHENIWORK_DATE_FORMAT)
+                clock_in = datetime.datetime.strptime(time['start_time'], WHENIWORK_DATE_FORMAT)
+                user = users_lookup[time['user_id']]
+                hash_str = str(time['user_id'])+str(shift_start.date())
+                #find the earliest clock in for this person/date
+                if  hash_str in done:
+                    clock_in = min([clock_in]+done[hash_str])
+                if abs((shift_start-clock_in).total_seconds() // 60) > 5:
+                    minutes = (shift_start-clock_in).total_seconds() // 60
+                    text_csv.append([
+                        self._locations[time['location_id']]['name'],
+                        f"{user['last_name']}, {user['first_name']}",
+                        f"{shift_start.strftime('%Y-%m-%d %H:%M:%S')}",
+                        f"{clock_in.strftime('%Y-%m-%d %H:%M:%S')}", 
+                        str(minutes),
+                        'early' if minutes > 0 else 'late'
+                        ])
+                done[hash_str].append(shift_start)
+            else:
+                #print(f"no shift for time {time['shift_id']}")
+                pass
+        
+        missed_shifts = set(shift_lookup.keys()).difference({x['shift_id'] for x in self._times['times']})
+        for shift_id in missed_shifts:
+            shift = shift_lookup[shift_id]
+            user = users_lookup[shift['user_id']]
+            text_csv.append([
+                self._locations[shift['location_id']]['name'],
+                f"{user['last_name']}, {user['first_name']}",
+                f"\"{datetime.datetime.strptime(shift['start_time'], WHENIWORK_DATE_FORMAT).strftime('%Y-%m-%d %H:%M:%S')}\"",
+                'N/A',
+                'N/A',
+                'no show on shift'
+                ])
+
+        return text_csv
+
     def emailTips(self, stores, tip_date, pay_period=0):
         span_dates = self.payperiod_dates(pay_period, tip_date)
         parameters = SSMParameterStore(prefix="/prod")["email"]

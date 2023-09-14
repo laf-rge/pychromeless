@@ -105,19 +105,18 @@ def daily_sales_handler(*args, **kwargs):
                                 continue
                             amount = amount + Decimal(atof(pattern.search(payin_line).group()))
                         if amount.quantize(TWOPLACES) > Decimal(150):
-                            send_email(f"High pay-in detected {store}", f"{store} - ${amount.quantize(TWOPLACES)}\n{payins}")
+                            send_email(f"<pre>High pay-in detected {store}", f"{store} - ${amount.quantize(TWOPLACES)}\n{payins}</pre>")
                     else:
                         line.Amount = 0
                 if subject != "":
                     subject += f" missing deposit for {str(txdate)}"
                     send_email(subject, f"""
-Folks,
-I couldn't find a depsoit for the following dates for these stores:
-{message}
-Please correct this and re-run.
-
-Thanks,
-Josiah
+Folks,<br/>
+I couldn't find a depsoit for the following dates for these stores:<br/>
+<pre>{message}</pre>
+Please correct this and re-run.<br/><br/>
+Thanks,<br/>
+Josiah<br/>
 (aka The Robot)""")
 
 
@@ -149,6 +148,17 @@ def online_cc_fee(*args, **kwargs):
 def send_email(subject, message, recipients = None):
     parameters = SSMParameterStore(prefix="/prod")["email"]
     from_email = parameters["from_email"]
+    style_tag = """
+    <style>
+      table,
+      th,
+      td {
+        padding: 10px;
+        border: 1px solid black;
+        border-collapse: collapse;
+      }
+    </style>
+"""
     #overwrite the recipients if provided
     if recipients is not None:
         receiver_emails = recipients
@@ -161,14 +171,14 @@ def send_email(subject, message, recipients = None):
         },
         Message={
         'Body': {
-        #'Html': {
-        #'Charset': charset,
-        #'Data': BODY_HTML,
-        #},
-        'Text': {
+        'Html': {
         'Charset': charset,
-        'Data': message,
+        'Data': f"<html><head><title>{subject}</title>{style_tag}</head><body>{message}</body></html>",
         },
+        #'Text': {
+        #'Charset': charset,
+        #'Data': message,
+        #},
         },
         'Subject': {
         'Charset': charset,
@@ -180,6 +190,22 @@ def send_email(subject, message, recipients = None):
         # # following line
         # ConfigurationSetName=CONFIGURATION_SET,
         )
+
+def attendanceTable(start_date, end_date):
+    t = Tips()
+    data = t.attendanceReport(stores, start_date, end_date)
+    table = "<table>\n<tr>"
+    table += ''.join(f"<th>{str(item)}</th>" for item in data[0])
+    table += "</tr>\n"
+    
+    for row in sorted(data[1:]):
+        table += "<tr>"
+        table += ''.join(f"<td>{str(item)}</td>" for item in row)
+        table += "</tr>\n"
+    
+    table += "</table>\n"
+    return table
+
 
 def daily_journal_handler(*args, **kwargs):
     yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
@@ -196,14 +222,14 @@ def daily_journal_handler(*args, **kwargs):
     for store in stores:
         gdrive.upload("{0}-{1}_daily_journal.txt".format(str(yesterday.date()), store), drawer_opens[store].encode('utf-8'), 'text/plain')
 
-    message = "Wagoner Management Corp.\n\nCash Drawer Opens:\n"
+    message = "<h1>Wagoner Management Corp.</h1>\n\n<h2>Cash Drawer Opens:</h2>\n<pre>"
 
     for store, journal in drawer_opens.items():
         message = "{}{}: {}\n" "".format(
             message, store, journal.count("Cash Drawer Open")
         )
 
-    message += "\n\nMissing Punches:\n"
+    message += "</pre>\n\n<h2>Missing Punches:</h2>\n<pre>"
 
     t = Tips()
     for time in t.getMissingPunches():
@@ -213,10 +239,14 @@ def daily_journal_handler(*args, **kwargs):
             t._locations[time['location_id']]['name'],
             time['start_time']
         )
-    message += "\n\nMeal Period Violations:\n"
+    message += "</pre>\n\n<h2>Meal Period Violations:</h2>\n<pre>"
     for item in sorted(t.getMealPeriodViolations(stores, yesterday), key=itemgetter('store', 'start_time')):
-            message += (f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n")
-    message += "\n\nThanks!\nJosiah (aka The Robot)"
+        message += (f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n")
+
+    message += "</pre><h2>Attendance Report:</h2><div>"
+    message += attendanceTable(yesterday, datetime.date.today())
+
+    message += "</div>\n\n<div><pre>Thanks!\nJosiah (aka The Robot)</pre></div>"
 
     response = send_email(subject, message)
 
