@@ -105,7 +105,7 @@ def daily_sales_handler(*args, **kwargs):
                                 continue
                             amount = amount + Decimal(atof(pattern.search(payin_line).group()))
                         if amount.quantize(TWOPLACES) > Decimal(150):
-                            send_email(f"<pre>High pay-in detected {store}", f"{store} - ${amount.quantize(TWOPLACES)}\n{payins}</pre>")
+                            send_email(f"High pay-in detected {store}", f"<pre>{store} - ${amount.quantize(TWOPLACES)}\n{payins}</pre>")
                     else:
                         line.Amount = 0
                 if subject != "":
@@ -208,7 +208,7 @@ def attendanceTable(start_date, end_date):
 
 
 def daily_journal_handler(*args, **kwargs):
-    yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
+    yesterday = datetime.date.today() - datetime.timedelta(days=1)
     
     subject = "Daily Journal Report {}".format(yesterday.strftime("%m/%d/%Y"))
 
@@ -220,7 +220,7 @@ def daily_journal_handler(*args, **kwargs):
 
     gdrive = WMCGdrive()
     for store in stores:
-        gdrive.upload("{0}-{1}_daily_journal.txt".format(str(yesterday.date()), store), drawer_opens[store].encode('utf-8'), 'text/plain')
+        gdrive.upload("{0}-{1}_daily_journal.txt".format(str(yesterday), store), drawer_opens[store].encode('utf-8'), 'text/plain')
 
     message = "<h1>Wagoner Management Corp.</h1>\n\n<h2>Cash Drawer Opens:</h2>\n<pre>"
 

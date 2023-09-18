@@ -140,7 +140,7 @@ class Tips:
                 'N/A',
                 'no show on shift'
                 ])
-
+        
         return text_csv
 
     def emailTips(self, stores, tip_date, pay_period=0):
