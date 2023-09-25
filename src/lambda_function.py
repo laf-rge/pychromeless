@@ -107,7 +107,7 @@ def daily_sales_handler(*args, **kwargs):
                         if amount.quantize(TWOPLACES) > Decimal(150):
                             send_email(f"High pay-in detected {store}", f"<pre>{store} - ${amount.quantize(TWOPLACES)}\n{payins}</pre>")
                     else:
-                        line.Amount = 0
+                        amount = Decimal(0)
                 if subject != "":
                     subject += f" missing deposit for {str(txdate)}"
                     send_email(subject, f"""
