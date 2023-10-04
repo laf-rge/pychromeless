@@ -67,24 +67,22 @@ class UberEats:
         driver.find_element(By.ID, "PASSWORD").send_keys(
             self._parameters["password"] + Keys.RETURN
         )
-        sleep(12)
+        sleep(5)
         # for element, pin in zip(
         #     driver.find_elements(By.XPATH, "//input"), self._parameters["pin"]
         # ):
         #     element.send_keys(pin)
         # driver.find_element(By.XPATH, "//button").click()
         # sleep(10)
-        input("pause...")
+        #input("pause...")
         return
 
     def __get_month_year(self):
         driver = self._driver._driver
         sleep(2)
-        month_ele = driver.find_element(By.XPATH, '//button[@aria-label="Previous month."]'
-                                             ).find_element(By.XPATH, "following-sibling::*")
-        month = month_ele.text.split(' ')[0]
-        month_ele = month_ele.find_element(By.XPATH, "following-sibling::*")
-        year = month_ele.text.split(' ')[0]
+        month = driver.find_element(By.XPATH, '//button[@aria-label="Previous month."]/following-sibling::*').text
+        print(month)
+        year = driver.find_element(By.XPATH, '//button[@aria-label="Previous month."]/following-sibling::*/following-sibling::*').text
         month = self._month_to_num[month]
         year = int(year)
         return month, year
@@ -105,12 +103,11 @@ class UberEats:
 
             while (True):
                 try:
-                    sleep(5)
                     year = self.__get_month_year()[1]
                     break
-                except:
+                except Exception as ex:
                     print("get year failed")
-                    pass
+                    raise ex
             while year != qdate.year:
                 if year > qdate.year:
                     print("moving back a month - year search")
@@ -139,10 +136,12 @@ class UberEats:
                             '//button[@aria-label="Next month."]'
                         ).click()
                     month = self.__get_month_year()[0]
-            except Exception:
+            except Exception as ex:
                 print("month search failed trying anyway")
-                pass
+                raise ex
             print('//div[contains(@aria-label, "{}")]'.format(date_text))
+            driver.find_element(By.XPATH, '//div[contains(@aria-label, "{}")]'.format(date_text)).click()
+            sleep(2)
             driver.find_element(By.XPATH, '//div[contains(@aria-label, "{}")]'.format(date_text)).click()
             ActionChains(driver).send_keys(Keys.ESCAPE).perform()
             return
