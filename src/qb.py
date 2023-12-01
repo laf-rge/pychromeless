@@ -61,7 +61,7 @@ detail_map = OrderedDict(
 
 gl_code_map = {
     "1700": "1980",  # security deposit
-    "2400": "6236",  # Sales Tax Payable
+    "2400": "6280",  # Sales Tax Payable
     "4000": "1201",  # Sales (stouborn soda?)
     "5010": "1201",  # Food Other
     "5010.1": "1201",  # Bread
@@ -81,13 +81,13 @@ gl_code_map = {
     "6293": "5301",  # Min Order Charge -> COGS - Delivery
     "6291": "5301",  # Fule Surcharge -> COGS - Delivery
     "6340": "5301",  # Ops: Miscellaneous
-    "8026": "6236",
+    "8026": "6280",
     "6290": "1201"  # Ops
 }  # Sales and Use Tax
 
 gl_code_map_to_cogs = {
     "1700": "1995",  # security deposit
-    "2400": "6236",  # Sales Tax Payable
+    "2400": "6280",  # Sales Tax Payable
     "4000": "5102",  # Sales (stouborn soda?)
     "5010": "5103",  # Food Other
     "5010.1": "5104",  # Bread
@@ -106,8 +106,8 @@ gl_code_map_to_cogs = {
     "6245": "6056",  # Kitchen - Cleaning Supplies
     "6293": "5301",  # Min Order Charge -> COGS - Delivery
     "6340": "5301",  # Ops: Miscellaneous
-    "8026": "6236",
-}  # Sales and Use Tax
+    "8026": "6280",  # Sales and Use Tax
+}  
 
 account_ref = None
 
