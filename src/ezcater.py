@@ -64,13 +64,13 @@ class EZCater():
         lines = []
         deposit_date = datetime.datetime.strptime(data["sentOn"], "%Y-%m-%d").date()
 
-        lines.append(["1260", 'Food Total', f"{data['accountingTotals']['food']}"])
-        lines.append(["2210", 'Sales Tax', f"{data['accountingTotals']['salesTax']}"])
-        lines.append(["6261", 'Delivery Fees', f"{data['accountingTotals']['deliveryFees']}"])
-        lines.append(["6261", 'Commission', f"-{data['accountingTotals']['marketplaceCommission']}"])
-        lines.append(["2220", 'Tips', f"{data['accountingTotals']['tips']}"])
-        lines.append(["6120", 'Credit Card Fees', f"-{data['accountingTotals']['creditCardFees']}"])
-        lines.append(["6261", 'ezDispatch Charges & Misc. Fees', f"{data['accountingTotals']['miscFees']}"])
+        lines.append(["1360", 'Food Total', f"{data['accountingTotals']['food']}"])
+        lines.append(["2310", 'Sales Tax', f"{data['accountingTotals']['salesTax']}"])
+        lines.append(["6310", 'Delivery Fees', f"{data['accountingTotals']['deliveryFees']}"])
+        lines.append(["6310", 'Commission', f"-{data['accountingTotals']['marketplaceCommission']}"])
+        lines.append(["2320", 'Tips', f"{data['accountingTotals']['tips']}"])
+        lines.append(["6210", 'Credit Card Fees', f"-{data['accountingTotals']['creditCardFees']}"])
+        lines.append(["6310", 'ezDispatch Charges & Misc. Fees', f"{data['accountingTotals']['miscFees']}"])
 
         result = [
             "EZ Cater",

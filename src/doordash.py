@@ -88,29 +88,29 @@ class Doordash:
                 notes = json.dumps(dict(zip(header, row)))
                 lines = []
                 lines.append(
-                    ["1260", "SUBTOTAL", row[header.index("Subtotal")]]
+                    ["1360", "SUBTOTAL", row[header.index("Subtotal")]]
                 )
                 lines.append(
-                    ["1260", "TAX_SUBTOTAL",
+                    ["1360", "TAX_SUBTOTAL",
                     row[header.index("Tax")]]
                     )
                 lines.append(
                     [
-                    "6261",
+                    "6310",
                     "COMMISSION",
                     "-" + row[header.index("Commission")],
                     ]
                 )
                 lines.append(
                     [
-                            "6260",
+                            "4830",
                             "error charges",
                             "-" + row[header.index("Error Charges")],
                         ]
                 )
                 lines.append(
                         [
-                            "6260",
+                            "4830",
                             "adjustments",
                             # are these positive? "-" +
                             row[header.index("Adjustments")],
@@ -190,29 +190,29 @@ class Doordash:
                         notes = json.dumps(dict(zip(header, row)))
                         lines = []
                         lines.append(
-                            ["1260", "SUBTOTAL", row[header.index("SUBTOTAL")]]
+                            ["1360", "SUBTOTAL", row[header.index("SUBTOTAL")]]
                         )
                         lines.append(
-                            ["1260", "TAX_SUBTOTAL",
+                            ["1360", "TAX_SUBTOTAL",
                              row[header.index("TAX_SUBTOTAL")]]
                         )
                         lines.append(
                             [
-                                "6261",
+                                "6310",
                                 "COMMISSION",
                                 "-" + row[header.index("COMMISSION")],
                             ]
                         )
                         lines.append(
                             [
-                                "6260",
+                                "4830",
                                 "error charges",
                                 "-" + row[header.index("error charges")],
                             ]
                         )
                         lines.append(
                             [
-                                "6260",
+                                "4830",
                                 "adjustments",
                                 # are these positive? "-" +
                                 row[header.index("adjustments")],

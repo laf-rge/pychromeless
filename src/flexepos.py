@@ -482,11 +482,11 @@ class Flexepos:
                    
                     giftcardsales = soup.find("table" , attrs={"id": "j_id125"})
                     if giftcardsales:
-                        lines.append(["1230", "sold", "-" + giftcardsales.find_all("tr")[4].find_all("td")[2].text.strip()])
+                        lines.append(["1330", "sold", "-" + giftcardsales.find_all("tr")[4].find_all("td")[2].text.strip()])
                     giftcardredeemed = soup.find("table" , attrs={"id": "j_id176"})
                     
                     if giftcardredeemed:
-                        lines.append(["1230", "instore", giftcardredeemed.find_all("tr")[1].find_all("td")[-3].text.strip()])               
+                        lines.append(["1330", "instore", giftcardredeemed.find_all("tr")[1].find_all("td")[-3].text.strip()])               
                     if len(lines) > 0:
                         results.append(["Jersey Mikes Franchise System", step_date, notes, lines, store])
                 step_date = step_date + datetime.timedelta(days=7)

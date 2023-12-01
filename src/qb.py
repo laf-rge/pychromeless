@@ -62,50 +62,50 @@ detail_map = OrderedDict(
 gl_code_map = {
     "1700": "1980",  # security deposit
     "2400": "6236",  # Sales Tax Payable
-    "4000": "1301",  # Sales (stouborn soda?)
-    "5010": "1301",  # Food Other
-    "5010.1": "1301",  # Bread
-    "5010.2": "1301",  # Chips
-    "5010.3": "1301",  # Cookies
-    "5010.5": "1301",  # Meat
-    "5010.6": "1301",  # Cheese
-    "5020": "1301",  # Paper
-    "5030": "1301",  # Beverages Other
-    "5030.1": "1301",  # Beverages Fountain
-    "5030.2": "1301",  # Beverages Bottles
-    "5040": "1301",  # Produce
-    "6243": "6720",  # Kitchen
-    "6244": "6730",  # Kitchen - Gloves
-    "6245": "6720",  # Kitchen - Cleaning Supplies
-    "6253": "1301",  # Ops: Comps -> inventory uncat
-    "6293": "5500",  # Min Order Charge -> COGS - Delivery
-    "6291": "5500",  # Fule Surcharge -> COGS - Delivery
-    "6340": "5500",  # Ops: Miscellaneous
+    "4000": "1201",  # Sales (stouborn soda?)
+    "5010": "1201",  # Food Other
+    "5010.1": "1201",  # Bread
+    "5010.2": "1201",  # Chips
+    "5010.3": "1201",  # Cookies
+    "5010.5": "1201",  # Meat
+    "5010.6": "1201",  # Cheese
+    "5020": "1201",  # Paper
+    "5030": "1201",  # Beverages Other
+    "5030.1": "1201",  # Beverages Fountain
+    "5030.2": "1201",  # Beverages Bottles
+    "5040": "1201",  # Produce
+    "6243": "6056",  # Kitchen
+    "6244": "6057",  # Kitchen - Gloves
+    "6245": "6056",  # Kitchen - Cleaning Supplies
+    "6253": "1201",  # Ops: Comps -> inventory uncat
+    "6293": "5301",  # Min Order Charge -> COGS - Delivery
+    "6291": "5301",  # Fule Surcharge -> COGS - Delivery
+    "6340": "5301",  # Ops: Miscellaneous
     "8026": "6236",
-    "6290": "1301"  # Ops
+    "6290": "1201"  # Ops
 }  # Sales and Use Tax
 
 gl_code_map_to_cogs = {
     "1700": "1995",  # security deposit
     "2400": "6236",  # Sales Tax Payable
     "4000": "5102",  # Sales (stouborn soda?)
-    "5010": "5200",  # Food Other
-    "5010.1": "5201",  # Bread
-    "5010.2": "5202",  # Chips
-    "5010.3": "5203",  # Cookies
-    "5010.4": "5207",  # Soup
-    "5010.5": "5204",  # Meat
-    "5010.6": "5205",  # Cheese
-    "5020": "5300",  # Paper
+    "5010": "5103",  # Food Other
+    "5010.1": "5104",  # Bread
+    "5010.2": "5105",  # Chips
+    "5010.3": "5106",  # Cookies
+    "5010.4": "5110",  # Soup
+    "5010.5": "5107",  # Meat
+    "5010.6": "5108",  # Cheese
+    "5020": "5201",  # Paper
     "5030": "5100",  # Beverages Other
     "5030.1": "5101",  # Beverages Fountain
     "5030.2": "5102",  # Beverages Bottles
-    "5040": "5206",  # Produce
-    "6243": "6720",  # Kitchen
-    "6244": "6730",  # Kitchen - Gloves
-    "6245": "6720",  # Kitchen - Cleaning Supplies
-    "6293": "5500",  # Min Order Charge -> COGS - Delivery
-    "6340": "5500",  # Ops: Miscellaneous
+    "5040": "5109",  # Produce
+    "6243": "6056",  # Kitchen
+    "6244": "6057",  # Kitchen - Gloves
+    "6245": "6056",  # Kitchen - Cleaning Supplies
+    "6293": "5301",  # Min Order Charge -> COGS - Delivery
+    "6340": "5301",  # Ops: Miscellaneous
     "8026": "6236",
 }  # Sales and Use Tax
 
@@ -128,12 +128,12 @@ def update_royalty(year, month, payment_data):
 
     for store, payment_info in payment_data.items():
         lines = [
-            [wmc_account_ref(6335), "", payment_info["Royalty"]],
-            [wmc_account_ref(6105), "", payment_info["Advertising"]],
-            [wmc_account_ref(6107), "", payment_info["Media"]],
-            [wmc_account_ref(6106), "", payment_info["CoOp"]],
+            [wmc_account_ref(6041), "", payment_info["Royalty"]],
+            [wmc_account_ref(6042), "", payment_info["Advertising"]],
+            [wmc_account_ref(6044), "", payment_info["Media"]],
+            [wmc_account_ref(6043), "", payment_info["CoOp"]],
             [
-                wmc_account_ref(2270),
+                wmc_account_ref(2370),
                 "",
                 "-"
                 + str(
@@ -263,7 +263,7 @@ def enter_online_cc_fee(year, month, payment_data):
 
     supplier = Vendor.where("DisplayName like 'Jersey Mikes%'", qb=CLIENT)[0]
     for store, payment_info in payment_data.items():
-        lines = [[wmc_account_ref(6120), "", payment_data[store]["Total Fees"]]]
+        lines = [[wmc_account_ref(6210), "", payment_data[store]["Total Fees"]]]
 
         sync_bill(
             supplier,
@@ -420,7 +420,7 @@ def sync_inventory(year, month, lines, notes, total, department):
 
     line = JournalEntryLine()
     line.JournalEntryLineDetail = JournalEntryLineDetail()
-    line.JournalEntryLineDetail.AccountRef = wmc_account_ref('1301')
+    line.JournalEntryLineDetail.AccountRef = wmc_account_ref('1201')
     line.JournalEntryLineDetail.DepartmentRef = None if not department else store_refs[department]
     line.JournalEntryLineDetail.PostingType = "Credit"
     line.LineNum = line_num
@@ -593,7 +593,7 @@ def fix_deposit():
                 order_by='TxnDate', start_position=r_count, max_results=1000, qb=CLIENT)
             for bill in bills:
                 if not hasattr(bill, 'DepartmentRef') or bill.DepartmentRef is None or bill.DepartmentRef.name == '20025':
-                    if hasattr(bill.Line[0], 'DepositLineDetail') and bill.Line[0].DepositLineDetail.AccountRef.name=="1230 Other Current Assets:Gift Cards":
+                    if hasattr(bill.Line[0], 'DepositLineDetail') and bill.Line[0].DepositLineDetail.AccountRef.name=="1330 Other Current Assets:Gift Cards":
                         if '20358' in bill.Line[0].Description:
                             print(bill.Line[0].Description,bill.DepartmentRef.name)
                             modify_queue.append(bill)

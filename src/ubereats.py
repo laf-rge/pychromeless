@@ -191,21 +191,21 @@ class UberEats:
         print(invoice)
         
         # third party
-        lines.append(["1260", 'Sales', invoice['Sales']])
+        lines.append(["1360", 'Sales', invoice['Sales']])
         
         # tips
         if 'Customer contributions' in invoice:
-            lines.append(["2220", 'Customer contributions', invoice['Customer contributions']])
+            lines.append(["2320", 'Customer contributions', invoice['Customer contributions']])
         if 'Customer Refunds' in invoice:
-            lines.append(["6260", 'Customer Refunds',
+            lines.append(["4830", 'Customer Refunds',
                       invoice['Customer Refunds']])
         if 'Marketing' in invoice:
             lines.append(["6101", 'Uber Marketing', invoice['Marketing']])
         #if 'Marketplace Facilitator (MF) Tax' in invoice:
-        #    lines.append(["2210", 'Marketplace Facilitator Tax', invoice['Marketplace Facilitator (MF) Tax']])
+        #    lines.append(["2310", 'Marketplace Facilitator Tax', invoice['Marketplace Facilitator (MF) Tax']])
         #if 'Total Taxes' in invoice:
-        #    lines.append(["1260", 'Total Taxes', invoice['Total Taxes']])
-        lines.append(["6261", 'Uber fees', invoice['Uber fees']])
+        #    lines.append(["1360", 'Total Taxes', invoice['Total Taxes']])
+        lines.append(["6310", 'Uber fees', invoice['Uber fees']])
         notes += str(txt)
         print(lines)
         

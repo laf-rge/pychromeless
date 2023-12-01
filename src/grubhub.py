@@ -90,15 +90,15 @@ class Grubhub:
 
                 for i in range(0, len(txt), 2):
                     if i == 0:
-                        lines.append(["1260", txt[0], self.convert_num(txt[1])])
+                        lines.append(["1360", txt[0], self.convert_num(txt[1])])
                     elif i == len(txt) - 2:
                         continue  # skip the deposit total
                     else:
-                        lines.append(["6261", txt[i], self.convert_num(txt[i + 1])])
+                        lines.append(["6310", txt[i], self.convert_num(txt[i + 1])])
 
                 refunds = driver.find_elements(By.XPATH, "//h5")[0]
                 if refunds.text.split()[0] == "Refunds":
-                    # lines.append(['6260',txt[i],self.convert_num(txt[i+1])])
+                    # lines.append(['4830',txt[i],self.convert_num(txt[i+1])])
                     notes += str(
                         refunds.find_element(By.XPATH, "following-sibling::*").text
                     )
