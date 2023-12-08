@@ -69,6 +69,7 @@ gl_code_map = {
     "5010.3": "1201",  # Cookies
     "5010.5": "1201",  # Meat
     "5010.6": "1201",  # Cheese
+    "5010.8": "1201",  # Retail - (CPR Jar)
     "5020": "1201",  # Paper
     "5030": "1201",  # Beverages Other
     "5030.1": "1201",  # Beverages Fountain
@@ -96,6 +97,7 @@ gl_code_map_to_cogs = {
     "5010.4": "5110",  # Soup
     "5010.5": "5107",  # Meat
     "5010.6": "5108",  # Cheese
+    "5010.8": "5103", #CPR Jar
     "5020": "5201",  # Paper
     "5030": "5100",  # Beverages Other
     "5030.1": "5101",  # Beverages Fountain
