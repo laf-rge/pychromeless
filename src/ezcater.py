@@ -27,7 +27,7 @@ class EZCater():
         # lougin
         driver.get("https://www.ezcater.com/caterer_portal/sign_in")
         driver.find_element(By.ID, "contact_username").send_keys(
-            self._parameters["user"]
+            self._parameters["user"] + Keys.ENTER
         )
         driver.find_element(By.ID, "contact_password").send_keys(
             self._parameters["password"] + Keys.ENTER
