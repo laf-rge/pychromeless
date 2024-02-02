@@ -24,10 +24,10 @@ class EZCater():
         driver.set_page_load_timeout(45)
 
         # logout
-        # lougin
+        # login
         driver.get("https://www.ezcater.com/caterer_portal/sign_in")
         driver.find_element(By.ID, "contact_username").send_keys(
-            self._parameters["user"] + Keys.ENTER
+            self._parameters["user"]
         )
         driver.find_element(By.ID, "contact_password").send_keys(
             self._parameters["password"] + Keys.ENTER

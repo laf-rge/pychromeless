@@ -67,17 +67,18 @@ class Doordash:
 
         driver.find_element(By.XPATH, 
                 '//button[@data-anchor-id="TimeFrameSelector"]').click()
-        driver.find_element(By.XPATH, 
-                '//label[normalize-space()="Last 30 Days"]/../..'
-                ).find_element(By.TAG_NAME, 'input').click()
         sleep(1)
+        #driver.find_element(By.XPATH, 
+        #        '//label[normalize-space()="Last 30 Days"]/../..'
+        #        ).find_element(By.TAG_NAME, 'input').click()
+        #sleep(1)
         driver.find_element(By.XPATH, 
                 '//button[normalize-space()="Apply"]').click()
         sleep(2)
 
         header = None
-        # Payout ID, Status, Store, Payout Date, Transaction Dates,
-        # Subtotal, Tax, Commission, Fees, Error Charges, Adjustments,
+        # Payout ID, Status, Store, Payout date, Transaction Dates,
+        # Subtotal, Tax, Commission, Fees, Error charges, Adjustments,
         # Net Payout
 
         for tr in driver.find_elements(By.TAG_NAME, 'tr'):
@@ -105,7 +106,7 @@ class Doordash:
                     [
                             "4830",
                             "error charges",
-                            "-" + row[header.index("Error Charges")],
+                            "-" + row[header.index("Error charges")],
                         ]
                 )
                 lines.append(
@@ -124,7 +125,7 @@ class Doordash:
                         ]
                 )
                 txdate = datetime.datetime.strptime(
-                            row[header.index("Payout Date")],
+                            row[header.index("Payout date")],
                             "%m/%d/%Y").date()
                 pending = row[header.index("Status")] == "Pending"
                 if start_date <= txdate <= end_date and not pending:

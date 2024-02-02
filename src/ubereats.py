@@ -67,14 +67,14 @@ class UberEats:
         driver.find_element(By.ID, "PASSWORD").send_keys(
             self._parameters["password"] + Keys.RETURN
         )
-        sleep(5)
+        sleep(2)
         # for element, pin in zip(
         #     driver.find_elements(By.XPATH, "//input"), self._parameters["pin"]
         # ):
         #     element.send_keys(pin)
         # driver.find_element(By.XPATH, "//button").click()
         # sleep(10)
-        #input("pause...")
+        input("pause...")
         return
 
     def __get_month_year(self):
@@ -89,6 +89,7 @@ class UberEats:
 
     def _click_date(self, qdate):
         driver = self._driver._driver
+        ActionChains(driver).send_keys(Keys.RETURN).perform()
         start_date = driver.find_element(By.XPATH, '//input[@aria-label="Select a date range."]').get_attribute('value').split()[0]
         driver.find_element(By.XPATH, '//input[@aria-label="Select a date range."]')
         while start_date != str(qdate).replace('-','/'):

@@ -30,7 +30,7 @@ pattern = re.compile(r"\d+\.\d\d")
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
     import chromedriver_binary
 
-stores = ['20358', '20395']
+stores = ['20358', '20395', '20400']
 
 
 def third_party_deposit_handler(*args, **kwargs):
@@ -79,7 +79,7 @@ def daily_sales_handler(*args, **kwargs):
         ]
     else:
         txdates = [datetime.date.today() - datetime.timedelta(days=1)]
-    # txdates = [datetime.date(2022,4,15)]
+    # txdates = [datetime.date(2023,12,2)]
     # txdates = map(partial(datetime.date, 2022, 4), range(6, 31))
 
     dj = Flexepos()

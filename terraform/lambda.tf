@@ -4,7 +4,7 @@ data "aws_ecr_repository" "wmc_ecr" {
 
 data "aws_ecr_image" "wmc_image" {
   repository_name = "wmc"
-  most_recent       = true
+  most_recent     = true
 }
 
 data "aws_caller_identity" "current" {
@@ -17,14 +17,14 @@ resource "aws_lambda_function" "invoice_sync" {
   function_name = "invoice-sync-${terraform.workspace}"
   description   = "[${terraform.workspace}] Syncs the last 30 days of invoices from CrunchTime into Quickbooks"
 
-  role             = aws_iam_role.flexepos_lambda_role.arn
-  package_type     = "Image"
-  image_uri        = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
+  role         = aws_iam_role.flexepos_lambda_role.arn
+  package_type = "Image"
+  image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.invoice_sync_handler"]
   }
-  timeout          = 480
-  memory_size      = 960
+  timeout     = 480
+  memory_size = 960
 
   environment {
     variables = local.lambda_env_invoice_sync
@@ -37,14 +37,14 @@ resource "aws_lambda_function" "daily_journal" {
   function_name = "daily-journal-${terraform.workspace}"
   description   = "[${terraform.workspace}] Sends an email report on store operations."
 
-  role             = aws_iam_role.flexepos_lambda_role.arn
-  package_type     = "Image"
-  image_uri        = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
+  role         = aws_iam_role.flexepos_lambda_role.arn
+  package_type = "Image"
+  image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.daily_journal_handler"]
   }
-  timeout          = 480
-  memory_size      = 960
+  timeout     = 480
+  memory_size = 960
 
   environment {
     variables = local.lambda_env_daily_journal
@@ -57,14 +57,14 @@ resource "aws_lambda_function" "daily_sales" {
   function_name = "daily-sales-${terraform.workspace}"
   description   = "[${terraform.workspace}] Enters daily sales for yesterday."
 
-  role             = aws_iam_role.flexepos_lambda_role.arn
-  package_type     = "Image"
-  image_uri        = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
+  role         = aws_iam_role.flexepos_lambda_role.arn
+  package_type = "Image"
+  image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.daily_sales_handler"]
   }
-  timeout          = 480
-  memory_size      = 960
+  timeout     = 480
+  memory_size = 960
 
   environment {
     variables = local.lambda_env_daily_sales
@@ -77,14 +77,14 @@ resource "aws_lambda_function" "email_tips" {
   function_name = "email-tips-${terraform.workspace}"
   description   = "[${terraform.workspace}] Emails tips spreadsheet."
 
-  role             = aws_iam_role.flexepos_lambda_role.arn
-  package_type     = "Image"
-  image_uri        = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
+  role         = aws_iam_role.flexepos_lambda_role.arn
+  package_type = "Image"
+  image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.email_tips_handler"]
   }
-  timeout          = 480
-  memory_size      = 960
+  timeout     = 480
+  memory_size = 960
 
   environment {
     variables = local.lambda_env_email_tips
@@ -97,14 +97,14 @@ resource "aws_lambda_function" "transform_tips" {
   function_name = "transform_tips-${terraform.workspace}"
   description   = "[${terraform.workspace}] Takes the excel tip spreadsheet and returns the Gusto CSV for import."
 
-  role             = aws_iam_role.flexepos_lambda_role.arn
-  package_type     = "Image"
-  image_uri        = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
+  role         = aws_iam_role.flexepos_lambda_role.arn
+  package_type = "Image"
+  image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.transform_tips_handler"]
   }
-  timeout          = 480
-  memory_size      = 960
+  timeout     = 480
+  memory_size = 960
 
   environment {
     variables = local.lambda_env_transform_tips
@@ -117,14 +117,14 @@ resource "aws_lambda_function" "get_mpvs" {
   function_name = "get-mpvs-${terraform.workspace}"
   description   = "[${terraform.workspace}] Returns MPVs for a specific pay period or the whole month."
 
-  role             = aws_iam_role.flexepos_lambda_role.arn
-  package_type     = "Image"
-  image_uri        = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
+  role         = aws_iam_role.flexepos_lambda_role.arn
+  package_type = "Image"
+  image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.get_mpvs_handler"]
   }
-  timeout          = 480
-  memory_size      = 960
+  timeout     = 480
+  memory_size = 960
 
   environment {
     variables = local.lambda_env_get_mpvs

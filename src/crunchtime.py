@@ -56,7 +56,8 @@ class Crunchtime:
         driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(store)
         driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(Keys.ENTER)
         driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(Keys.ENTER)
-        WebDriverWait(driver, 10).until(lambda driver: driver.switch_to.active_element.tag_name == 'div')
+        #WebDriverWait(driver, 10).until(lambda driver: driver.switch_to.active_element.tag_name == 'div')
+        sleep(4)
         ActionChains(driver).send_keys(Keys.ESCAPE).perform()
         return
 
@@ -86,6 +87,9 @@ class Crunchtime:
                   ):
                 ActionChains(driver).move_to_element(element).click().send_keys(Keys.ARROW_DOWN).send_keys(Keys.RETURN).perform()
                 loop_detection += 1
+            if loop_detection == 30:
+                print(f"Valid end date not found skikking {store}")
+                return
             self._export(driver, False)
         finally:
             driver.quit()

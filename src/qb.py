@@ -51,6 +51,7 @@ detail_map = OrderedDict(
         ("Online Credit Card", ("37", -1)),
         ("InStore Credit Card", ("28", -1)),
         ("Third Party", ("42", -1)),
+        ("Remote Payment", ("45", -1)),
         ("Gift Cards Sold", ("34", 1)),
         ("Sales Tax", ("15", 1)),
         ("Donations", ("36", 1)),
