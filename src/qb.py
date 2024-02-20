@@ -50,7 +50,10 @@ detail_map = OrderedDict(
         ("Gift Card", ("30", -1)),
         ("Online Credit Card", ("37", -1)),
         ("InStore Credit Card", ("28", -1)),
-        ("Third Party", ("42", -1)),
+        ("DoorDash", ("46", -1)),
+        ("GrubHub", ("48", -1)),
+        ("UberEats", ("47", -1)),
+        ("EZ Cater", ("49", -1)),
         ("Remote Payment", ("45", -1)),
         ("Gift Cards Sold", ("34", 1)),
         ("Sales Tax", ("15", 1)),
@@ -110,7 +113,15 @@ gl_code_map_to_cogs = {
     "6293": "5301",  # Min Order Charge -> COGS - Delivery
     "6340": "5301",  # Ops: Miscellaneous
     "8026": "6280",  # Sales and Use Tax
-}  
+}
+
+third_party_map = {
+    "DoorDash": "1361",
+    "UberEats": "1362",
+    "GrubHub": "1363",
+    "EZ Cater": "1364",
+    "Total": "1360",
+}
 
 account_ref = None
 
@@ -193,20 +204,20 @@ def create_daily_sales(txdate, daily_reports):
         line_num = 1
         amount_total = Decimal(0.0)
         for line_item, line_id in detail_map.items():
-            daily_report[line_item]
             line = SalesItemLine()
             line.LineNum = line_num
-            line.Description = "{} imported from ({})".format(
-                line_item, daily_report[line_item]
-            )
-            if daily_report[line_item]:
+            if line_item in daily_report and daily_report[line_item]:
                 if daily_report[line_item].startswith("N"):
                     line.Amount = 0
                 else:
                     line.Amount = atof(daily_report[line_item].strip("$")) * line_id[1]
                 amount_total += Decimal(line.Amount)
+                line.Description = "{} imported from ({})".format(
+                    line_item, daily_report[line_item]
+                )
             else:
                 line.Amount = 0
+                line.Description = "Nothing captured."
             line.SalesItemLineDetail = SalesItemLineDetail()
             item = Item.query("select * from Item where id = '{}'".format(line_id[0]),
                 qb=CLIENT)[0]
@@ -379,6 +390,53 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
     except Exception as ex:
         print(bill.to_json())
         print(ex)
+
+def sync_third_party_transactions(year, month, payment_data):
+    refresh_session()
+    
+    store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
+
+    for store, store_data in payment_data.items():
+        entries = JournalEntry.where(
+            "DocNumber = 'tp-{0}-{2}-{1}'".format(store, str(month).zfill(2),
+                                            year), qb=CLIENT)
+        if len(entries) == 0:
+            # create the JournalEntry
+            jentry = JournalEntry()
+            jentry.DocNumber = 'tp-{0}-{2}-{1}'.format(store, str(month).zfill(2),
+                                                    year, qb=CLIENT)
+        else:
+            jentry = entries[0]
+
+        jentry.TxnDate = qb_date_format(
+            datetime.date(year, month, calendar.monthrange(year, month)[1]))
+        jentry.PrivateNote = str(payment_data)
+
+        # clear the lines
+        jentry.Line = []
+
+        line_num = 1
+
+        for payment_name, amount in store_data.items():
+            line = JournalEntryLine()
+            line.JournalEntryLineDetail = JournalEntryLineDetail()
+            line.JournalEntryLineDetail.AccountRef = wmc_account_ref(third_party_map[payment_name])
+            line.JournalEntryLineDetail.DepartmentRef = None if not store else store_refs[store]
+            line.JournalEntryLineDetail.PostingType = "Debit"
+            line.LineNum = line_num
+            line.Id = line_num
+            line.Amount = Decimal(atof(amount)).quantize(TWOPLACES)
+            if payment_name == "Total":
+                line.JournalEntryLineDetail.PostingType = "Credit"
+            line.Description = payment_name
+            line_num += 1
+            jentry.Line.append(line)
+        
+        try:
+            jentry.save(qb=CLIENT)
+        except Exception as ex:
+            print(jentry.to_json())
+            print(ex)
 
 
 def sync_inventory(year, month, lines, notes, total, department):

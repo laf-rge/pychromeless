@@ -19,8 +19,15 @@ from ssm_parameter_store import SSMParameterStore
 from webdriver_wrapper import WebDriverWrapper
 
 store_map = {'20025': '631548',
-             '20358': '23026026'}
+             '20358': '23026026',
+             '20395': '24923975',
+             '20400': '26026815',
+             '20407': '',
+             }
 
+store_inv_map = {v: k for k, v in store_map.items()}
+
+company_id = '1431'
 
 class Doordash:
     """"""
@@ -62,7 +69,7 @@ class Doordash:
 
         
         driver.get(
-            "https://merchant-portal.doordash.com/merchant/financials?business_id=1431"
+            f"https://merchant-portal.doordash.com/merchant/financials?business_id={company_id}"
         )
 
         driver.find_element(By.XPATH, 
@@ -76,72 +83,34 @@ class Doordash:
                 '//button[normalize-space()="Apply"]').click()
         sleep(2)
 
-        header = None
-        # Payout ID, Status, Store, Payout date, Transaction Dates,
-        # Subtotal, Tax, Commission, Fees, Error charges, Adjustments,
-        # Net Payout
+        payout_ids = []
+        for tr in driver.find_elements(By.TAG_NAME, 'tr')[1:]:
+            payout_ids.append(tr.find_elements(By.TAG_NAME, 'td')[1].find_element(By.TAG_NAME, 'a').get_attribute('href'))
 
-        for tr in driver.find_elements(By.TAG_NAME, 'tr'):
-            row = []
-            for td in tr.find_elements(By.TAG_NAME, 'td'):
-                row.append(td.text.replace('$', '').replace('-', ''))
-            if header:
-                notes = json.dumps(dict(zip(header, row)))
-                lines = []
-                lines.append(
-                    ["1360", "SUBTOTAL", row[header.index("Subtotal")]]
-                )
-                lines.append(
-                    ["1360", "TAX_SUBTOTAL",
-                    row[header.index("Tax")]]
-                    )
-                lines.append(
-                    [
-                    "6310",
-                    "COMMISSION",
-                    "-" + row[header.index("Commission")],
-                    ]
-                )
-                lines.append(
-                    [
-                            "4830",
-                            "error charges",
-                            "-" + row[header.index("Error charges")],
-                        ]
-                )
-                lines.append(
-                        [
-                            "4830",
-                            "adjustments",
-                            # are these positive? "-" +
-                            row[header.index("Adjustments")],
-                        ]
-                )
-                lines.append(
-                        [
-                            "6101",
-                            "marketing fees",
-                            "-" + row[header.index("Fees")],
-                        ]
-                )
-                txdate = datetime.datetime.strptime(
-                            row[header.index("Payout date")],
-                            "%m/%d/%Y").date()
-                pending = row[header.index("Status")] == "Pending"
-                if start_date <= txdate <= end_date and not pending:
-                    store = ""
-                    results.append(
-                            [
-                                "Doordash",
-                                txdate,
-                                notes,
-                                lines,
-                                row[header.index("Store")].replace(")","")[-5:]
-                            ]
-                    )
-            else:
-                header = [x.text for x in
-                            tr.find_elements(By.TAG_NAME, 'th')]
+        for payout_id in payout_ids:
+            lines = []
+            driver.get(f"{payout_id}?business_id={company_id}")
+            sleep(2)
+
+            txdate_str = driver.find_element(By.XPATH, "//*[contains(text(),'Payout on')]").text
+            txdate = datetime.datetime.strptime(txdate_str, "Payout on %B %d, %Y").date()
+            notes = driver.find_element(By.XPATH, "//*[starts-with(text(),'Sales')]/../../../../../../../..").text.split('\n')
+            notes = {notes[i]: notes[i+1].replace('$','') for i in range(0,len(notes), 2)}
+            lines.append(["1361", "Subtotal", notes['Subtotal']])
+            lines.append(["1361", "Tax", notes['Tax']])
+            lines.append(["6310", "DoorDash services", notes['DoorDash services']])
+            lines.append(["4830", "Amendments", notes['Amendments']])
+            #customer fees and customer fees tax not implemented
+            
+            results.append(
+                [
+                    "Doordash",
+                    txdate,
+                    str(notes),
+                    lines,
+                    store_inv_map[payout_id.split('/')[7]],
+                ]
+            )
         return results
 
 
@@ -191,10 +160,10 @@ class Doordash:
                         notes = json.dumps(dict(zip(header, row)))
                         lines = []
                         lines.append(
-                            ["1360", "SUBTOTAL", row[header.index("SUBTOTAL")]]
+                            ["1361", "SUBTOTAL", row[header.index("SUBTOTAL")]]
                         )
                         lines.append(
-                            ["1360", "TAX_SUBTOTAL",
+                            ["1361", "TAX_SUBTOTAL",
                              row[header.index("TAX_SUBTOTAL")]]
                         )
                         lines.append(

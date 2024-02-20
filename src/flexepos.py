@@ -45,6 +45,60 @@ class Flexepos:
         )
         return
 
+    def getThirdPartyTransactions(self, stores, year, month):
+        span_dates = [
+            datetime.date(year, month, 1),
+            datetime.date(year, month, calendar.monthrange(year, month)[1])
+        ]
+        span_date_start = span_dates[0].strftime("%m%d%Y")
+        span_date_end = span_dates[1].strftime("%m%d%Y")
+
+        self._login()
+        driver = self._driver._driver
+
+        payment_data = {}
+
+        try:
+            sleep(2)
+            driver.find_element(By.ID, "menu:0:j_id23_header").click()
+            sleep(2)
+            driver.find_element(By.ID, "menu:0:j_id24:13:j_id25").click()
+            sleep(1)
+            for store in stores:
+                payment_data[store] = {}
+                sleep(3)
+                driver.find_element(By.ID, "parameters:store").clear()
+                driver.find_element(By.ID, "parameters:store").send_keys(store)
+                driver.find_element(By.ID, "parameters:startDateCalendarInputDate").clear()
+                driver.find_element(By.ID, 
+                    "parameters:startDateCalendarInputDate"
+                ).send_keys(span_date_start)
+                driver.find_element(By.ID, "parameters:endDateCalendarInputDate").clear()
+                driver.find_element(By.ID, "parameters:endDateCalendarInputDate").send_keys(
+                    span_date_end
+                )
+                driver.find_element(By.ID, "parameters:GroupById").click()
+                Select(
+                    driver.find_element(By.ID, "parameters:GroupById")
+                ).select_by_visible_text("Summary")
+                driver.find_element(By.ID, "parameters:submit").click()
+                sleep(5)
+                soup = BeautifulSoup(driver.page_source, features="html.parser")
+                online_table = soup.find("table", attrs={"class": "table-standard"})
+                if not online_table:
+                    payment_data.pop(store, None)
+                    continue
+                rows = online_table.find_all("tr")
+                for row in rows[1:]:
+                    r = [ele.text.strip() for ele in row.find_all("td")]
+                    payment_data[store][r[0]] = r[4]
+                driver.find_element(By.ID, "j_id37_switch_off").click()
+        finally:
+            if driver:
+                driver.quit()
+
+        return payment_data
+
     """
     """
 
@@ -189,7 +243,7 @@ class Flexepos:
                     sales_data[store]["Online Gift Card"] = None
                     sales_data[store]["House Account"] = None
                     sales_data[store]["Remote Payment"] = None
-                    sales_data[store]["Third Party"] = None
+                    #sales_data[store]["Third Party"] = None
                 else:
                     row = [ele.text.strip() for ele in rows[4].find_all("td")]
                     sales_data[store]["Cash"] = row[1]
@@ -200,7 +254,8 @@ class Flexepos:
                     sales_data[store]["Online Gift Card"] = row[6]
                     sales_data[store]["House Account"] = row[7]
                     sales_data[store]["Remote Payment"] = row[8]
-                    sales_data[store]["Third Party"] = row[9]
+                    #using new third party breakdown
+                    #sales_data[store]["Third Party"] = row[9]
 
                 # Collected Tax
                 payment_table = soup.find("table", attrs={"id": "TotalTax"})
@@ -278,6 +333,35 @@ class Flexepos:
                 driver.implicitly_wait(5)
                 sales_data[store]["Payouts"] = payouts
 
+                # break down third party
+
+                driver.find_element(By.ID, "menu:0:j_id29_header").click()
+                sleep(2)
+                driver.find_element(By.ID, "menu:0:j_id30:13").click()
+                sleep(1)
+                driver.find_element(By.ID, "parameters:store").clear()
+                driver.find_element(By.ID, "parameters:store").send_keys(store)
+                driver.find_element(By.ID, "parameters:startDateCalendarInputDate").clear()
+                driver.find_element(By.ID, 
+                    "parameters:startDateCalendarInputDate"
+                ).send_keys(tx_date_str)
+                driver.find_element(By.ID, "parameters:endDateCalendarInputDate").clear()
+                driver.find_element(By.ID, "parameters:endDateCalendarInputDate").send_keys(
+                    tx_date_str
+                )
+                driver.find_element(By.ID, "parameters:GroupById").click()
+                Select(
+                    driver.find_element(By.ID, "parameters:GroupById")
+                ).select_by_visible_text("Summary")
+                driver.find_element(By.ID, "parameters:submit").click()
+                sleep(5)
+                soup = BeautifulSoup(driver.page_source, features="html.parser")
+                online_table = soup.find("table", attrs={"class": "table-standard"})
+                if online_table:
+                    rows = online_table.find_all("tr")
+                    for row in rows[1:-1]:
+                        r = [ele.text.strip() for ele in row.find_all("td")]
+                        sales_data[store][r[0]] = r[4]
         finally:
             if driver:
                 driver.quit()

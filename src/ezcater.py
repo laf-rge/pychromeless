@@ -64,7 +64,7 @@ class EZCater():
         lines = []
         deposit_date = datetime.datetime.strptime(data["sentOn"], "%Y-%m-%d").date()
 
-        lines.append(["1360", 'Food Total', f"{data['accountingTotals']['food']}"])
+        lines.append(["1364", 'Food Total', f"{data['accountingTotals']['food']}"])
         lines.append(["2310", 'Sales Tax', f"{data['accountingTotals']['salesTax']}"])
         lines.append(["6310", 'Delivery Fees', f"{data['accountingTotals']['deliveryFees']}"])
         lines.append(["6310", 'Commission', f"-{data['accountingTotals']['marketplaceCommission']}"])

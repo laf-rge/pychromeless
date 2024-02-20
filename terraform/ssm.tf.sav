@@ -102,8 +102,8 @@ resource "aws_ssm_parameter" "from_email" {
 }
 
 resource "aws_ssm_parameter" "gdrive_json" {
-  name = "/${terraform.workspace}/gcp/gdrive"
-  type = "SecureString"
+  name  = "/${terraform.workspace}/gcp/gdrive"
+  type  = "SecureString"
   value = data.lastpass_secret.gdrive_json.note
-  tags = local.common_tags
+  tags  = local.common_tags
 }

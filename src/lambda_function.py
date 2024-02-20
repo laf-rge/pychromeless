@@ -80,7 +80,7 @@ def daily_sales_handler(*args, **kwargs):
     else:
         txdates = [datetime.date.today() - datetime.timedelta(days=1)]
     # txdates = [datetime.date(2023,12,2)]
-    # txdates = map(partial(datetime.date, 2022, 4), range(6, 31))
+    # txdates = map(partial(datetime.date, 2024, 1), range(21, 31))
 
     dj = Flexepos()
     for txdate in txdates:

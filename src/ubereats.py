@@ -22,6 +22,8 @@ store_map = {
     '20025': '8d6b329b-4976-4ef7-8411-3a416614a726',
     '20358': 'ee0492bb-edd6-507a-83eb-1d1427e3ff7d',
     '20395': '8fdc747c-dd18-491f-8c3a-317b1b4cab3c',
+    '20400': '6f845016-13f6-41fd-8cd0-08b83157b0d8',
+    '20407': 'b8399c5e-1bbc-4e6c-a897-63121cf7d37c',
 }
 
 
@@ -64,9 +66,9 @@ class UberEats:
             self._parameters["user"] + Keys.RETURN
         )
         sleep(3)
-        driver.find_element(By.ID, "PASSWORD").send_keys(
-            self._parameters["password"] + Keys.RETURN
-        )
+        #driver.find_element(By.ID, "PASSWORD").send_keys(
+        #    self._parameters["password"] + Keys.RETURN
+        #)
         sleep(2)
         # for element, pin in zip(
         #     driver.find_elements(By.XPATH, "//input"), self._parameters["pin"]
@@ -163,7 +165,10 @@ class UberEats:
             try:
                 while qdate < end_date:
                     print(qdate)
-                    results.extend([self.get_payment(store, qdate)])
+                    if store == '20400' and qdate < datetime.date(2024,1,31):
+                        print(f"skipping {store} {qdate}")
+                    else: 
+                        results.extend([self.get_payment(store, qdate)])
                     qdate = qdate + datetime.timedelta(days=7)
             finally:
                 #self._driver._driver.close()
@@ -192,7 +197,7 @@ class UberEats:
         print(invoice)
         
         # third party
-        lines.append(["1360", 'Sales', invoice['Sales']])
+        lines.append(["1362", 'Sales', invoice['Sales']])
         
         # tips
         if 'Customer contributions' in invoice:
@@ -205,7 +210,7 @@ class UberEats:
         #if 'Marketplace Facilitator (MF) Tax' in invoice:
         #    lines.append(["2310", 'Marketplace Facilitator Tax', invoice['Marketplace Facilitator (MF) Tax']])
         #if 'Total Taxes' in invoice:
-        #    lines.append(["1360", 'Total Taxes', invoice['Total Taxes']])
+        #    lines.append(["1361", 'Total Taxes', invoice['Total Taxes']])
         lines.append(["6310", 'Uber fees', invoice['Uber fees']])
         notes += str(txt)
         print(lines)
@@ -228,6 +233,8 @@ class UberEats:
             )
         else:
             qdate = qdate - datetime.timedelta(days=(qdate.weekday()))
+        if store == '20400' and qdate < datetime.date(2024,1,31):
+            qdate = datetime.date(2024,1,31)
         if not self._driver:
             self._login()
         driver = self._driver._driver
@@ -238,6 +245,8 @@ class UberEats:
         print("**",qdate)
 
         qdate2 = qdate - datetime.timedelta(days=(qdate.weekday() + 7))
+        if store == '20400' and qdate2 < datetime.date(2024,1,31):
+            qdate2 = datetime.date(2024,1,31)
 
         sleep(3)
         self._click_date(qdate2)

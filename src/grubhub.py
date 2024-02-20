@@ -64,7 +64,7 @@ class Grubhub:
             input("pause")
             driver = self._driver._driver
             driver.get(
-             "https://restaurant.grubhub.com/financials/deposit-history/3192172,6177240/"
+             "https://restaurant.grubhub.com/financials/deposit-history/3192172,6177240,7583896/"
             )
             sleep(2)
             driver.find_element(By.CLASS_NAME, "date-picker-input__date-button").click()
@@ -90,7 +90,7 @@ class Grubhub:
 
                 for i in range(0, len(txt), 2):
                     if i == 0:
-                        lines.append(["1360", txt[0], self.convert_num(txt[1])])
+                        lines.append(["1363", txt[0], self.convert_num(txt[1])])
                     elif i == len(txt) - 2:
                         continue  # skip the deposit total
                     else:
