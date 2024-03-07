@@ -30,7 +30,7 @@ pattern = re.compile(r"\d+\.\d\d")
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
     import chromedriver_binary
 
-stores = ['20358', '20395', '20400']
+global_stores = ['20358', '20395', '20400', '20407']
 
 
 def third_party_deposit_handler(*args, **kwargs):
@@ -40,30 +40,28 @@ def third_party_deposit_handler(*args, **kwargs):
     results = []
     try:
         dj = Flexepos()
-        results.extend(dj.getGiftCardACH(stores, start_date, end_date))
+        results.extend(dj.getGiftCardACH(global_stores, start_date, end_date))
         d = Doordash()
-        results.extend(d.get_payments(stores, start_date, end_date))
+        results.extend(d.get_payments(global_stores, start_date, end_date))
         u = UberEats()
-        results.extend(u.get_payments(stores, start_date, end_date))
+        results.extend(u.get_payments(global_stores, start_date, end_date))
         g = Grubhub()
         results.extend(g.get_payments(start_date, end_date))
         e = EZCater()
-        results.extend(e.get_payments(stores, start_date, end_date))
+        results.extend(e.get_payments(global_stores, start_date, end_date))
     finally:
         for result in results:
             qb.sync_third_party_deposit(*result)
-            print(result)
-
 
 def invoice_sync_handler(*args, **kwargs):
     yesterday = datetime.date.today() - datetime.timedelta(days=1)
     ct = crunchtime.Crunchtime()
-    ct.process_gl_report(stores)
+    ct.process_gl_report(global_stores)
     if yesterday.day < 6:
         last_month = datetime.date.today() - datetime.timedelta(days=7)
-        ct.process_inventory_report(stores, last_month.year, last_month.month)
+        ct.process_inventory_report(global_stores, last_month.year, last_month.month)
     else:
-        ct.process_inventory_report(stores, yesterday.year, yesterday.month)
+        ct.process_inventory_report(global_stores, yesterday.year, yesterday.month)
     return {"statusCode": 200, "body": "Success"}
 
 
@@ -87,13 +85,22 @@ def daily_sales_handler(*args, **kwargs):
         retry = 5
         while retry:
             try:
+                stores = global_stores.copy()
+                if '20400' in stores and txdate < datetime.date(2024,1,31) :
+                    stores.remove('20400')
+                if '20407' in stores and txdate < datetime.date(2024,3,6):
+                    stores.remove('20407')
                 journal = dj.getDailySales(stores, txdate)
                 qb.create_daily_sales(txdate, journal)
                 print(txdate)
                 retry = 0
                 subject = ""
                 message = ""
-                for store in stores:
+                for store in global_stores:
+                    #store not open guard
+                    if ( store == '20400' and txdate < datetime.date(2024,1,31) ) or (store == '20407' and txdate < datetime.date(2024,3,6)):
+                        print(f'skipping {store} on {txdate}')
+                        continue
                     if journal[store]["Bank Deposits"] is None or journal[store]["Bank Deposits"] == "":
                         subject += f"{store} "
                         message += f"{store} is missing a deposit for {str(txdate)}\n"
@@ -124,7 +131,7 @@ Josiah<br/>
                 print("error " + str(txdate))
                 print(ex)
                 retry -= 1
-    payment_data = dj.getOnlinePayments(stores, txdate.year, txdate.month)
+    payment_data = dj.getOnlinePayments(global_stores, txdate.year, txdate.month)
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
     royalty_data = dj.getRoyaltyReport(
         'wmc',
@@ -141,7 +148,7 @@ def online_cc_fee(*args, **kwargs):
     txdate = datetime.date.today() - datetime.timedelta(days=1)
 
     dj = Flexepos()
-    payment_data = dj.getOnlinePayments(stores, txdate.year, txdate.month)
+    payment_data = dj.getOnlinePayments(global_stores, txdate.year, txdate.month)
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
     return {"statusCode": 200, "body": "Success"}
 
@@ -193,7 +200,7 @@ def send_email(subject, message, recipients = None):
 
 def attendanceTable(start_date, end_date):
     t = Tips()
-    data = t.attendanceReport(stores, start_date, end_date)
+    data = t.attendanceReport(global_stores, start_date, end_date)
     table = "<table>\n<tr>"
     table += ''.join(f"<th>{str(item)}</th>" for item in data[0])
     table += "</tr>\n"
@@ -215,11 +222,11 @@ def daily_journal_handler(*args, **kwargs):
     dj = Flexepos()
     drawer_opens = dict()
     drawer_opens = dj.getDailyJournal(
-        stores, yesterday.strftime("%m%d%Y")
+        global_stores, yesterday.strftime("%m%d%Y")
     )
 
     gdrive = WMCGdrive()
-    for store in stores:
+    for store in global_stores:
         gdrive.upload("{0}-{1}_daily_journal.txt".format(str(yesterday), store), drawer_opens[store].encode('utf-8'), 'text/plain')
 
     message = "<h1>Wagoner Management Corp.</h1>\n\n<h2>Cash Drawer Opens:</h2>\n<pre>"
@@ -240,7 +247,7 @@ def daily_journal_handler(*args, **kwargs):
             time['start_time']
         )
     message += "</pre>\n\n<h2>Meal Period Violations:</h2>\n<pre>"
-    for item in sorted(t.getMealPeriodViolations(stores, yesterday), key=itemgetter('store', 'start_time')):
+    for item in sorted(t.getMealPeriodViolations(global_stores, yesterday), key=itemgetter('store', 'start_time')):
         message += (f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n")
 
     message += "</pre><h2>Attendance Report:</h2><div>"
@@ -265,7 +272,7 @@ def email_tips_handler(*args, **kwargs):
         month = int(event['month'])
         pay_period = int(event['day'])
     t = Tips()
-    t.emailTips(stores, datetime.date(year, month, 5), pay_period)
+    t.emailTips(global_stores, datetime.date(year, month, 5), pay_period)
 
 def decode_upload(event):
     # decoding form-data into bytes
@@ -342,7 +349,7 @@ def get_mpvs_handler(*args, **kwargs):
             except Exception as ex:
                 return {"statusCode": 400, "body": str(e)}
         t = Tips()
-        csv = t.exportMealPeriodViolations(stores, datetime.date(year, month, 5), pay_period)
+        csv = t.exportMealPeriodViolations(global_stores, datetime.date(year, month, 5), pay_period)
     except Exception as e:
         print(e)
         return {"statusCode": 400, "body": str(e)}

@@ -88,7 +88,7 @@ class Crunchtime:
                 ActionChains(driver).move_to_element(element).click().send_keys(Keys.ARROW_DOWN).send_keys(Keys.RETURN).perform()
                 loop_detection += 1
             if loop_detection == 30:
-                print(f"Valid end date not found skikking {store}")
+                print(f"Valid end date not found skipping {store}")
                 return
             self._export(driver, False)
         finally:
