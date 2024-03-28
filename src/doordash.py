@@ -8,6 +8,7 @@ import os
 import zipfile
 import sys
 from time import sleep
+from collections import defaultdict
 
 from bs4 import BeautifulSoup
 from selenium.common.exceptions import NoAlertPresentException, NoSuchElementException
@@ -18,11 +19,11 @@ from selenium.webdriver.support.ui import Select
 from ssm_parameter_store import SSMParameterStore
 from webdriver_wrapper import WebDriverWrapper
 
-store_map = {'20025': '631548',
+store_map = {
              '20358': '23026026',
              '20395': '24923975',
              '20400': '26026815',
-             '20407': '',
+             '20407': '27848178',
              }
 
 store_inv_map = {v: k for k, v in store_map.items()}
@@ -53,7 +54,7 @@ class Doordash:
         )
         driver.find_element(By.XPATH, 
             '//input[@data-anchor-id="IdentityLoginPageEmailField"]'
-        ).send_keys(self._parameters["user"])
+        ).send_keys(self._parameters["user"]+Keys.ENTER)
         driver.find_element(By.XPATH, 
             '//input[@data-anchor-id="IdentityLoginPagePasswordField"]'
         ).send_keys(self._parameters["password"])
@@ -93,6 +94,7 @@ class Doordash:
             sleep(2)
 
             txdate_str = driver.find_element(By.XPATH, "//*[contains(text(),'Payout on')]").text
+            print(txdate_str)
             txdate = datetime.datetime.strptime(txdate_str, "Payout on %B %d, %Y").date()
             notes = driver.find_element(By.XPATH, "//*[starts-with(text(),'Sales')]/../../../../../../../..").text.split('\n')
             notes = {notes[i]: notes[i+1].replace('$','') for i in range(0,len(notes), 2)}
@@ -101,7 +103,9 @@ class Doordash:
             lines.append(["6310", "DoorDash services", notes['DoorDash services']])
             lines.append(["4830", "Amendments", notes['Amendments']])
             #customer fees and customer fees tax not implemented
-            
+            store = store_inv_map.get(payout_id.split('/')[7], None)
+            if store is None:
+                continue
             results.append(
                 [
                     "Doordash",

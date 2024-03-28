@@ -165,7 +165,7 @@ class UberEats:
             try:
                 while qdate < end_date:
                     print(qdate)
-                    if (store == '20400' and qdate < datetime.date(2024,1,31)) or (store == '20407' and qdate < datetime.date(2024,3,6)):
+                    if (store == '20400' and qdate < datetime.date(2024,1,31)) or (store == '20407' and qdate < datetime.date(2024,3,18)):
                         print(f"skipping {store} {qdate}")
                     else: 
                         results.extend([self.get_payment(store, qdate)])
@@ -235,8 +235,8 @@ class UberEats:
             qdate = qdate - datetime.timedelta(days=(qdate.weekday()))
         if store == '20400' and qdate < datetime.date(2024,1,31):
             qdate = datetime.date(2024,1,31)
-        elif store == '20407' and qdate < datetime.date(2024,3,6):
-            qdate = datetime.date(2024,3,6)
+        elif store == '20407' and qdate < datetime.date(2024,3,18):
+            qdate = datetime.date(2024,3,18)
         if not self._driver:
             self._login()
         driver = self._driver._driver
@@ -249,8 +249,8 @@ class UberEats:
         qdate2 = qdate - datetime.timedelta(days=(qdate.weekday() + 7))
         if store == '20400' and qdate2 < datetime.date(2024,1,31):
             qdate2 = datetime.date(2024,1,31)
-        elif store == '20407' and qdate2 < datetime.date(2024,3,6):
-            qdate2 = datetime.date(2024,3,6)
+        elif store == '20407' and qdate2 < datetime.date(2024,3,7):
+            qdate2 = datetime.date(2024,3,7)
 
         sleep(3)
         self._click_date(qdate2)
