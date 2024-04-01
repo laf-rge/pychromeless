@@ -62,7 +62,7 @@ def invoice_sync_handler(*args, **kwargs):
         ct.process_inventory_report(global_stores, last_month.year, last_month.month)
     else:
         ct.process_inventory_report(global_stores, yesterday.year, yesterday.month)
-    return {"statusCode": 200, "body": "Success"}
+    return {"statusCode": 200, "body": "Success", "headers": {"Access-Control-Allow-Origin" : "*"}}
 
 
 def daily_sales_handler(*args, **kwargs):
@@ -141,7 +141,7 @@ Josiah<br/>
         ),
     )
     qb.update_royalty(txdate.year, txdate.month, royalty_data)
-    return {"statusCode": 200, "body": "Success"}
+    return {"statusCode": 200, "body": "Success", "headers": {"Access-Control-Allow-Origin" : "*"}}
 
 
 def online_cc_fee(*args, **kwargs):
@@ -150,7 +150,7 @@ def online_cc_fee(*args, **kwargs):
     dj = Flexepos()
     payment_data = dj.getOnlinePayments(global_stores, txdate.year, txdate.month)
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
-    return {"statusCode": 200, "body": "Success"}
+    return {"statusCode": 200, "body": "Success", "headers": {"Access-Control-Allow-Origin" : "*"}}
 
 def send_email(subject, message, recipients = None):
     parameters = SSMParameterStore(prefix="/prod")["email"]
@@ -257,7 +257,7 @@ def daily_journal_handler(*args, **kwargs):
 
     response = send_email(subject, message)
 
-    return {"statusCode": 200, "body": response}
+    return {"statusCode": 200, "body": response, "headers": {"Access-Control-Allow-Origin" : "*"}}
 
 def email_tips_handler(*args, **kwargs):
     year = datetime.date.today().year
@@ -325,9 +325,11 @@ def transform_tips_handler(*args, **kwargs):
         csv = t.exportTipsTransform(tips_stream)
     except Exception as e:
         print(e)
-        return {"statusCode": 400, "body": str(e)}
+        return {"statusCode": 400, "body": str(e), "headers": {"Access-Control-Allow-Origin" : "*"}}
     return {"statusCode": 200, 'headers': { "Content-type": "text/csv",
-        'Content-disposition': 'attachment; filename=gusto_upload_tips.csv'},"body": csv}
+        'Content-disposition': 'attachment; filename=gusto_upload_tips.csv',  
+        "Access-Control-Allow-Origin" : "*"},
+        "body": csv}
 
 def get_mpvs_handler(*args, **kwargs):
     csv = ""
@@ -347,11 +349,14 @@ def get_mpvs_handler(*args, **kwargs):
                 month = int(multipart_content['month'])
                 pay_period = int(multipart_content['pay_period'])
             except Exception as ex:
-                return {"statusCode": 400, "body": str(e)}
+                return {"statusCode": 400, "body": str(e), "headers": {"Access-Control-Allow-Origin" : "*"}}
         t = Tips()
         csv = t.exportMealPeriodViolations(global_stores, datetime.date(year, month, 5), pay_period)
     except Exception as e:
         print(e)
-        return {"statusCode": 400, "body": str(e)}
+        return {"statusCode": 400, "body": str(e), "headers": {"Access-Control-Allow-Origin" : "*"}}
     return {"statusCode": 200, 'headers': { "Content-type": "text/csv",
-        'Content-disposition': 'attachment; filename=gusto_upload_mpvs.csv'},"body": csv}
+        "Access-Control-Allow-Origin" : "*",
+        'Content-disposition': 'attachment; filename=gusto_upload_mpvs.csv'
+    },
+         "body": csv}
