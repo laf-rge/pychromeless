@@ -13,6 +13,26 @@ data "aws_caller_identity" "current" {
   # the "source_account" on the permission resource.
 }
 
+resource "aws_lambda_function" "authorizer" {
+  function_name = "authorizer-${terraform.workspace}"
+  description   = "[${terraform.workspace}] Sends an email report on store operations."
+
+  role         = aws_iam_role.flexepos_lambda_role.arn
+  package_type = "Image"
+  image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
+  image_config {
+    command = ["validate_token.lambda_handler"]
+  }
+  timeout     = 480
+  memory_size = 960
+
+  environment {
+    variables = local.lambda_env_authorizer
+  }
+
+  tags = local.common_tags
+}
+
 resource "aws_lambda_function" "invoice_sync" {
   function_name = "invoice-sync-${terraform.workspace}"
   description   = "[${terraform.workspace}] Syncs the last 30 days of invoices from CrunchTime into Quickbooks"

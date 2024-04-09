@@ -1,9 +1,9 @@
 // SETTINGS
 terraform {
   required_providers {
-    lastpass = {
-      source = "nrkno/lastpass"
-    }
+    //lastpass = {
+    //  source = "nrkno/lastpass"
+    //}
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"

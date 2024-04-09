@@ -12,3 +12,6 @@ openpyxl
 google-api-python-client
 google-auth-httplib2
 icecream
+pyjwt
+cryptography
+pandas

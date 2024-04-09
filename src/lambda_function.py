@@ -1,6 +1,5 @@
 import calendar
 import datetime
-import json
 import os
 import boto3
 import crunchtime
@@ -9,6 +8,8 @@ import base64
 import email
 import io
 import re
+import traceback
+import pandas as pd
 from wmcgdrive import WMCGdrive
 from tips import Tips
 from ubereats import UberEats
@@ -30,7 +31,7 @@ pattern = re.compile(r"\d+\.\d\d")
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
     import chromedriver_binary
 
-global_stores = ['20358', '20395', '20400', '20407']
+global_stores = ["20358", "20395", "20400", "20407"]
 
 
 def third_party_deposit_handler(*args, **kwargs):
@@ -53,6 +54,7 @@ def third_party_deposit_handler(*args, **kwargs):
         for result in results:
             qb.sync_third_party_deposit(*result)
 
+
 def invoice_sync_handler(*args, **kwargs):
     yesterday = datetime.date.today() - datetime.timedelta(days=1)
     ct = crunchtime.Crunchtime()
@@ -62,34 +64,43 @@ def invoice_sync_handler(*args, **kwargs):
         ct.process_inventory_report(global_stores, last_month.year, last_month.month)
     else:
         ct.process_inventory_report(global_stores, yesterday.year, yesterday.month)
-    return {"statusCode": 200, "body": "Success", "headers": {"Access-Control-Allow-Origin" : "*"}}
+    return {
+        "statusCode": 200,
+        "body": "Success",
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+        },
+    }
 
 
 def daily_sales_handler(*args, **kwargs):
     event = {}
-    if args != None and len(args)>0:
+    if args != None and len(args) > 0:
         event = args[0]
-    if 'year' in event:
-        txdates = [ datetime.date(
-            year = int(event['year']),
-            month = int(event['month']),
-            day = int(event['day']))
+    if "year" in event:
+        txdates = [
+            datetime.date(
+                year=int(event["year"]),
+                month=int(event["month"]),
+                day=int(event["day"]),
+            )
         ]
     else:
         txdates = [datetime.date.today() - datetime.timedelta(days=1)]
     # txdates = [datetime.date(2023,12,2)]
     # txdates = map(partial(datetime.date, 2024, 1), range(21, 31))
-
+    print(txdates)
     dj = Flexepos()
     for txdate in txdates:
         retry = 5
         while retry:
             try:
                 stores = global_stores.copy()
-                if '20400' in stores and txdate < datetime.date(2024,1,31) :
-                    stores.remove('20400')
-                if '20407' in stores and txdate < datetime.date(2024,3,6):
-                    stores.remove('20407')
+                if "20400" in stores and txdate < datetime.date(2024, 1, 31):
+                    stores.remove("20400")
+                if "20407" in stores and txdate < datetime.date(2024, 3, 6):
+                    stores.remove("20407")
                 journal = dj.getDailySales(stores, txdate)
                 qb.create_daily_sales(txdate, journal)
                 print(txdate)
@@ -97,11 +108,16 @@ def daily_sales_handler(*args, **kwargs):
                 subject = ""
                 message = ""
                 for store in global_stores:
-                    #store not open guard
-                    if ( store == '20400' and txdate < datetime.date(2024,1,31) ) or (store == '20407' and txdate < datetime.date(2024,3,6)):
-                        print(f'skipping {store} on {txdate}')
+                    # store not open guard
+                    if (store == "20400" and txdate < datetime.date(2024, 1, 31)) or (
+                        store == "20407" and txdate < datetime.date(2024, 3, 6)
+                    ):
+                        print(f"skipping {store} on {txdate}")
                         continue
-                    if journal[store]["Bank Deposits"] is None or journal[store]["Bank Deposits"] == "":
+                    if (
+                        journal[store]["Bank Deposits"] is None
+                        or journal[store]["Bank Deposits"] == ""
+                    ):
                         subject += f"{store} "
                         message += f"{store} is missing a deposit for {str(txdate)}\n"
                     payins = journal[store]["Payins"].strip()
@@ -110,22 +126,29 @@ def daily_sales_handler(*args, **kwargs):
                         for payin_line in payins.split("\n")[1:]:
                             if payin_line.startswith("TOTAL"):
                                 continue
-                            amount = amount + Decimal(atof(pattern.search(payin_line).group()))
+                            amount = amount + Decimal(
+                                atof(pattern.search(payin_line).group())
+                            )
                         if amount.quantize(TWOPLACES) > Decimal(150):
-                            send_email(f"High pay-in detected {store}", f"<pre>{store} - ${amount.quantize(TWOPLACES)}\n{payins}</pre>")
+                            send_email(
+                                f"High pay-in detected {store}",
+                                f"<pre>{store} - ${amount.quantize(TWOPLACES)}\n{payins}</pre>",
+                            )
                     else:
                         amount = Decimal(0)
                 if subject != "":
                     subject += f" missing deposit for {str(txdate)}"
-                    send_email(subject, f"""
+                    send_email(
+                        subject,
+                        f"""
 Folks,<br/>
 I couldn't find a depsoit for the following dates for these stores:<br/>
 <pre>{message}</pre>
 Please correct this and re-run.<br/><br/>
 Thanks,<br/>
 Josiah<br/>
-(aka The Robot)""")
-
+(aka The Robot)""",
+                    )
 
             except Exception as ex:
                 print("error " + str(txdate))
@@ -134,14 +157,21 @@ Josiah<br/>
     payment_data = dj.getOnlinePayments(global_stores, txdate.year, txdate.month)
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
     royalty_data = dj.getRoyaltyReport(
-        'wmc',
+        "wmc",
         datetime.date(txdate.year, txdate.month, 1),
         datetime.date(
             txdate.year, txdate.month, calendar.monthrange(txdate.year, txdate.month)[1]
         ),
     )
     qb.update_royalty(txdate.year, txdate.month, royalty_data)
-    return {"statusCode": 200, "body": "Success", "headers": {"Access-Control-Allow-Origin" : "*"}}
+    return {
+        "statusCode": 200,
+        "body": "Success",
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+        },
+    }
 
 
 def online_cc_fee(*args, **kwargs):
@@ -150,9 +180,17 @@ def online_cc_fee(*args, **kwargs):
     dj = Flexepos()
     payment_data = dj.getOnlinePayments(global_stores, txdate.year, txdate.month)
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
-    return {"statusCode": 200, "body": "Success", "headers": {"Access-Control-Allow-Origin" : "*"}}
+    return {
+        "statusCode": 200,
+        "body": "Success",
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+        },
+    }
 
-def send_email(subject, message, recipients = None):
+
+def send_email(subject, message, recipients=None):
     parameters = SSMParameterStore(prefix="/prod")["email"]
     from_email = parameters["from_email"]
     style_tag = """
@@ -166,68 +204,72 @@ def send_email(subject, message, recipients = None):
       }
     </style>
 """
-    #overwrite the recipients if provided
+    # overwrite the recipients if provided
     if recipients is not None:
         receiver_emails = recipients
     else:
-        receiver_emails = parameters["receiver_email"].split(', ')
+        receiver_emails = parameters["receiver_email"].split(", ")
     charset = "UTF-8"
-    client = boto3.client('ses')
-    return client.send_email(Destination={
-        'ToAddresses':  receiver_emails,
+    client = boto3.client("ses")
+    return client.send_email(
+        Destination={
+            "ToAddresses": receiver_emails,
         },
         Message={
-        'Body': {
-        'Html': {
-        'Charset': charset,
-        'Data': f"<html><head><title>{subject}</title>{style_tag}</head><body>{message}</body></html>",
-        },
-        #'Text': {
-        #'Charset': charset,
-        #'Data': message,
-        #},
-        },
-        'Subject': {
-        'Charset': charset,
-        'Data': subject,
-        },
+            "Body": {
+                "Html": {
+                    "Charset": charset,
+                    "Data": f"<html><head><title>{subject}</title>{style_tag}</head><body>{message}</body></html>",
+                },
+                #'Text': {
+                #'Charset': charset,
+                #'Data': message,
+                # },
+            },
+            "Subject": {
+                "Charset": charset,
+                "Data": subject,
+            },
         },
         Source=from_email,
         # # If you are not using a configuration set, comment or delete the
         # # following line
         # ConfigurationSetName=CONFIGURATION_SET,
-        )
+    )
+
 
 def attendanceTable(start_date, end_date):
     t = Tips()
     data = t.attendanceReport(global_stores, start_date, end_date)
     table = "<table>\n<tr>"
-    table += ''.join(f"<th>{str(item)}</th>" for item in data[0])
+    table += "".join(f"<th>{str(item)}</th>" for item in data[0])
     table += "</tr>\n"
-    
+
     for row in sorted(data[1:]):
         table += "<tr>"
-        table += ''.join(f"<td>{str(item)}</td>" for item in row)
+        table += "".join(f"<td>{str(item)}</td>" for item in row)
         table += "</tr>\n"
-    
+
     table += "</table>\n"
     return table
 
 
 def daily_journal_handler(*args, **kwargs):
     yesterday = datetime.date.today() - datetime.timedelta(days=1)
-    
+
     subject = "Daily Journal Report {}".format(yesterday.strftime("%m/%d/%Y"))
 
     dj = Flexepos()
     drawer_opens = dict()
-    drawer_opens = dj.getDailyJournal(
-        global_stores, yesterday.strftime("%m%d%Y")
-    )
+    drawer_opens = dj.getDailyJournal(global_stores, yesterday.strftime("%m%d%Y"))
 
     gdrive = WMCGdrive()
     for store in global_stores:
-        gdrive.upload("{0}-{1}_daily_journal.txt".format(str(yesterday), store), drawer_opens[store].encode('utf-8'), 'text/plain')
+        gdrive.upload(
+            "{0}-{1}_daily_journal.txt".format(str(yesterday), store),
+            drawer_opens[store].encode("utf-8"),
+            "text/plain",
+        )
 
     message = "<h1>Wagoner Management Corp.</h1>\n\n<h2>Cash Drawer Opens:</h2>\n<pre>"
 
@@ -240,15 +282,20 @@ def daily_journal_handler(*args, **kwargs):
 
     t = Tips()
     for time in t.getMissingPunches():
-        user = t._users[time['user_id']]
-        message = "{}{}, {} : {} - {}\n".format(message,
-            user['last_name'], user['first_name'],
-            t._locations[time['location_id']]['name'],
-            time['start_time']
+        user = t._users[time["user_id"]]
+        message = "{}{}, {} : {} - {}\n".format(
+            message,
+            user["last_name"],
+            user["first_name"],
+            t._locations[time["location_id"]]["name"],
+            time["start_time"],
         )
     message += "</pre>\n\n<h2>Meal Period Violations:</h2>\n<pre>"
-    for item in sorted(t.getMealPeriodViolations(global_stores, yesterday), key=itemgetter('store', 'start_time')):
-        message += (f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n")
+    for item in sorted(
+        t.getMealPeriodViolations(global_stores, yesterday),
+        key=itemgetter("store", "start_time"),
+    ):
+        message += f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n"
 
     message += "</pre><h2>Attendance Report:</h2><div>"
     message += attendanceTable(yesterday, datetime.date.today())
@@ -257,106 +304,180 @@ def daily_journal_handler(*args, **kwargs):
 
     response = send_email(subject, message)
 
-    return {"statusCode": 200, "body": response, "headers": {"Access-Control-Allow-Origin" : "*"}}
+    return {
+        "statusCode": 200,
+        "body": response,
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+        },
+    }
+
 
 def email_tips_handler(*args, **kwargs):
     year = datetime.date.today().year
     month = datetime.date.today().month
     pay_period = 0
-    
+
+    print(args)
+    print(len(args))
     event = {}
-    if args != None and len(args)>0:
+    if args is not None and len(args) > 0:
         event = args[0]
-    if 'year' in event:
-        year = int(event['year'])
-        month = int(event['month'])
-        pay_period = int(event['day'])
+    if "year" in event:
+        year = int(event["year"])
+        month = int(event["month"])
+        pay_period = int(event["day"])
+    print(year,month,pay_period)
     t = Tips()
     t.emailTips(global_stores, datetime.date(year, month, 5), pay_period)
 
-def decode_upload(event):
+
+def decode_upload(event) -> dict:
     # decoding form-data into bytes
     post_data = base64.b64decode(event["body"])
     # fetching content-type
     try:
         content_type = event["headers"]["Content-Type"]
-    except:
+    except KeyError:
         content_type = event["headers"]["content-type"]
     # concate Content-Type: with content_type from event
     ct = "Content-Type: " + content_type + "\n"
-    
+
     # parsing message from bytes
     msg = email.message_from_bytes(ct.encode() + post_data)
-    
+
     # checking if the message is multipart
     print("Multipart check : ", msg.is_multipart())
     multipart_content = {}
     # if message is multipart
     if msg.is_multipart():
-        
         # retrieving form-data
         for part in msg.get_payload():
             # checking if filename exist as a part of content-disposition header
             if part.get_filename():
                 # fetching the filename
                 file_name = part.get_filename()
+                print(file_name)
             print(part.get_content_type())
-            multipart_content[
-                part.get_param("name", header="content-disposition")
-            ] = part.get_payload(decode=True)
+            print(part.get_param("name", header="content-disposition"))
+            multipart_content[part.get_param("name", header="content-disposition")] = (
+                part.get_payload(decode=True)
+            )
     return multipart_content
 
 
 def transform_tips_handler(*args, **kwargs):
     csv = ""
+    year = datetime.date.today().day
+    month = datetime.date.today().month
+    pay_period = 3
+
     try:
         event = {}
-        if args != None and len(args)==2:
+        if args != None and len(args) == 2:
             event = args[0]
             context = args[1]
         tips_stream = None
-        
-        if 'excel' in kwargs:
+
+        if "excel" in kwargs:
             tips_stream = open("tips-aug.xlsx", "rb")
         else:
-            multipart_content = decode_upload(event) 
-            tips_stream = io.BytesIO(multipart_content.get("file", None))
+            multipart_content = decode_upload(event)
+            print(multipart_content)
+            tips_stream = io.BytesIO(multipart_content.get("file[]", None))
+            if "year" in multipart_content:
+                try:
+                    year = int(multipart_content["year"])
+                    month = int(multipart_content["month"])
+                    pay_period = int(multipart_content["pay_period"])
+                except Exception as ex:
+                    print(traceback.print_exc())
+                    return {
+                        "statusCode": 400,
+                        "body": str(ex),
+                        "headers": {
+                            "Access-Control-Allow-Origin": "*",
+                            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                        },
+                    }
         t = Tips()
-        csv = t.exportTipsTransform(tips_stream)
+        csv_tips = t.exportTipsTransform(tips_stream)
+        if pay_period>=3:
+            csv = csv_tips
+        else:
+            csv_mpvs = t.exportMealPeriodViolations(global_stores, datetime.date(year, month, 5), pay_period)
+            merged_data = pd.merge(pd.read_csv(io.StringIO(csv_tips)), pd.read_csv(io.StringIO(csv_mpvs)),
+                on=['last_name', 'first_name', 'title'], how='outer')
+            csv = merged_data.to_csv(index=False)
+
     except Exception as e:
         print(e)
-        return {"statusCode": 400, "body": str(e), "headers": {"Access-Control-Allow-Origin" : "*"}}
-    return {"statusCode": 200, 'headers': { "Content-type": "text/csv",
-        'Content-disposition': 'attachment; filename=gusto_upload_tips.csv',  
-        "Access-Control-Allow-Origin" : "*"},
-        "body": csv}
+        print(traceback.print_exc())
+        return {
+            "statusCode": 400,
+            "body": str(e),
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+            },
+        }
+    return {
+        "statusCode": 200,
+        "headers": {
+            "Content-type": "text/csv",
+            "Content-disposition": "attachment; filename=gusto_upload_tips.csv",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+        },
+        "body": csv,
+    }
+
 
 def get_mpvs_handler(*args, **kwargs):
     csv = ""
     year = datetime.date.today().year
     month = datetime.date.today().month
     pay_period = 2
-    
+
     try:
         event = {}
-        if args != None and len(args)==2:
+        if args != None and len(args) == 2:
             event = args[0]
             context = args[1]
         multipart_content = decode_upload(event)
-        if 'year' in multipart_content:
+        if "year" in multipart_content:
             try:
-                year = int(multipart_content['year'])
-                month = int(multipart_content['month'])
-                pay_period = int(multipart_content['pay_period'])
+                year = int(multipart_content["year"])
+                month = int(multipart_content["month"])
+                pay_period = int(multipart_content["pay_period"])
             except Exception as ex:
-                return {"statusCode": 400, "body": str(e), "headers": {"Access-Control-Allow-Origin" : "*"}}
+                return {
+                    "statusCode": 400,
+                    "body": str(ex),
+                    "headers": {
+                        "Access-Control-Allow-Origin": "*",
+                        "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                    },
+                }
         t = Tips()
-        csv = t.exportMealPeriodViolations(global_stores, datetime.date(year, month, 5), pay_period)
+        csv = t.exportMealPeriodViolations(
+            global_stores, datetime.date(year, month, 5), pay_period
+        )
     except Exception as e:
         print(e)
-        return {"statusCode": 400, "body": str(e), "headers": {"Access-Control-Allow-Origin" : "*"}}
-    return {"statusCode": 200, 'headers': { "Content-type": "text/csv",
-        "Access-Control-Allow-Origin" : "*",
-        'Content-disposition': 'attachment; filename=gusto_upload_mpvs.csv'
-    },
-         "body": csv}
+        return {
+            "statusCode": 400,
+            "body": str(e),
+            "headers": {"Access-Control-Allow-Origin": "*"},
+        }
+    return {
+        "statusCode": 200,
+        "headers": {
+            "Content-type": "text/csv",
+            "Access-Control-Allow-Origin": "*",
+            "Content-disposition": "attachment; filename=gusto_upload_mpvs.csv",
+            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+        },
+        "body": csv,
+    }
