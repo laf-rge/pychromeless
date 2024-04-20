@@ -25,13 +25,17 @@ class EZCater():
 
         # logout
         # login
-        driver.get("https://www.ezcater.com/caterer_portal/sign_in")
-        driver.find_element(By.ID, "contact_username").send_keys(
-            self._parameters["user"]
-        )
-        driver.find_element(By.ID, "contact_password").send_keys(
-            self._parameters["password"] + Keys.ENTER
-        )
+        try:
+            driver.get("https://www.ezcater.com/caterer_portal/sign_in")
+            driver.find_element(By.ID, "contact_username").send_keys(
+                self._parameters["user"]
+            )
+            driver.find_element(By.ID, "password").send_keys(
+                self._parameters["password"] + Keys.ENTER
+            )    
+        except:
+            input("login exception...")
+
         WebDriverWait(driver, 45)
 
     def get_payments(self, stores, start_date, end_date):

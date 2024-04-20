@@ -33,8 +33,22 @@ if os.environ.get("AWS_EXECUTION_ENV") is not None:
 
 global_stores = ["20358", "20395", "20400", "20407"]
 
+def create_response(status_code: int, body: str, content_type: str ='application/json', filename: str = None)  -> dict:
+    headers = {
+            "Content-type": content_type,
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+            
+        }
+    if filename is not None:
+        headers['Content-Disposition'] = f"attachment; filename={filename}"
+    return {
+        "statusCode": status_code,
+        "body": body,
+        "headers": headers,
+    }
 
-def third_party_deposit_handler(*args, **kwargs):
+def third_party_deposit_handler(*args, **kwargs) -> dict:
     start_date = datetime.date.today() - datetime.timedelta(days=28)
     end_date = datetime.date.today()
     # start_date = datetime.date(2022, 4, 1)
@@ -53,9 +67,9 @@ def third_party_deposit_handler(*args, **kwargs):
     finally:
         for result in results:
             qb.sync_third_party_deposit(*result)
+    return create_response(200, "Success")
 
-
-def invoice_sync_handler(*args, **kwargs):
+def invoice_sync_handler(*args, **kwargs) -> dict:
     yesterday = datetime.date.today() - datetime.timedelta(days=1)
     ct = crunchtime.Crunchtime()
     ct.process_gl_report(global_stores)
@@ -64,19 +78,11 @@ def invoice_sync_handler(*args, **kwargs):
         ct.process_inventory_report(global_stores, last_month.year, last_month.month)
     else:
         ct.process_inventory_report(global_stores, yesterday.year, yesterday.month)
-    return {
-        "statusCode": 200,
-        "body": "Success",
-        "headers": {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-        },
-    }
+    return create_response(200, "Success")
 
-
-def daily_sales_handler(*args, **kwargs):
+def daily_sales_handler(*args, **kwargs) -> dict:
     event = {}
-    if args != None and len(args) > 0:
+    if args is not None and len(args) > 0:
         event = args[0]
     if "year" in event:
         txdates = [
@@ -88,7 +94,7 @@ def daily_sales_handler(*args, **kwargs):
         ]
     else:
         txdates = [datetime.date.today() - datetime.timedelta(days=1)]
-    # txdates = [datetime.date(2023,12,2)]
+    # txdates = [datetime.date(2024,3,9)]
     # txdates = map(partial(datetime.date, 2024, 1), range(21, 31))
     print(txdates)
     dj = Flexepos()
@@ -164,31 +170,15 @@ Josiah<br/>
         ),
     )
     qb.update_royalty(txdate.year, txdate.month, royalty_data)
-    return {
-        "statusCode": 200,
-        "body": "Success",
-        "headers": {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-        },
-    }
+    return create_response(200, "Success")
 
-
-def online_cc_fee(*args, **kwargs):
+def online_cc_fee(*args, **kwargs) -> dict:
     txdate = datetime.date.today() - datetime.timedelta(days=1)
 
     dj = Flexepos()
     payment_data = dj.getOnlinePayments(global_stores, txdate.year, txdate.month)
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
-    return {
-        "statusCode": 200,
-        "body": "Success",
-        "headers": {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-        },
-    }
-
+    return create_response(200, "Success")
 
 def send_email(subject, message, recipients=None):
     parameters = SSMParameterStore(prefix="/prod")["email"]
@@ -237,8 +227,7 @@ def send_email(subject, message, recipients=None):
         # ConfigurationSetName=CONFIGURATION_SET,
     )
 
-
-def attendanceTable(start_date, end_date):
+def attendanceTable(start_date, end_date) -> str:
     t = Tips()
     data = t.attendanceReport(global_stores, start_date, end_date)
     table = "<table>\n<tr>"
@@ -253,8 +242,7 @@ def attendanceTable(start_date, end_date):
     table += "</table>\n"
     return table
 
-
-def daily_journal_handler(*args, **kwargs):
+def daily_journal_handler(*args, **kwargs) -> dict:
     yesterday = datetime.date.today() - datetime.timedelta(days=1)
 
     subject = "Daily Journal Report {}".format(yesterday.strftime("%m/%d/%Y"))
@@ -304,17 +292,9 @@ def daily_journal_handler(*args, **kwargs):
 
     response = send_email(subject, message)
 
-    return {
-        "statusCode": 200,
-        "body": response,
-        "headers": {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-        },
-    }
+    return create_response(200, response)
 
-
-def email_tips_handler(*args, **kwargs):
+def email_tips_handler(*args, **kwargs) -> dict:
     year = datetime.date.today().year
     month = datetime.date.today().month
     pay_period = 0
@@ -332,7 +312,7 @@ def email_tips_handler(*args, **kwargs):
     t = Tips()
     t.emailTips(global_stores, datetime.date(year, month, 5), pay_period)
 
-
+# https://github.com/srcecde/aws-tutorial-code/blob/master/lambda/lambda_api_multipart.py
 def decode_upload(event) -> dict:
     # decoding form-data into bytes
     post_data = base64.b64decode(event["body"])
@@ -366,8 +346,7 @@ def decode_upload(event) -> dict:
             )
     return multipart_content
 
-
-def transform_tips_handler(*args, **kwargs):
+def transform_tips_handler(*args, **kwargs) -> dict:
     csv = ""
     year = datetime.date.today().day
     month = datetime.date.today().month
@@ -393,14 +372,7 @@ def transform_tips_handler(*args, **kwargs):
                     pay_period = int(multipart_content["pay_period"])
                 except Exception as ex:
                     print(traceback.print_exc())
-                    return {
-                        "statusCode": 400,
-                        "body": str(ex),
-                        "headers": {
-                            "Access-Control-Allow-Origin": "*",
-                            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-                        },
-                    }
+                    return create_response(400, str(ex))
         t = Tips()
         csv_tips = t.exportTipsTransform(tips_stream)
         if pay_period>=3:
@@ -414,25 +386,8 @@ def transform_tips_handler(*args, **kwargs):
     except Exception as e:
         print(e)
         print(traceback.print_exc())
-        return {
-            "statusCode": 400,
-            "body": str(e),
-            "headers": {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-            },
-        }
-    return {
-        "statusCode": 200,
-        "headers": {
-            "Content-type": "text/csv",
-            "Content-disposition": "attachment; filename=gusto_upload_tips.csv",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-        },
-        "body": csv,
-    }
-
+        return create_response(400, str(e))
+    return create_response(200, csv, content_type="text/csv", filename="gusto_tips.csv")
 
 def get_mpvs_handler(*args, **kwargs):
     csv = ""
@@ -452,32 +407,12 @@ def get_mpvs_handler(*args, **kwargs):
                 month = int(multipart_content["month"])
                 pay_period = int(multipart_content["pay_period"])
             except Exception as ex:
-                return {
-                    "statusCode": 400,
-                    "body": str(ex),
-                    "headers": {
-                        "Access-Control-Allow-Origin": "*",
-                        "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-                    },
-                }
+                return create_response(400, str(ex))
         t = Tips()
         csv = t.exportMealPeriodViolations(
             global_stores, datetime.date(year, month, 5), pay_period
         )
     except Exception as e:
         print(e)
-        return {
-            "statusCode": 400,
-            "body": str(e),
-            "headers": {"Access-Control-Allow-Origin": "*"},
-        }
-    return {
-        "statusCode": 200,
-        "headers": {
-            "Content-type": "text/csv",
-            "Access-Control-Allow-Origin": "*",
-            "Content-disposition": "attachment; filename=gusto_upload_mpvs.csv",
-            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-        },
-        "body": csv,
-    }
+        return create_response(400, str(e))
+    return create_response(200, csv, content_type="text/csv", filename="gusto_mpvs.csv")

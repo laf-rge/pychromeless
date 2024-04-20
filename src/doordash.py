@@ -1,4 +1,3 @@
-import calendar
 import csv
 import datetime
 import glob
@@ -6,15 +5,9 @@ import io
 import json
 import os
 import zipfile
-import sys
 from time import sleep
-from collections import defaultdict
-
-from bs4 import BeautifulSoup
-from selenium.common.exceptions import NoAlertPresentException, NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import Select
 
 from ssm_parameter_store import SSMParameterStore
 from webdriver_wrapper import WebDriverWrapper
@@ -91,7 +84,7 @@ class Doordash:
         for payout_id in payout_ids:
             lines = []
             driver.get(f"{payout_id}?business_id={company_id}")
-            sleep(2)
+            sleep(3)
 
             txdate_str = driver.find_element(By.XPATH, "//*[contains(text(),'Payout on')]").text
             print(txdate_str)
