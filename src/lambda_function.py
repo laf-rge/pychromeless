@@ -18,7 +18,7 @@ from grubhub import Grubhub
 from flexepos import Flexepos
 from ezcater import EZCater
 from ssm_parameter_store import SSMParameterStore
-from functools import partial
+from functools import partial # noqa # pylint: disable=unused-import
 from operator import itemgetter
 from decimal import Decimal
 from locale import LC_NUMERIC, atof, setlocale
@@ -29,7 +29,7 @@ setlocale(LC_NUMERIC, "")
 pattern = re.compile(r"\d+\.\d\d")
 
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
-    import chromedriver_binary
+    import chromedriver_binary # noqa # pylint: disable=unused-import
 
 global_stores = ["20358", "20395", "20400", "20407"]
 
@@ -354,9 +354,9 @@ def transform_tips_handler(*args, **kwargs) -> dict:
 
     try:
         event = {}
-        if args != None and len(args) == 2:
+        if args is not None and len(args) == 2:
             event = args[0]
-            context = args[1]
+            #context = args[1]
         tips_stream = None
 
         if "excel" in kwargs:
@@ -397,9 +397,9 @@ def get_mpvs_handler(*args, **kwargs):
 
     try:
         event = {}
-        if args != None and len(args) == 2:
+        if args is not None and len(args) == 2:
             event = args[0]
-            context = args[1]
+            #context = args[1]
         multipart_content = decode_upload(event)
         if "year" in multipart_content:
             try:

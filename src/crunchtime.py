@@ -1,18 +1,13 @@
 import csv
 import datetime
 import glob
-import json
 import os
 import re
 from time import sleep
-
-from selenium.common.exceptions import NoAlertPresentException, NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import Select, WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
+from selenium.webdriver.support.ui import WebDriverWait
 import qb
 from ssm_parameter_store import SSMParameterStore
 from webdriver_wrapper import WebDriverWrapper

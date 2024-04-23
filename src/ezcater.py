@@ -1,13 +1,9 @@
 import os
 import datetime
-import json
 from time import sleep
-
-from selenium.common.exceptions import NoAlertPresentException, NoSuchElementException
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import Select, WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait
 
 from ssm_parameter_store import SSMParameterStore
 from webdriver_wrapper import WebDriverWrapper
@@ -33,7 +29,7 @@ class EZCater():
             driver.find_element(By.ID, "password").send_keys(
                 self._parameters["password"] + Keys.ENTER
             )    
-        except:
+        except:  # noqa: E722
             input("login exception...")
 
         WebDriverWait(driver, 45)
