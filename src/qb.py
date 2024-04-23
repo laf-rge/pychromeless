@@ -194,7 +194,7 @@ def create_daily_sales(txdate, daily_reports):
             new_receipts[store] = SalesReceipt()
 
     for store, new_receipt in new_receipts.items():
-        if not (store in daily_reports):
+        if store not in daily_reports:
             continue
         new_receipts[store].DepartmentRef = store_refs[store]
         new_receipt.TxnDate = qb_date_format(txdate)
@@ -299,7 +299,7 @@ def sync_third_party_deposit(supplier, deposit_date,
     # check if one already exists
     query = Deposit.filter(TxnDate=qb_date_format(deposit_date), qb=CLIENT)
     for d in query:
-        if d.DepartmentRef == None if not department else store_refs[department] and Decimal(
+        if d.DepartmentRef is None if not department else store_refs[department] and Decimal(
             d.Line[0].Amount).quantize(TWOPLACES) == Decimal(
             atof(lines[0][2])
         ).quantize(TWOPLACES):
@@ -404,7 +404,7 @@ def sync_third_party_transactions(year, month, payment_data):
             # create the JournalEntry
             jentry = JournalEntry()
             jentry.DocNumber = 'tp-{0}-{2}-{1}'.format(store, str(month).zfill(2),
-                                                    year, qb=CLIENT)
+                                                    year)
         else:
             jentry = entries[0]
 
@@ -451,7 +451,7 @@ def sync_inventory(year, month, lines, notes, total, department):
         # create the JournalEntry
         jentry = JournalEntry()
         jentry.DocNumber = 'inv-{0}-{2}-{1}'.format(department, str(month).zfill(2),
-                                                 year, qb=CLIENT)
+                                                 year)
     else:
         jentry = entries[0]
     jentry.TxnDate = qb_date_format(
@@ -624,7 +624,7 @@ def put_secret(secret_string):
 
 def bill_export():
     refresh_session()
-    store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
+    #store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
     for qb_data_type in [VendorCredit, Bill, SalesReceipt, Deposit, JournalEntry]:
         with open("purchase_{0}_journal.json".format(qb_data_type.__name__), "w") as fileout:
             fileout.write("[")

@@ -1,4 +1,3 @@
-import json
 import datetime
 import os
 import calendar
@@ -7,7 +6,7 @@ import boto3
 import flexepos
 from itertools import islice
 from decimal import Decimal
-from locale import LC_NUMERIC, atof, setlocale
+from locale import LC_NUMERIC, setlocale
 from openpyxl.worksheet.dimensions import ColumnDimension, DimensionHolder
 from openpyxl.utils import get_column_letter
 #from pygments import highlight
@@ -149,7 +148,7 @@ class Tips:
         receiver_email = ['info@wagonermanagement.com']
         from_email = parameters["from_email"]
         subject = "Tip Spreadsheet for {} pp {}".format(tip_date.strftime("%m/%Y"), pay_period)
-        charset = "UTF-8"
+        #charset = "UTF-8"
         output = BytesIO()
         workbook = openpyxl.Workbook()
         workbook.remove(workbook.active)
@@ -279,6 +278,6 @@ class Tips:
         for sheet_name in workbook.get_sheet_names():
             worksheet = workbook.get_sheet_by_name(sheet_name)
             for row in islice(worksheet.rows,3, None):
-                if row[3].value != None and Decimal(row[3].value).quantize(TWOPLACES) > 0.0:
+                if row[3].value is not None and Decimal(row[3].value).quantize(TWOPLACES) > 0.0:
                     text_csv.append(f"{row[0].value},{row[1].value},Crew (Primary),{Decimal(row[3].value).quantize(TWOPLACES)}") 
         return "\n".join(text_csv)

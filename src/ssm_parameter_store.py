@@ -23,8 +23,6 @@
 import datetime
 
 import boto3
-from botocore.exceptions import ClientError
-
 
 class SSMParameterStore(object):
     """
@@ -100,7 +98,7 @@ class SSMParameterStore(object):
         entry = self._keys[name]
 
         # simple ttl
-        if self._ttl == False or (
+        if self._ttl is False or (
             entry["expire"] and entry["expire"] <= datetime.datetime.now()
         ):
             entry.pop("value", None)

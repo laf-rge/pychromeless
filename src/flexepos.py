@@ -1,11 +1,9 @@
 import calendar
 import datetime
-import json
 import os
 from time import sleep
 
 from bs4 import BeautifulSoup
-from selenium.common.exceptions import NoAlertPresentException, NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select, WebDriverWait
@@ -17,7 +15,8 @@ from functools import partial
 """
 """
 
-onDay = lambda weekdate, weekday: weekdate + datetime.timedelta(days=(weekday-weekdate.weekday())%7)
+def onDay(weekdate, weekday):
+    return weekdate + datetime.timedelta(days=(weekday - weekdate.weekday()) % 7)
 
 class Flexepos:
     """"""

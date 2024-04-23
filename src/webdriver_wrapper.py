@@ -3,9 +3,10 @@ import shutil
 import uuid
 
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
-    import chromedriver_binary
+    import chromedriver_binary  # noqa: F401
 
 
 class WebDriverWrapper:
