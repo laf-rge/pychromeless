@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 public.ecr.aws/lambda/python:3.10
+FROM --platform=linux/amd64 public.ecr.aws/lambda/python:3.12
 ARG TARGETARCH
 MAINTAINER william@wagonermanagement.com
 
