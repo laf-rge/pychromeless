@@ -375,6 +375,12 @@ def transform_tips_handler(*args, **kwargs) -> dict:
                     return create_response(400, str(ex))
         t = Tips()
         csv_tips = t.exportTipsTransform(tips_stream)
+        lines = csv_tips.strip().split("\n")
+        print(lines)
+        if len(lines) <= 1:
+            # CSV text contains only the header and no data
+            # Fail fast or handle the scenario accordingly
+            return create_response(400, "No tips generated please save the file in Excel before uploading to fix.")
         if pay_period>=3:
             csv = csv_tips
         else:
