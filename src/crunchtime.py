@@ -87,7 +87,7 @@ class Crunchtime:
                 return
             self._export(driver, False)
         finally:
-            _driver.close()
+            self._driver.close()
 
     def get_gl_report(self, store):
         self._login(store)
@@ -99,7 +99,7 @@ class Crunchtime:
             sleep(20)
             self._export(driver, True)
         finally:
-            self._driver.close()
+            self.self._driver.close()
         return
 
     def _export(self, driver, export_combo):
