@@ -99,7 +99,7 @@ class Crunchtime:
             sleep(20)
             self._export(driver, True)
         finally:
-            _driver.close()
+            self._driver.close()
         return
 
     def _export(self, driver, export_combo):
