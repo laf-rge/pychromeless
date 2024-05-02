@@ -207,7 +207,7 @@ class Crunchtime:
                             and invoice_date.year >= 2020
                         ):
                             vendor = qb.vendor_lookup("PAPER")
-                        elif i[3].strip() in ['20358', '20395']:
+                        elif i[3].strip() in ['20358', '20395', '20400', '20407']:
                             #hotfix for store to store
                             vendor = None
                         else:
