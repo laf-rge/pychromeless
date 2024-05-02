@@ -94,7 +94,7 @@ class Flexepos:
                 driver.find_element(By.ID, "j_id37_switch_off").click()
         finally:
             if driver:
-                driver.quit()
+                _driver.close()
 
         return payment_data
 
@@ -161,7 +161,7 @@ class Flexepos:
                 driver.find_element(By.ID, "j_id37_switch_off").click()
         finally:
             if driver:
-                driver.quit()
+                _driver.close()
 
         return payment_data
 
@@ -363,7 +363,7 @@ class Flexepos:
                         sales_data[store][r[0]] = r[4]
         finally:
             if driver:
-                driver.quit()
+                _driver.close()
             pass
         return sales_data
 
@@ -412,7 +412,7 @@ class Flexepos:
             driver.find_element(By.ID, "j_id3:j_id16").click()
         finally:
             if driver:
-                driver.quit()
+                _driver.close()
         return drawer_opens
 
     """
@@ -450,7 +450,7 @@ class Flexepos:
                 
         finally:
             if driver:
-                driver.quit()
+                _driver.close()
         return rv
 
     """
@@ -497,7 +497,7 @@ class Flexepos:
             return royalty_data
         finally:
             if driver:
-                driver.quit()
+                _driver.close()
     
     """
     The gift card periods are Thursday to Wednesday with funding on Friday's. Comparing your 
@@ -576,7 +576,7 @@ class Flexepos:
             return results
         finally:
             if driver:
-                driver.quit()
+                _driver.close()
 
     def getDailyJournalExport(self, stores, start_date, end_date):
         qdate = end_date
