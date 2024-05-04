@@ -522,7 +522,7 @@ class Flexepos:
     def getGiftCardACH(self, stores, start_date, end_date):
         if end_date <= start_date:
             raise Exception("End date can not be before start date.")
-        
+        driver = None
         try:
             self._login()
             driver = self._driver._driver
@@ -571,7 +571,7 @@ class Flexepos:
                     if giftcardredeemed:
                         lines.append(["1330", "instore", giftcardredeemed.find_all("tr")[1].find_all("td")[-3].text.strip()])               
                     if len(lines) > 0:
-                        results.append(["Jersey Mikes Franchise System", step_date, notes, lines, store])
+                        results.append(["Jersey Mike's Franchise System", step_date, notes, lines, store])
                 step_date = step_date + datetime.timedelta(days=7)
             return results
         finally:

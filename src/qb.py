@@ -275,7 +275,7 @@ def create_daily_sales(txdate, daily_reports):
 def enter_online_cc_fee(year, month, payment_data):
     refresh_session()
 
-    supplier = Vendor.where("DisplayName like 'Jersey Mikes%'", qb=CLIENT)[0]
+    supplier = Vendor.where("DisplayName like 'Jersey Mike%'", qb=CLIENT)[0]
     for store, payment_info in payment_data.items():
         lines = [[wmc_account_ref(6210), "", payment_data[store]["Total Fees"]]]
 
