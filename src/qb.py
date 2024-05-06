@@ -36,7 +36,7 @@ from quickbooks.objects import (
 
 # warning! this won't work if we multiply
 TWOPLACES = Decimal(10) ** -2
-setlocale(LC_NUMERIC, "")
+setlocale(LC_NUMERIC, "en_US.utf-8")
 AUTH_CLIENT = None
 CLIENT = None
 

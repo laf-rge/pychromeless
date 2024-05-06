@@ -27,16 +27,17 @@ class Crunchtime:
 
     def _login(self, store):
         self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
-        self._driver = WebDriverWrapper(download_location="/tmp")
         self._parameters = SSMParameterStore(prefix="/prod")["crunchtime"]
+
         self._driver = WebDriverWrapper(download_location="/tmp")
         driver = self._driver._driver
         driver.implicitly_wait(25)
 
-        driver.set_page_load_timeout(45)
+        driver.set_page_load_timeout(65)
 
-        driver.get("https://jerseymikes.net-chef.com/ceslogin/auto/logout.ct")
+        #driver.get("https://jerseymikes.net-chef.com/ceslogin/auto/logout.ct")
         driver.get("https://jerseymikes.net-chef.com/standalone/modern.ct#Login")
+        sleep(5)
         username_element = driver.find_element(By.XPATH, '//input[@name="username"]')
         username_element.clear()
         username_element.send_keys(self._parameters["user"])
@@ -51,21 +52,21 @@ class Crunchtime:
         driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(store)
         driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(Keys.ENTER)
         driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(Keys.ENTER)
-        #WebDriverWait(driver, 10).until(lambda driver: driver.switch_to.active_element.tag_name == 'div')
-        sleep(4)
+        sleep(20)
+        #WebDriverWait(driver, 40).until(lambda driver: driver.switch_to.active_element.tag_name == 'div')
         ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-        return
+        return self._driver
 
     def get_inventory_report(self, store, year, month):
         self._login(store)
-        driver = self._driver._driver
-        try:
+        print(f"get_inventory_report: logged in {store}")
+        with self._driver._driver as driver:
             driver.get("https://jerseymikes.net-chef.com/ncext/index.ct#inventoryMenu~actualtheoreticalcost?parentModule=inventoryMenu")
             sleep(3)
             element = driver.find_element(By.NAME, 'startDateCombo')
             loop_detection = 0
             while (loop_detection < 30 and
-                   driver.switch_to.active_element.get_attribute(
+                driver.switch_to.active_element.get_attribute(
                     'value') != '{0}/01/{1}'.format(
                         str(month).zfill(2), year)):
                 ActionChains(driver).move_to_element(element).click().send_keys(Keys.ARROW_DOWN).send_keys(Keys.RETURN).perform()
@@ -74,32 +75,30 @@ class Crunchtime:
             loop_detection = 0
             while (
                     loop_detection < 30
-                    and driver.find_element_by_name("endDateCombo").get_attribute(
+                    and driver.find_element(By.NAME, "endDateCombo").get_attribute(
                         "value")[:2]
                     != str(month).zfill(2)
-                    and driver.find_element_by_name("endDateCombo").get_attribute(
+                    and driver.find_element(By.NAME, "endDateCombo").get_attribute(
                         "value")[6:] != year
-                  ):
+                ):
                 ActionChains(driver).move_to_element(element).click().send_keys(Keys.ARROW_DOWN).send_keys(Keys.RETURN).perform()
                 loop_detection += 1
             if loop_detection == 30:
                 print(f"Valid end date not found skipping {store}")
                 return
+            print(f"get_inventory_report: exporting {store}")
             self._export(driver, False)
-        finally:
-            self._driver.close()
 
     def get_gl_report(self, store):
         self._login(store)
-        driver = self._driver._driver
-        try:
+        print(f"get_gl_report: logged in {store}")
+        with self._driver._driver as driver:
             driver.get(
                 "https://jerseymikes.net-chef.com/ncext/index.ct#purchasingMenu~purchasesByGL?parentModule=purchasingMenu"
             )
-            sleep(20)
+            sleep(25)
+            print(f"get_gl_report: exporting {store}")
             self._export(driver, True)
-        finally:
-            self.self._driver.close()
         return
 
     def _export(self, driver, export_combo):
@@ -109,6 +108,8 @@ class Crunchtime:
         sleep(10)
         elem.click()
         sleep(6)
+        #ActionChains(driver).send_keys(Keys.CONTROL + "E").perform()
+        # consider using ctrl-shift-e
         export = driver.find_element(By.CSS_SELECTOR, 
             "[ces-selenium-id='tool_export']"
         )

@@ -19,12 +19,13 @@ resource "aws_lambda_function" "authorizer" {
 
   role         = aws_iam_role.flexepos_lambda_role.arn
   package_type = "Image"
+  architectures = ["x86_64"]
   image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["validate_token.lambda_handler"]
   }
   timeout     = 480
-  memory_size = 960
+  memory_size = 512
 
   environment {
     variables = local.lambda_env_authorizer
@@ -39,12 +40,13 @@ resource "aws_lambda_function" "invoice_sync" {
 
   role         = aws_iam_role.flexepos_lambda_role.arn
   package_type = "Image"
+  architectures = ["x86_64"]
   image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.invoice_sync_handler"]
   }
   timeout     = 480
-  memory_size = 960
+  memory_size = 8096
 
   environment {
     variables = local.lambda_env_invoice_sync
@@ -59,12 +61,13 @@ resource "aws_lambda_function" "daily_journal" {
 
   role         = aws_iam_role.flexepos_lambda_role.arn
   package_type = "Image"
+  architectures = ["x86_64"]
   image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.daily_journal_handler"]
   }
   timeout     = 480
-  memory_size = 960
+  memory_size = 8096
 
   environment {
     variables = local.lambda_env_daily_journal
@@ -79,12 +82,13 @@ resource "aws_lambda_function" "daily_sales" {
 
   role         = aws_iam_role.flexepos_lambda_role.arn
   package_type = "Image"
+  architectures = ["x86_64"]
   image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.daily_sales_handler"]
   }
   timeout     = 480
-  memory_size = 960
+  memory_size = 8096
 
   environment {
     variables = local.lambda_env_daily_sales
@@ -99,12 +103,13 @@ resource "aws_lambda_function" "email_tips" {
 
   role         = aws_iam_role.flexepos_lambda_role.arn
   package_type = "Image"
+  architectures = ["x86_64"]
   image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.email_tips_handler"]
   }
   timeout     = 480
-  memory_size = 960
+  memory_size = 8096
 
   environment {
     variables = local.lambda_env_email_tips
@@ -119,12 +124,13 @@ resource "aws_lambda_function" "transform_tips" {
 
   role         = aws_iam_role.flexepos_lambda_role.arn
   package_type = "Image"
+  architectures = ["x86_64"]
   image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.transform_tips_handler"]
   }
   timeout     = 480
-  memory_size = 960
+  memory_size = 8096
 
   environment {
     variables = local.lambda_env_transform_tips
@@ -139,12 +145,13 @@ resource "aws_lambda_function" "get_mpvs" {
 
   role         = aws_iam_role.flexepos_lambda_role.arn
   package_type = "Image"
+  architectures = ["x86_64"]
   image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
   image_config {
     command = ["lambda_function.get_mpvs_handler"]
   }
   timeout     = 480
-  memory_size = 960
+  memory_size = 8096
 
   environment {
     variables = local.lambda_env_get_mpvs

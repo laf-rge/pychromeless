@@ -25,7 +25,7 @@ WHENIWORK_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
 
 # warning! this won't work if we multiply
 TWOPLACES = Decimal(10) ** -2
-setlocale(LC_NUMERIC, "")
+setlocale(LC_NUMERIC, "en_US.utf-8")
 
 #def color_print(json_obj):
 #    print(highlight(json.dumps(json_obj,indent=2), JsonLexer(), TerminalFormatter()))

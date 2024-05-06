@@ -1,15 +1,78 @@
 import os
 import shutil
 import uuid
-
+from tempfile import mkdtemp
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-if os.environ.get("AWS_EXECUTION_ENV") is not None:
-    import chromedriver_binary  # noqa: F401
-
-
 class WebDriverWrapper:
+    def __init__(self, download_location=None):
+        in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
+        options = webdriver.ChromeOptions()
+        service = webdriver.ChromeService("/opt/chromedriver")
+
+        
+        if in_aws:
+            options.binary_location = '/opt/chrome/chrome'
+            options.add_argument("--headless=new")
+        else:
+            options.binary_location = '/opt/chrome/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'
+        options.add_argument('--no-sandbox')
+        options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1280,900")
+        options.add_argument("--single-process")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-dev-tools")
+        options.add_argument("--no-zygote")
+        options.add_argument("--no-first-run")
+        options.add_argument("--safebrowsing-disable-auto-update")
+        options.add_argument("--hide-scrollbars")
+        options.add_argument(f"--user-data-dir={mkdtemp()}")
+        options.add_argument(f"--data-path={mkdtemp()}")
+        options.add_argument(f"--disk-cache-dir={mkdtemp()}")
+        options.add_argument("--remote-debugging-port=9222")
+        options.add_argument("--force-device-scale-factor=1")
+        options.add_argument("--enable-logging")
+        options.add_argument("--log-level=0")
+        options.add_argument("--v=99")
+        options.add_argument("--password-store=basic")
+        options.add_argument("--disable-extensions")
+        options.add_argument("--enable-features=NetworkService,NetworkServiceInProcess")
+        options.add_argument("--dns-prefetch-disable")
+        options.add_argument(
+                "user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.3163.100 Safari/537.36"
+            )
+        options.add_experimental_option("prefs", {"download.default_directory": download_location if download_location else "/tmp",
+            "download.directory_upgrade": True, "download.prompt_for_download": False,
+            "credentials_enable_service": False,
+            "profile.password_manager_enabled": False})
+        self.download_location=download_location
+        
+        self._driver = webdriver.Chrome(options=options, service=service)
+
+    def close(self):
+        # Close webdriver connection
+        if self._driver:
+            self._driver.quit()
+        self._driver=None
+
+        # TODO: cleanup temp directories from mkdtemp
+
+        # Remove possible core dumps
+        folder = "/tmp"
+        for the_file in os.listdir(folder):
+            file_path = os.path.join(folder, the_file)
+            try:
+                if (
+                    "core.headless-chromi" in file_path
+                    and os.path.exists(file_path)
+                    and os.path.isfile(file_path)
+                ):
+                    os.unlink(file_path)
+            except Exception as e:
+                print(e)
+
+class WebDriverWrapperOld:
     def __init__(self, download_location=None):
         in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
         chrome_options = webdriver.ChromeOptions()
