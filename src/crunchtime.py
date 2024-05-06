@@ -54,7 +54,8 @@ class Crunchtime:
         driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(Keys.ENTER)
         sleep(20)
         #WebDriverWait(driver, 40).until(lambda driver: driver.switch_to.active_element.tag_name == 'div')
-        driver.find_element(By.XPATH, '//div[@ces-selenium-id="tool_close"]').click()
+        #ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+        driver.find_element(By.XPATH, '//div[@ces-selenium-id="tool_close"]').click() #this will break when there is no banner
         return self._driver
 
     def get_inventory_report(self, store, year, month):
