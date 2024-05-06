@@ -10,7 +10,6 @@ class WebDriverWrapper:
         in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
         options = webdriver.ChromeOptions()
         service = webdriver.ChromeService("/opt/chromedriver")
-
         
         if in_aws:
             options.binary_location = '/opt/chrome/chrome'
