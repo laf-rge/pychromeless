@@ -98,6 +98,8 @@ class WebDriverWrapperOld:
                 "safebrowsing.enabled": False,
                 "safebrowsing.disable_download_protection": True,
                 "profile.default_content_setting_values.automatic_downloads": 1,
+                "credentials_enable_service": False,
+                "profile.password_manager_enabled": False,
             }
 
             if in_aws:
