@@ -1,6 +1,5 @@
 import calendar
 import datetime
-import os
 import boto3
 import crunchtime
 import qb
