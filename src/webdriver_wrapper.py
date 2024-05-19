@@ -67,10 +67,12 @@ class WebDriverWrapper:
             )
 
             chrome_options.binary_location = "/opt/bin/headless-chromium"
+            self._driver = webdriver.Chrome(chrome_options=chrome_options)
         else:
             chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+            self._driver = webdriver.Chrome(options=chrome_options)
 
-        self._driver = webdriver.Chrome(chrome_options=chrome_options)
+        
 
         if self.download_location:
             self.enable_download_in_headless_chrome()
