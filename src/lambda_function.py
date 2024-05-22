@@ -1,15 +1,17 @@
 import calendar
 import datetime
 import os
+from typing import Any
 import boto3
 import crunchtime
 import qb
 import base64
-import email
 import io
 import re
 import traceback
 import pandas as pd
+import email
+from email.message import Message
 from wmcgdrive import WMCGdrive
 from tips import Tips
 from ubereats import UberEats
@@ -33,7 +35,7 @@ if os.environ.get("AWS_EXECUTION_ENV") is not None:
 
 global_stores = ["20358", "20395", "20400", "20407"]
 
-def create_response(status_code: int, body: str, content_type: str ='application/json', filename: str = None)  -> dict:
+def create_response(status_code: int, body: str, content_type: str ='application/json', filename: str | None = None)  -> dict:
     headers = {
             "Content-type": content_type,
             "Access-Control-Allow-Origin": "*",
@@ -132,8 +134,10 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                         for payin_line in payins.split("\n")[1:]:
                             if payin_line.startswith("TOTAL"):
                                 continue
-                            amount = amount + Decimal(
-                                atof(pattern.search(payin_line).group())
+                            match = pattern.search(payin_line)
+                            if match:
+                                amount = amount + Decimal(
+                                    atof(match.group())
                             )
                         if amount.quantize(TWOPLACES) > Decimal(150):
                             send_email(
@@ -160,6 +164,7 @@ Josiah<br/>
                 print("error " + str(txdate))
                 print(ex)
                 retry -= 1
+    txdate = txdates[0]
     payment_data = dj.getOnlinePayments(global_stores, txdate.year, txdate.month)
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
     royalty_data = dj.getRoyaltyReport(
@@ -311,9 +316,10 @@ def email_tips_handler(*args, **kwargs) -> dict:
     print(year,month,pay_period)
     t = Tips()
     t.emailTips(global_stores, datetime.date(year, month, 5), pay_period)
+    return create_response(200, "Email Sent!")
 
 # https://github.com/srcecde/aws-tutorial-code/blob/master/lambda/lambda_api_multipart.py
-def decode_upload(event) -> dict:
+def decode_upload(event: dict[str, Any]) -> dict[str, bytes]:
     # decoding form-data into bytes
     post_data = base64.b64decode(event["body"])
     # fetching content-type
@@ -325,7 +331,7 @@ def decode_upload(event) -> dict:
     ct = "Content-Type: " + content_type + "\n"
 
     # parsing message from bytes
-    msg = email.message_from_bytes(ct.encode() + post_data)
+    msg: Message = email.message_from_bytes(ct.encode() + post_data)
 
     # checking if the message is multipart
     print("Multipart check : ", msg.is_multipart())
@@ -334,16 +340,18 @@ def decode_upload(event) -> dict:
     if msg.is_multipart():
         # retrieving form-data
         for part in msg.get_payload():
-            # checking if filename exist as a part of content-disposition header
-            if part.get_filename():
-                # fetching the filename
-                file_name = part.get_filename()
-                print(file_name)
-            print(part.get_content_type())
-            print(part.get_param("name", header="content-disposition"))
-            multipart_content[part.get_param("name", header="content-disposition")] = (
-                part.get_payload(decode=True)
-            )
+            # Ensure part is an instance of Message
+            if isinstance(part, Message):
+                # checking if filename exist as a part of content-disposition header
+                if part.get_filename():
+                    # fetching the filename
+                    file_name = part.get_filename()
+                    print(file_name)
+                print(part.get_content_type())
+                print(part.get_param("name", header="content-disposition"))
+                name_param = part.get_param("name", header="content-disposition")
+                if name_param:
+                    multipart_content[name_param] = part.get_payload(decode=True)
     return multipart_content
 
 def transform_tips_handler(*args, **kwargs) -> dict:
@@ -364,7 +372,7 @@ def transform_tips_handler(*args, **kwargs) -> dict:
         else:
             multipart_content = decode_upload(event)
             print(multipart_content)
-            tips_stream = io.BytesIO(multipart_content.get("file[]", None))
+            tips_stream = io.BytesIO(multipart_content.get("file[]", b''))
             if "year" in multipart_content:
                 try:
                     year = int(multipart_content["year"])

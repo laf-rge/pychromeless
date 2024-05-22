@@ -20,6 +20,7 @@ from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from collections import defaultdict
 from operator import itemgetter
+from typing import Any
 
 WHENIWORK_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
 
@@ -205,12 +206,13 @@ class Tips:
             }
         )
 
-    def getMissingPunches(self):
+    def getMissingPunches(self) -> list[dict[str, Any]]:
         times = self._a.get('/times',
             params= { "start": (datetime.date.today()-datetime.timedelta(days=20)).isoformat(),
                 "end":(datetime.datetime.now()).isoformat() }
             )
         self._users = {}
+        
         for user in times['users']:
             self._users[user['id']] = user
         return list(filter(lambda rtime: rtime['end_time'] is None, times['times']))
