@@ -73,10 +73,10 @@ class Crunchtime:
         while (
                 loop_detection < 30
                 and driver.find_element(By.NAME, "endDateCombo").get_attribute(
-                    "value")[:2]
+                    "value")[:2] # type: ignore
                 != str(month).zfill(2)
                 and driver.find_element(By.NAME, "endDateCombo").get_attribute(
-                    "value")[6:] != year
+                    "value")[6:] != year # type: ignore
                 ):
             ActionChains(driver).move_to_element(element).click().send_keys(Keys.ARROW_DOWN).send_keys(Keys.RETURN).perform()
             loop_detection += 1
@@ -179,6 +179,7 @@ class Crunchtime:
                 vendor = None
                 invoice_num = 0
                 invoice_date = None
+                notes = ""
                 for row in glreader:
                     if len(row) != 3:
                         continue

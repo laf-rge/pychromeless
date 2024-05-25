@@ -8,7 +8,7 @@ from decimal import Decimal
 from functools import reduce
 from locale import LC_NUMERIC, atof, setlocale
 
-import boto3
+from boto3.session import Session
 from botocore.exceptions import ClientError
 from intuitlib.client import AuthClient
 from quickbooks import QuickBooks
@@ -23,10 +23,10 @@ from quickbooks.objects import (
     Deposit,
     DepositLine,
     DepositLineDetail,
+    Item,
     JournalEntry,
     JournalEntryLine,
     JournalEntryLineDetail,
-    Item,
     SalesItemLine,
     SalesItemLineDetail,
     SalesReceipt,
@@ -87,7 +87,7 @@ gl_code_map = {
     "6291": "5301",  # Fule Surcharge -> COGS - Delivery
     "6340": "5301",  # Ops: Miscellaneous
     "8026": "6280",
-    "6290": "1201"  # Ops
+    "6290": "1201",  # Ops
 }  # Sales and Use Tax
 
 gl_code_map_to_cogs = {
@@ -101,7 +101,7 @@ gl_code_map_to_cogs = {
     "5010.4": "5110",  # Soup
     "5010.5": "5107",  # Meat
     "5010.6": "5108",  # Cheese
-    "5010.8": "5103", #CPR Jar
+    "5010.8": "5103",  # CPR Jar
     "5020": "5201",  # Paper
     "5030": "5100",  # Beverages Other
     "5030.1": "5101",  # Beverages Fountain
@@ -167,7 +167,7 @@ def update_royalty(year, month, payment_data):
             datetime.date(year, month, calendar.monthrange(year, month)[1]),
             json.dumps(payment_info),
             lines,
-            store
+            store,
         )
     return
 
@@ -208,19 +208,22 @@ def create_daily_sales(txdate, daily_reports):
             line.LineNum = line_num
             if line_item in daily_report and daily_report[line_item]:
                 if daily_report[line_item].startswith("N"):
-                    line.Amount = 0
+                    line.Amount = Decimal(0)
                 else:
-                    line.Amount = atof(daily_report[line_item].strip("$")) * line_id[1]
+                    line.Amount = (
+                        Decimal(atof(daily_report[line_item].strip("$"))) * line_id[1]
+                    )
                 amount_total += Decimal(line.Amount)
                 line.Description = "{} imported from ({})".format(
                     line_item, daily_report[line_item]
                 )
             else:
-                line.Amount = 0
+                line.Amount = Decimal(0)
                 line.Description = "Nothing captured."
             line.SalesItemLineDetail = SalesItemLineDetail()
-            item = Item.query("select * from Item where id = '{}'".format(line_id[0]),
-                qb=CLIENT)[0]
+            item = Item.query(
+                "select * from Item where id = '{}'".format(line_id[0]), qb=CLIENT
+            )[0]
             line.SalesItemLineDetail.ItemRef = item.to_ref()
             line.SalesItemLineDetail.ServiceDate = None
             new_receipt.Line.append(line)
@@ -236,11 +239,13 @@ def create_daily_sales(txdate, daily_reports):
             for payin_line in line.Description.split("\n")[1:]:
                 if payin_line.startswith("TOTAL"):
                     continue
-                amount = amount + Decimal(atof(pattern.search(payin_line).group()))
+                mg = pattern.search(payin_line)
+                if mg:
+                    amount = amount + Decimal(atof(mg.group()))
             line.Amount = amount.quantize(TWOPLACES)
             amount_total += amount
         else:
-            line.Amount = 0
+            line.Amount = Decimal(0)
         line.SalesItemLineDetail = SalesItemLineDetail()
         item = Item.query("select * from Item where id = '{}'".format(43), qb=CLIENT)[0]
         line.SalesItemLineDetail.ItemRef = item.to_ref()
@@ -258,7 +263,7 @@ def create_daily_sales(txdate, daily_reports):
                 amount_total
             ).quantize(TWOPLACES)
         else:
-            line.Amount = 0
+            line.Amount = Decimal(0)
         line.SalesItemLineDetail = SalesItemLineDetail()
         item = Item.query("select * from Item where id = '{}'".format(31), qb=CLIENT)[0]
         line.SalesItemLineDetail.ItemRef = item.to_ref()
@@ -285,13 +290,12 @@ def enter_online_cc_fee(year, month, payment_data):
             datetime.date(year, month, calendar.monthrange(year, month)[1]),
             json.dumps(payment_data[store]),
             lines,
-            store
+            store,
         )
     return
 
 
-def sync_third_party_deposit(supplier, deposit_date,
-                             notes, lines, department=None):
+def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=None):
     refresh_session()
 
     store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
@@ -299,10 +303,13 @@ def sync_third_party_deposit(supplier, deposit_date,
     # check if one already exists
     query = Deposit.filter(TxnDate=qb_date_format(deposit_date), qb=CLIENT)
     for d in query:
-        if d.DepartmentRef is None if not department else store_refs[department] and Decimal(
-            d.Line[0].Amount).quantize(TWOPLACES) == Decimal(
-            atof(lines[0][2])
-        ).quantize(TWOPLACES):
+        if (
+            d.DepartmentRef is None
+            if not department
+            else store_refs[department]
+            and Decimal(d.Line[0].Amount).quantize(TWOPLACES)
+            == Decimal(atof(lines[0][2])).quantize(TWOPLACES)
+        ):
             print(
                 "Already imported skipping {} {} {}".format(
                     deposit_date, d.Line[0].Amount, lines[0][2]
@@ -321,7 +328,9 @@ def sync_third_party_deposit(supplier, deposit_date,
         line = DepositLine()
         line.DepositLineDetail = DepositLineDetail()
         line.DepositLineDetail.AccountRef = wmc_account_ref(int(deposit_line[0]))
-        line.DepositLineDetail.Entity = Vendor.filter(DisplayName=supplier, qb=CLIENT)[0].to_ref()
+        line.DepositLineDetail.Entity = Vendor.filter(DisplayName=supplier, qb=CLIENT)[
+            0
+        ].to_ref()
         line.LineNum = line_num
         line.Id = line_num
         line.Amount = Decimal(atof(deposit_line[2])).quantize(TWOPLACES)
@@ -365,9 +374,9 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
     bill.PrivateNote = notes
     bill.DepartmentRef = None if not department else store_refs[department]
 
-    if item_sign > 0:
+    if isinstance(bill, Bill):
         bill.SalesTermRef = supplier.TermRef
-    bill.DueDate = None
+        bill.DueDate = None
 
     # clear the lines
     bill.Line = []
@@ -391,25 +400,27 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
         print(bill.to_json())
         print(ex)
 
+
 def sync_third_party_transactions(year, month, payment_data):
     refresh_session()
-    
+
     store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
 
     for store, store_data in payment_data.items():
         entries = JournalEntry.where(
-            "DocNumber = 'tp-{0}-{2}-{1}'".format(store, str(month).zfill(2),
-                                            year), qb=CLIENT)
+            "DocNumber = 'tp-{0}-{2}-{1}'".format(store, str(month).zfill(2), year),
+            qb=CLIENT,
+        )
         if len(entries) == 0:
             # create the JournalEntry
             jentry = JournalEntry()
-            jentry.DocNumber = 'tp-{0}-{2}-{1}'.format(store, str(month).zfill(2),
-                                                    year)
+            jentry.DocNumber = "tp-{0}-{2}-{1}".format(store, str(month).zfill(2), year)
         else:
             jentry = entries[0]
 
         jentry.TxnDate = qb_date_format(
-            datetime.date(year, month, calendar.monthrange(year, month)[1]))
+            datetime.date(year, month, calendar.monthrange(year, month)[1])
+        )
         jentry.PrivateNote = str(payment_data)
 
         # clear the lines
@@ -420,8 +431,12 @@ def sync_third_party_transactions(year, month, payment_data):
         for payment_name, amount in store_data.items():
             line = JournalEntryLine()
             line.JournalEntryLineDetail = JournalEntryLineDetail()
-            line.JournalEntryLineDetail.AccountRef = wmc_account_ref(third_party_map[payment_name])
-            line.JournalEntryLineDetail.DepartmentRef = None if not store else store_refs[store]
+            line.JournalEntryLineDetail.AccountRef = wmc_account_ref(
+                third_party_map[payment_name]
+            )
+            line.JournalEntryLineDetail.DepartmentRef = (
+                None if not store else store_refs[store]
+            )
             line.JournalEntryLineDetail.PostingType = "Debit"
             line.LineNum = line_num
             line.Id = line_num
@@ -431,7 +446,7 @@ def sync_third_party_transactions(year, month, payment_data):
             line.Description = payment_name
             line_num += 1
             jentry.Line.append(line)
-        
+
         try:
             jentry.save(qb=CLIENT)
         except Exception as ex:
@@ -445,17 +460,20 @@ def sync_inventory(year, month, lines, notes, total, department):
     store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
 
     entries = JournalEntry.where(
-        "DocNumber = 'inv-{0}-{2}-{1}'".format(department, str(month).zfill(2),
-                                           year), qb=CLIENT)
+        "DocNumber = 'inv-{0}-{2}-{1}'".format(department, str(month).zfill(2), year),
+        qb=CLIENT,
+    )
     if len(entries) == 0:
         # create the JournalEntry
         jentry = JournalEntry()
-        jentry.DocNumber = 'inv-{0}-{2}-{1}'.format(department, str(month).zfill(2),
-                                                 year)
+        jentry.DocNumber = "inv-{0}-{2}-{1}".format(
+            department, str(month).zfill(2), year
+        )
     else:
         jentry = entries[0]
     jentry.TxnDate = qb_date_format(
-        datetime.date(year, month, calendar.monthrange(year, month)[1]))
+        datetime.date(year, month, calendar.monthrange(year, month)[1])
+    )
     jentry.PrivateNote = notes
 
     # clear the lines
@@ -467,22 +485,26 @@ def sync_inventory(year, month, lines, notes, total, department):
         line = JournalEntryLine()
         line.JournalEntryLineDetail = JournalEntryLineDetail()
         line.JournalEntryLineDetail.AccountRef = jentry_line[0]
-        line.JournalEntryLineDetail.DepartmentRef = None if not department else store_refs[department]
+        line.JournalEntryLineDetail.DepartmentRef = (
+            None if not department else store_refs[department]
+        )
         line.JournalEntryLineDetail.PostingType = "Debit"
         line.LineNum = line_num
         line.Id = line_num
         line.Amount = Decimal(atof(jentry_line[1])).quantize(TWOPLACES)
         if line.Amount < 0:
             line.JournalEntryLineDetail.PostingType = "Credit"
-            line.Amount = line.Amount * - 1
+            line.Amount = line.Amount * -1
         line.Description = jentry_line[2]
         line_num += 1
         jentry.Line.append(line)
 
     line = JournalEntryLine()
     line.JournalEntryLineDetail = JournalEntryLineDetail()
-    line.JournalEntryLineDetail.AccountRef = wmc_account_ref('1201')
-    line.JournalEntryLineDetail.DepartmentRef = None if not department else store_refs[department]
+    line.JournalEntryLineDetail.AccountRef = wmc_account_ref("1201")
+    line.JournalEntryLineDetail.DepartmentRef = (
+        None if not department else store_refs[department]
+    )
     line.JournalEntryLineDetail.PostingType = "Credit"
     line.LineNum = line_num
     line.Id = line_num
@@ -502,7 +524,10 @@ def wmc_account_ref(acctNum):
     if account_ref is None:
         refresh_session()
         account_ref = dict(
-            map(lambda x: (x.AcctNum, x.to_ref()), Account.all(max_results=1000, qb=CLIENT))
+            map(
+                lambda x: (x.AcctNum, x.to_ref()),
+                Account.all(max_results=1000, qb=CLIENT),
+            )
         )
     return account_ref[str(acctNum)]
 
@@ -512,7 +537,10 @@ def account_ref_lookup(gl_account_code):
     if account_ref is None:
         refresh_session()
         account_ref = dict(
-            map(lambda x: (x.AcctNum, x.to_ref()), Account.all(max_results=1000, qb=CLIENT))
+            map(
+                lambda x: (x.AcctNum, x.to_ref()),
+                Account.all(max_results=1000, qb=CLIENT),
+            )
         )
 
     return account_ref[gl_code_map[gl_account_code]]
@@ -523,7 +551,10 @@ def inventory_ref_lookup(inv_account_code):
     if inv_account_ref is None:
         refresh_session()
         inv_account_ref = dict(
-            map(lambda x: (x.AcctNum, x.to_ref()), Account.all(max_results=1000, qb=CLIENT))
+            map(
+                lambda x: (x.AcctNum, x.to_ref()),
+                Account.all(max_results=1000, qb=CLIENT),
+            )
         )
 
     return inv_account_ref[gl_code_map_to_cogs[inv_account_code]]
@@ -537,10 +568,10 @@ def vendor_lookup(gl_vendor_name):
             "WNEPLS": Vendor.where("DisplayName like 'The Paper%'", qb=CLIENT)[0],
             "PR-D&D": Vendor.where("DisplayName like 'D&D%'", qb=CLIENT)[0],
             "PEPSI": Vendor.where("DisplayName like 'Pepsi%'", qb=CLIENT)[0],
-            "GenPro" : Vendor.where("DisplayName like 'General Produce'", qb=CLIENT)[0],
-            "SYSFRA" : Vendor.where("DisplayName like 'Sysco San%'", qb=CLIENT)[0],
-            "SYSSAC" : Vendor.where("DisplayName like 'Sysco Sac%'", qb=CLIENT)[0],
-            "SAL"   : Vendor.where("DisplayName like 'Sala%'", qb=CLIENT)[0],
+            "GenPro": Vendor.where("DisplayName like 'General Produce'", qb=CLIENT)[0],
+            "SYSFRA": Vendor.where("DisplayName like 'Sysco San%'", qb=CLIENT)[0],
+            "SYSSAC": Vendor.where("DisplayName like 'Sysco Sac%'", qb=CLIENT)[0],
+            "SAL": Vendor.where("DisplayName like 'Sala%'", qb=CLIENT)[0],
         }
     return vendor[gl_vendor_name]
 
@@ -565,25 +596,24 @@ def refresh_session():
     s["access_token"] = AUTH_CLIENT.access_token
     s["refresh_token"] = AUTH_CLIENT.refresh_token
     put_secret(json.dumps(s))
-    #QuickBooks.enable_global()
-    CLIENT = QuickBooks(auth_client=AUTH_CLIENT,  
-        company_id="1401432085"
-    )
+    # QuickBooks.enable_global()
+    CLIENT = QuickBooks(auth_client=AUTH_CLIENT, company_id="1401432085")
     return CLIENT
-    
+
 
 secret_name = "prod/qbo"
 region_name = "us-east-2"
 
 # Create a Secrets Manager client
-session = boto3.session.Session()
+session = Session()
 client = session.client(service_name="secretsmanager", region_name=region_name)
 
 
-def get_secret():
+def get_secret() -> bytes | str:
     # In this sample we only handle the specific exceptions for the 'GetSecretValue' API.
     # See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
     # We rethrow the exception by default.
+    get_secret_value_response = None
     try:
         get_secret_value_response = client.get_secret_value(SecretId=secret_name)
     except ClientError as e:
@@ -607,13 +637,15 @@ def get_secret():
             # We can't find the resource that you asked for.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
-    else:
-        # Decrypts secret using the associated KMS CMK.
-        # Depending on whether the secret is a string or binary, one of these fields will be populated.
+    # Decrypts secret using the associated KMS CMK.
+    # Depending on whether the secret is a string or binary, one of these fields will be populated.
+    if get_secret_value_response:
         if "SecretString" in get_secret_value_response:
             return get_secret_value_response["SecretString"]
         else:
             return base64.b64decode(get_secret_value_response["SecretBinary"])
+    else:
+        raise Exception("Secrets issue.")
 
 
 def put_secret(secret_string):
@@ -622,44 +654,76 @@ def put_secret(secret_string):
     )
     return put_secret_value_response
 
+
 def bill_export():
     refresh_session()
-    #store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
+    # store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
     for qb_data_type in [VendorCredit, Bill, SalesReceipt, Deposit, JournalEntry]:
-        with open("purchase_{0}_journal.json".format(qb_data_type.__name__), "w") as fileout:
+        with open(
+            "purchase_{0}_journal.json".format(qb_data_type.__name__), "w"
+        ) as fileout:
             fileout.write("[")
-            query_count = qb_data_type.count(where_clause="TxnDate > '2020-06-01' AND TxnDate < '2023-06-07'", qb=CLIENT)
-            r_count=1
-            while r_count<query_count:
-                bills = qb_data_type.where(where_clause="TxnDate >= '2020-06-01' AND TxnDate < '2023-06-07'",
-                    order_by='TxnDate', start_position=r_count, max_results=1000, qb=CLIENT)
+            query_count = qb_data_type.count(
+                where_clause="TxnDate > '2020-06-01' AND TxnDate < '2023-06-07'",
+                qb=CLIENT,
+            )
+            r_count = 1
+            while r_count < query_count:
+                bills = qb_data_type.where(
+                    where_clause="TxnDate >= '2020-06-01' AND TxnDate < '2023-06-07'",
+                    order_by="TxnDate",
+                    start_position=r_count,
+                    max_results=1000,
+                    qb=CLIENT,
+                )
                 for bill in bills:
-                    if not hasattr(bill, 'DepartmentRef') or bill.DepartmentRef is None or bill.DepartmentRef.name in (None, 'WMC', '20025'):
+                    if (
+                        not hasattr(bill, "DepartmentRef")
+                        or bill.DepartmentRef is None
+                        or bill.DepartmentRef.name in (None, "WMC", "20025")
+                    ):
                         fileout.write(bill.to_json())
-                        fileout.write(',\n')
-                    r_count+=1
+                        fileout.write(",\n")
+                    r_count += 1
             fileout.write("]")
-    
+
+
 def fix_deposit():
     refresh_session()
     store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
     qb_data_type = Deposit
     modify_queue = []
-    with open("purchase_{0}_journal.json".format(qb_data_type.__name__), "w") as fileout:
+    with open(
+        "purchase_{0}_journal.json".format(qb_data_type.__name__), "w"
+    ) as fileout:
         fileout.write("[")
-        query_count = qb_data_type.count(where_clause="TxnDate >= '2022-01-01' AND TxnDate < '2023-01-01'", qb=CLIENT)
-        r_count=1
-        while r_count<query_count:
-            bills = qb_data_type.where(where_clause="TxnDate >= '2022-01-01' AND TxnDate < '2023-01-01'",
-                order_by='TxnDate', start_position=r_count, max_results=1000, qb=CLIENT)
+        query_count = qb_data_type.count(
+            where_clause="TxnDate >= '2022-01-01' AND TxnDate < '2023-01-01'", qb=CLIENT
+        )
+        r_count = 1
+        while r_count < query_count:
+            bills = qb_data_type.where(
+                where_clause="TxnDate >= '2022-01-01' AND TxnDate < '2023-01-01'",
+                order_by="TxnDate",
+                start_position=r_count,
+                max_results=1000,
+                qb=CLIENT,
+            )
             for bill in bills:
-                if not hasattr(bill, 'DepartmentRef') or bill.DepartmentRef is None or bill.DepartmentRef.name == '20025':
-                    if hasattr(bill.Line[0], 'DepositLineDetail') and bill.Line[0].DepositLineDetail.AccountRef.name=="1330 Other Current Assets:Gift Cards":
-                        if '20358' in bill.Line[0].Description:
-                            print(bill.Line[0].Description,bill.DepartmentRef.name)
+                if (
+                    not hasattr(bill, "DepartmentRef")
+                    or bill.DepartmentRef is None
+                    or bill.DepartmentRef.name == "20025"
+                ):
+                    if (
+                        hasattr(bill.Line[0], "DepositLineDetail")
+                        and bill.Line[0].DepositLineDetail.AccountRef.name
+                        == "1330 Other Current Assets:Gift Cards"
+                    ):
+                        if "20358" in bill.Line[0].Description:
+                            print(bill.Line[0].Description, bill.DepartmentRef.name)
                             modify_queue.append(bill)
-                r_count+=1
+                r_count += 1
         for bill in modify_queue:
-            bill.DepartmentRef = store_refs['20358']
-            #bill.save(qb=CLIENT)
-        
+            bill.DepartmentRef = store_refs["20358"]
+            # bill.save(qb=CLIENT)

@@ -1,29 +1,30 @@
+import base64
 import calendar
 import datetime
-import os
-from typing import Any
-import boto3
-import crunchtime
-import qb
-import base64
+import email
 import io
+import os
 import re
 import traceback
-import pandas as pd
-import email
+from decimal import Decimal
 from email.message import Message
-from wmcgdrive import WMCGdrive
+from functools import partial  # noqa # pylint: disable=unused-import
+from locale import LC_NUMERIC, atof, setlocale
+from operator import itemgetter
+from typing import Any
+
+import boto3
+import crunchtime
+import pandas as pd
+import qb
+from doordash import Doordash
+from ezcater import EZCater
+from flexepos import Flexepos
+from grubhub import Grubhub
+from ssm_parameter_store import SSMParameterStore
 from tips import Tips
 from ubereats import UberEats
-from doordash import Doordash
-from grubhub import Grubhub
-from flexepos import Flexepos
-from ezcater import EZCater
-from ssm_parameter_store import SSMParameterStore
-from functools import partial # noqa # pylint: disable=unused-import
-from operator import itemgetter
-from decimal import Decimal
-from locale import LC_NUMERIC, atof, setlocale
+from wmcgdrive import WMCGdrive
 
 # warning! this won't work if we multiply
 TWOPLACES = Decimal(10) ** -2
@@ -31,24 +32,30 @@ setlocale(LC_NUMERIC, "")
 pattern = re.compile(r"\d+\.\d\d")
 
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
-    import chromedriver_binary # noqa # pylint: disable=unused-import
+    import chromedriver_binary  # noqa # pylint: disable=unused-import
 
 global_stores = ["20358", "20395", "20400", "20407"]
 
-def create_response(status_code: int, body: str, content_type: str ='application/json', filename: str | None = None)  -> dict:
+
+def create_response(
+    status_code: int,
+    body: str,
+    content_type: str = "application/json",
+    filename: str | None = None,
+) -> dict:
     headers = {
-            "Content-type": content_type,
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-            
-        }
+        "Content-type": content_type,
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+    }
     if filename is not None:
-        headers['Content-Disposition'] = f"attachment; filename={filename}"
+        headers["Content-Disposition"] = f"attachment; filename={filename}"
     return {
         "statusCode": status_code,
         "body": body,
         "headers": headers,
     }
+
 
 def third_party_deposit_handler(*args, **kwargs) -> dict:
     start_date = datetime.date.today() - datetime.timedelta(days=28)
@@ -71,6 +78,7 @@ def third_party_deposit_handler(*args, **kwargs) -> dict:
             qb.sync_third_party_deposit(*result)
     return create_response(200, "Success")
 
+
 def invoice_sync_handler(*args, **kwargs) -> dict:
     yesterday = datetime.date.today() - datetime.timedelta(days=1)
     ct = crunchtime.Crunchtime()
@@ -81,6 +89,7 @@ def invoice_sync_handler(*args, **kwargs) -> dict:
     else:
         ct.process_inventory_report(global_stores, yesterday.year, yesterday.month)
     return create_response(200, "Success")
+
 
 def daily_sales_handler(*args, **kwargs) -> dict:
     event = {}
@@ -136,9 +145,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                                 continue
                             match = pattern.search(payin_line)
                             if match:
-                                amount = amount + Decimal(
-                                    atof(match.group())
-                            )
+                                amount = amount + Decimal(atof(match.group()))
                         if amount.quantize(TWOPLACES) > Decimal(150):
                             send_email(
                                 f"High pay-in detected {store}",
@@ -177,6 +184,7 @@ Josiah<br/>
     qb.update_royalty(txdate.year, txdate.month, royalty_data)
     return create_response(200, "Success")
 
+
 def online_cc_fee(*args, **kwargs) -> dict:
     txdate = datetime.date.today() - datetime.timedelta(days=1)
 
@@ -184,6 +192,7 @@ def online_cc_fee(*args, **kwargs) -> dict:
     payment_data = dj.getOnlinePayments(global_stores, txdate.year, txdate.month)
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
     return create_response(200, "Success")
+
 
 def send_email(subject, message, recipients=None):
     parameters = SSMParameterStore(prefix="/prod")["email"]
@@ -232,6 +241,7 @@ def send_email(subject, message, recipients=None):
         # ConfigurationSetName=CONFIGURATION_SET,
     )
 
+
 def attendanceTable(start_date, end_date) -> str:
     t = Tips()
     data = t.attendanceReport(global_stores, start_date, end_date)
@@ -246,6 +256,7 @@ def attendanceTable(start_date, end_date) -> str:
 
     table += "</table>\n"
     return table
+
 
 def daily_journal_handler(*args, **kwargs) -> dict:
     yesterday = datetime.date.today() - datetime.timedelta(days=1)
@@ -299,6 +310,7 @@ def daily_journal_handler(*args, **kwargs) -> dict:
 
     return create_response(200, response)
 
+
 def email_tips_handler(*args, **kwargs) -> dict:
     year = datetime.date.today().year
     month = datetime.date.today().month
@@ -313,10 +325,11 @@ def email_tips_handler(*args, **kwargs) -> dict:
         year = int(event["year"])
         month = int(event["month"])
         pay_period = int(event["day"])
-    print(year,month,pay_period)
+    print(year, month, pay_period)
     t = Tips()
     t.emailTips(global_stores, datetime.date(year, month, 5), pay_period)
     return create_response(200, "Email Sent!")
+
 
 # https://github.com/srcecde/aws-tutorial-code/blob/master/lambda/lambda_api_multipart.py
 def decode_upload(event: dict[str, Any]) -> dict[str, bytes]:
@@ -354,6 +367,7 @@ def decode_upload(event: dict[str, Any]) -> dict[str, bytes]:
                     multipart_content[name_param] = part.get_payload(decode=True)
     return multipart_content
 
+
 def transform_tips_handler(*args, **kwargs) -> dict:
     csv = ""
     year = datetime.date.today().day
@@ -364,7 +378,7 @@ def transform_tips_handler(*args, **kwargs) -> dict:
         event = {}
         if args is not None and len(args) == 2:
             event = args[0]
-            #context = args[1]
+            # context = args[1]
         tips_stream = None
 
         if "excel" in kwargs:
@@ -372,7 +386,7 @@ def transform_tips_handler(*args, **kwargs) -> dict:
         else:
             multipart_content = decode_upload(event)
             print(multipart_content)
-            tips_stream = io.BytesIO(multipart_content.get("file[]", b''))
+            tips_stream = io.BytesIO(multipart_content.get("file[]", b""))
             if "year" in multipart_content:
                 try:
                     year = int(multipart_content["year"])
@@ -388,13 +402,22 @@ def transform_tips_handler(*args, **kwargs) -> dict:
         if len(lines) <= 1:
             # CSV text contains only the header and no data
             # Fail fast or handle the scenario accordingly
-            return create_response(400, "No tips generated please save the file in Excel before uploading to fix.")
-        if pay_period>=3:
+            return create_response(
+                400,
+                "No tips generated please save the file in Excel before uploading to fix.",
+            )
+        if pay_period >= 3:
             csv = csv_tips
         else:
-            csv_mpvs = t.exportMealPeriodViolations(global_stores, datetime.date(year, month, 5), pay_period)
-            merged_data = pd.merge(pd.read_csv(io.StringIO(csv_tips)), pd.read_csv(io.StringIO(csv_mpvs)),
-                on=['last_name', 'first_name', 'title'], how='outer')
+            csv_mpvs = t.exportMealPeriodViolations(
+                global_stores, datetime.date(year, month, 5), pay_period
+            )
+            merged_data = pd.merge(
+                pd.read_csv(io.StringIO(csv_tips)),
+                pd.read_csv(io.StringIO(csv_mpvs)),
+                on=["last_name", "first_name", "title"],
+                how="outer",
+            )
             csv = merged_data.to_csv(index=False)
 
     except Exception as e:
@@ -402,6 +425,7 @@ def transform_tips_handler(*args, **kwargs) -> dict:
         print(traceback.print_exc())
         return create_response(400, str(e))
     return create_response(200, csv, content_type="text/csv", filename="gusto_tips.csv")
+
 
 def get_mpvs_handler(*args, **kwargs):
     csv = ""
@@ -413,7 +437,7 @@ def get_mpvs_handler(*args, **kwargs):
         event = {}
         if args is not None and len(args) == 2:
             event = args[0]
-            #context = args[1]
+            # context = args[1]
         multipart_content = decode_upload(event)
         if "year" in multipart_content:
             try:
