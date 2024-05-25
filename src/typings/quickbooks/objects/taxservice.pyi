@@ -20,4 +20,9 @@ class TaxService(QuickbooksBaseObject, UpdateMixin):
     Id: int
     TaxRateDetails: Incomplete
     def __init__(self) -> None: ...
-    def save(self, qb: Incomplete | None = None): ...
+    def save(
+        self,
+        qb: Incomplete | None = None,
+        request_id: Incomplete | None = None,
+        params: Incomplete | None = None,
+    ): ...

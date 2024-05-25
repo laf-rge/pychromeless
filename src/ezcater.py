@@ -1,6 +1,7 @@
 import datetime
 import os
 from time import sleep
+from typing import cast
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -12,7 +13,9 @@ from webdriver_wrapper import WebDriverWrapper
 class EZCater:
     def __init__(self):
         self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
-        self._parameters = SSMParameterStore(prefix="/prod")["ezcater"]
+        self._parameters = cast(
+            SSMParameterStore, SSMParameterStore(prefix="/prod")["ezcater"]
+        )
 
     def _login(self):
         self._driver = WebDriverWrapper(download_location="/tmp")
@@ -25,10 +28,10 @@ class EZCater:
         try:
             driver.get("https://www.ezcater.com/caterer_portal/sign_in")
             driver.find_element(By.ID, "contact_username").send_keys(
-                self._parameters["user"]
+                str(self._parameters["user"])
             )
             driver.find_element(By.ID, "password").send_keys(
-                self._parameters["password"] + Keys.ENTER
+                str(self._parameters["password"]) + Keys.ENTER
             )
         except:  # noqa: E722
             input("login exception...")

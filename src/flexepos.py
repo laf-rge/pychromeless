@@ -1,16 +1,16 @@
 import calendar
 import datetime
 import os
+from functools import partial
 from time import sleep
+from typing import cast
 
 from bs4 import BeautifulSoup, Tag
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select, WebDriverWait
-
 from ssm_parameter_store import SSMParameterStore
 from webdriver_wrapper import WebDriverWrapper
-from functools import partial
 
 """
 """
@@ -25,7 +25,9 @@ class Flexepos:
 
     def __init__(self):
         self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
-        self._parameters = SSMParameterStore(prefix="/prod")["flexepos"]
+        self._parameters = cast(
+            SSMParameterStore, SSMParameterStore(prefix="/prod")["flexepos"]
+        )
 
     """
     """
@@ -41,10 +43,10 @@ class Flexepos:
         driver.get("https://fms.flexepos.com/FlexeposWeb/")
         sleep(5)
         driver.find_element(By.ID, "login:username").clear()
-        driver.find_element(By.ID, "login:username").send_keys(self._parameters["user"])
+        driver.find_element(By.ID, "login:username").send_keys(str(self._parameters["user"]))
         driver.find_element(By.ID, "login:password").clear()
         driver.find_element(By.ID, "login:password").send_keys(
-            self._parameters["password"] + Keys.ENTER
+            str(self._parameters["password"]) + Keys.ENTER
         )
         return
 
@@ -635,11 +637,11 @@ class Flexepos:
                                 "1330",
                                 "sold",
                                 "-"
-                                + giftcardsales.find_all("tr")[4] # type: ignore
+                                + giftcardsales.find_all("tr")[4]  # type: ignore
                                 .find_all("td")[2]
                                 .text.strip(),
                             ]
-                        )  
+                        )
                     giftcardredeemed = soup.find("table", attrs={"id": "j_id176"})
 
                     if giftcardredeemed:
@@ -651,7 +653,7 @@ class Flexepos:
                                 .find_all("td")[-3]
                                 .text.strip(),
                             ]
-                        ) 
+                        )
                     if len(lines) > 0:
                         results.append(
                             [

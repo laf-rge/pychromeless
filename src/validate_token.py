@@ -7,79 +7,79 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 import json
 from urllib.request import urlopen
+from typing import Any, Dict, List, Optional, Union
 
 class OAuth2TokenValidation:
+    def __init__(self, tenant_id: str, client_id: str):
+        self.jwks_url: str = f"https://login.microsoftonline.com/{tenant_id}/discovery/v2.0/keys"
+        self.issuer_url: str = f"https://sts.windows.net/{tenant_id}/"
+        self.audience: str = f"api://{client_id}"
 
-    def __init__(self, tenant_id, client_id):
-        self.jwks_url = f"https://login.microsoftonline.com/{tenant_id}/discovery/v2.0/keys"
-        self.issuer_url = f"https://sts.windows.net/{tenant_id}/"
-        self.audience = f"api://{client_id}"
+        self.jwks: Dict[str, Any] = json.loads(urlopen(self.jwks_url).read())
+        self.last_jwks_public_key_update: float = time.time()
 
-        self.jwks = json.loads(urlopen(self.jwks_url).read())
-        self.last_jwks_public_key_update = time.time()
-
-    def validate_token_and_decode_it(self, token):
+    def validate_token_and_decode_it(self, token: str) -> Dict[str, Any]:
         """
-        :param token: the jwt token to validate
-        :return: the decoded token if valid, else raises an exception
-        """
+        Validate the JWT token and decode it.
 
+        :param token: The JWT token to validate.
+        :return: The decoded token if valid, else raises an exception.
+        """
         try:
             unverified_header = jwt.get_unverified_header(token)
         except Exception as e:
             raise Exception(f"Unable to decode authorization token headers: {e}")
 
         try:
-            rsa_key = OAuth2TokenValidation.find_rsa_key(self.jwks, unverified_header)
-            public_key = OAuth2TokenValidation.rsa_pem_from_jwk(rsa_key)
+            rsa_key = self.find_rsa_key(self.jwks, unverified_header)
+            public_key = self.rsa_pem_from_jwk(rsa_key)
 
             return jwt.decode(
-              token,
-              public_key,
-              verify=True,
-              algorithms=["RS256"],
-              audience=self.audience,
-              issuer=self.issuer_url
+                token,
+                public_key,
+                algorithms=["RS256"],
+                audience=self.audience,
+                issuer=self.issuer_url
             )
-
         except jwt.ExpiredSignatureError:
             raise Exception("Token has expired")
         except jwt.InvalidTokenError:
             raise Exception("Invalid token")
         except Exception as e:
-            # update the public key if not fresh and try again
+            # Update the public key if not fresh and try again
             if int(time.time() - self.last_jwks_public_key_update) > 60:
                 self.jwks = json.loads(urlopen(self.jwks_url).read())
                 self.last_jwks_public_key_update = time.time()
                 return self.validate_token_and_decode_it(token)
             else:
-                print(f"Error validating token: {e}")
+                raise Exception(f"Error validating token: {e}")
 
     @staticmethod
-    def find_rsa_key(jwks, unverified_header):
+    def find_rsa_key(jwks: Dict[str, Any], unverified_header: Dict[str, Any]) -> Dict[str, str]:
         for key in jwks["keys"]:
             if key["kid"] == unverified_header["kid"]:
                 return {
-                  "kty": key["kty"],
-                  "kid": key["kid"],
-                  "use": key["use"],
-                  "n": key["n"],
-                  "e": key["e"]
+                    "kty": key["kty"],
+                    "kid": key["kid"],
+                    "use": key["use"],
+                    "n": key["n"],
+                    "e": key["e"]
                 }
+        raise Exception("RSA key not found")
 
     @staticmethod
-    def ensure_bytes(key):
+    def ensure_bytes(key: Union[str, bytes]) -> bytes:
         if isinstance(key, str):
             key = key.encode('utf-8')
         return key
 
     @staticmethod
-    def decode_value(val):
+    def decode_value(val: Union[str, bytes]) -> int:
         decoded = base64.urlsafe_b64decode(OAuth2TokenValidation.ensure_bytes(val) + b'==')
         return int.from_bytes(decoded, 'big')
 
     @staticmethod
-    def rsa_pem_from_jwk(jwk):
+    def rsa_pem_from_jwk(jwk: Dict[str, str]) -> bytes:
         return RSAPublicNumbers(
             n=OAuth2TokenValidation.decode_value(jwk['n']),
             e=OAuth2TokenValidation.decode_value(jwk['e'])
@@ -88,43 +88,15 @@ class OAuth2TokenValidation:
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         )
 
-def lambda_handler(event, context):
+def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     print("Client token: " + event['authorizationToken'])
     print("Method ARN: " + event['methodArn'])
 
-    '''
-    Validate the incoming token and produce the principal user identifier
-    associated with the token. This can be accomplished in a number of ways:
-
-    1. Call out to the OAuth provider
-    2. Decode a JWT token inline
-    3. Lookup in a self-managed DB
-    '''
-    oat = OAuth2TokenValidation('4d83363f-a694-437f-892e-3ee76d388743','32483067-a12e-43ba-a194-a4a6e0a579b2')
+    oat = OAuth2TokenValidation('4d83363f-a694-437f-892e-3ee76d388743', '32483067-a12e-43ba-a194-a4a6e0a579b2')
     bearer = oat.validate_token_and_decode_it(event['authorizationToken'])
 
     principalId = bearer['oid']
 
-    '''
-    You can send a 401 Unauthorized response to the client by failing like so:
-
-      raise Exception('Unauthorized')
-
-    If the token is valid, a policy must be generated which will allow or deny
-    access to the client. If access is denied, the client will receive a 403
-    Access Denied response. If access is allowed, API Gateway will proceed with
-    the backend integration configured on the method that was called.
-
-    This function must generate a policy that is associated with the recognized
-    principal user identifier. Depending on your use case, you might store
-    policies in a DB, or generate them on the fly.
-
-    Keep in mind, the policy is cached for 5 minutes by default (TTL is
-    configurable in the authorizer) and will apply to subsequent calls to any
-    method/resource in the RestApi made with the same token.
-
-    The example policy below denies access to all resources in the RestApi.
-    '''
     tmp = event['methodArn'].split(':')
     apiGatewayArnTmp = tmp[5].split('/')
     awsAccountId = tmp[4]
@@ -133,24 +105,18 @@ def lambda_handler(event, context):
     policy.restApiId = apiGatewayArnTmp[0]
     policy.region = tmp[3]
     policy.stage = apiGatewayArnTmp[1]
-    if bearer['scp']=="WMCWeb.Josiah":
+    if bearer['scp'] == "WMCWeb.Josiah":
         policy.allowMethod(HttpVerb.ALL, '*')
     else:
         policy.denyAllMethods()
 
-    # Finally, build the policy
     authResponse = policy.build()
 
-    # new! -- add additional key-value pairs associated with the authenticated principal
-    # these are made available by APIGW like so: $context.authorizer.<key>
-    # additional context is cached
     context = {
         'key': 'value',  # $context.authorizer.key -> value
         'number': 1,
         'bool': True
     }
-    # context['arr'] = ['foo'] <- this is invalid, APIGW will not accept it
-    # context['obj'] = {'foo':'bar'} <- also invalid
 
     authResponse['context'] = context
 
@@ -168,60 +134,29 @@ class HttpVerb:
     ALL = '*'
 
 
-class AuthPolicy(object):
-    # The AWS account id the policy will be generated for. This is used to create the method ARNs.
-    awsAccountId = ''
-    # The principal used for the policy, this should be a unique identifier for the end user.
-    principalId = ''
-    # The policy version used for the evaluation. This should always be '2012-10-17'
-    version = '2012-10-17'
-    # The regular expression used to validate resource paths for the policy
-    pathRegex = '^[/.a-zA-Z0-9-\*]+$'
+class AuthPolicy:
+    pathRegex = r'^[/.a-zA-Z0-9-*]+$'
 
-    '''Internal lists of allowed and denied methods.
-
-    These are lists of objects and each object has 2 properties: A resource
-    ARN and a nullable conditions statement. The build method processes these
-    lists and generates the approriate statements for the final policy.
-    '''
-    allowMethods = []
-    denyMethods = []
-
-    """Replace the placeholder value with a default API Gateway API id to be used in the policy.
-    Beware of using '*' since it will not simply mean any API Gateway API id, because stars will greedily expand over '/' or other separators.
-    See https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_resource.html for more details."""
-    restApiId = "uu7jn6wcdh"
-
-    """Replace the placeholder value with a default region to be used in the policy.
-    Beware of using '*' since it will not simply mean any region, because stars will greedily expand over '/' or other separators.
-    See https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_resource.html for more details."""
-    region = "us-east-2"
-
-    """Replace the placeholder value with a default stage to be used in the policy.
-    Beware of using '*' since it will not simply mean any stage, because stars will greedily expand over '/' or other separators.
-    See https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_resource.html for more details."""
-    stage = "test"
-
-    def __init__(self, principal, awsAccountId):
+    def __init__(self, principal: str, awsAccountId: str):
         self.awsAccountId = awsAccountId
         self.principalId = principal
-        self.allowMethods = []
-        self.denyMethods = []
+        self.allowMethods: List[Dict[str, Any]] = []
+        self.denyMethods: List[Dict[str, Any]] = []
+        self.restApiId = "uu7jn6wcdh"
+        self.region = "us-east-2"
+        self.stage = "test"
 
-    def _addMethod(self, effect, verb, resource, conditions):
-        '''Adds a method to the internal lists of allowed or denied methods. Each object in
-        the internal list contains a resource ARN and a condition statement. The condition
-        statement can be null.'''
+    def _addMethod(self, effect: str, verb: str, resource: str, conditions: Optional[Dict[str, Any]] = None) -> None:
         if verb != '*' and not hasattr(HttpVerb, verb):
-            raise NameError('Invalid HTTP verb ' + verb + '. Allowed verbs in HttpVerb class')
+            raise NameError(f'Invalid HTTP verb {verb}. Allowed verbs in HttpVerb class')
         resourcePattern = re.compile(self.pathRegex)
         if not resourcePattern.match(resource):
-            raise NameError('Invalid resource path: ' + resource + '. Path should match ' + self.pathRegex)
+            raise NameError(f'Invalid resource path: {resource}. Path should match {self.pathRegex}')
 
-        if resource[:1] == '/':
+        if resource.startswith('/'):
             resource = resource[1:]
 
-        resourceArn = 'arn:aws:execute-api:{}:{}:{}/{}/{}/{}'.format(self.region, self.awsAccountId, self.restApiId, self.stage, verb, resource)
+        resourceArn = f'arn:aws:execute-api:{self.region}:{self.awsAccountId}:{self.restApiId}/{self.stage}/{verb}/{resource}'
 
         if effect.lower() == 'allow':
             self.allowMethods.append({
@@ -234,27 +169,21 @@ class AuthPolicy(object):
                 'conditions': conditions
             })
 
-    def _getEmptyStatement(self, effect):
-        '''Returns an empty statement object prepopulated with the correct action and the
-        desired effect.'''
-        statement = {
+    def _getEmptyStatement(self, effect: str) -> Dict[str, Any]:
+        return {
             'Action': 'execute-api:Invoke',
-            'Effect': effect[:1].upper() + effect[1:].lower(),
+            'Effect': effect.capitalize(),
             'Resource': []
         }
 
-        return statement
-
-    def _getStatementForEffect(self, effect, methods):
-        '''This function loops over an array of objects containing a resourceArn and
-        conditions statement and generates the array of statements for the policy.'''
+    def _getStatementForEffect(self, effect: str, methods: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         statements = []
 
-        if len(methods) > 0:
+        if methods:
             statement = self._getEmptyStatement(effect)
 
             for curMethod in methods:
-                if curMethod['conditions'] is None or len(curMethod['conditions']) == 0:
+                if not curMethod['conditions']:
                     statement['Resource'].append(curMethod['resourceArn'])
                 else:
                     conditionalStatement = self._getEmptyStatement(effect)
@@ -267,49 +196,32 @@ class AuthPolicy(object):
 
         return statements
 
-    def allowAllMethods(self):
-        '''Adds a '*' allow to the policy to authorize access to all methods of an API'''
-        self._addMethod('Allow', HttpVerb.ALL, '*', [])
+    def allowAllMethods(self) -> None:
+        self._addMethod('Allow', HttpVerb.ALL, '*')
 
-    def denyAllMethods(self):
-        '''Adds a '*' allow to the policy to deny access to all methods of an API'''
-        self._addMethod('Deny', HttpVerb.ALL, '*', [])
+    def denyAllMethods(self) -> None:
+        self._addMethod('Deny', HttpVerb.ALL, '*')
 
-    def allowMethod(self, verb, resource):
-        '''Adds an API Gateway method (Http verb + Resource path) to the list of allowed
-        methods for the policy'''
-        self._addMethod('Allow', verb, resource, [])
+    def allowMethod(self, verb: str, resource: str) -> None:
+        self._addMethod('Allow', verb, resource)
 
-    def denyMethod(self, verb, resource):
-        '''Adds an API Gateway method (Http verb + Resource path) to the list of denied
-        methods for the policy'''
-        self._addMethod('Deny', verb, resource, [])
+    def denyMethod(self, verb: str, resource: str) -> None:
+        self._addMethod('Deny', verb, resource)
 
-    def allowMethodWithConditions(self, verb, resource, conditions):
-        '''Adds an API Gateway method (Http verb + Resource path) to the list of allowed
-        methods and includes a condition for the policy statement. More on AWS policy
-        conditions here: http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements.html#Condition'''
+    def allowMethodWithConditions(self, verb: str, resource: str, conditions: Dict[str, Any]) -> None:
         self._addMethod('Allow', verb, resource, conditions)
 
-    def denyMethodWithConditions(self, verb, resource, conditions):
-        '''Adds an API Gateway method (Http verb + Resource path) to the list of denied
-        methods and includes a condition for the policy statement. More on AWS policy
-        conditions here: http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements.html#Condition'''
+    def denyMethodWithConditions(self, verb: str, resource: str, conditions: Dict[str, Any]) -> None:
         self._addMethod('Deny', verb, resource, conditions)
 
-    def build(self):
-        '''Generates the policy document based on the internal lists of allowed and denied
-        conditions. This will generate a policy with two main statements for the effect:
-        one statement for Allow and one statement for Deny.
-        Methods that includes conditions will have their own statement in the policy.'''
-        if ((self.allowMethods is None or len(self.allowMethods) == 0) and
-                (self.denyMethods is None or len(self.denyMethods) == 0)):
+    def build(self) -> Dict[str, Any]:
+        if not self.allowMethods and not self.denyMethods:
             raise NameError('No statements defined for the policy')
 
         policy = {
             'principalId': self.principalId,
             'policyDocument': {
-                'Version': self.version,
+                'Version': '2012-10-17',
                 'Statement': []
             }
         }

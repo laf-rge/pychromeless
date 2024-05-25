@@ -67,12 +67,10 @@ class WebDriverWrapper:
             )
 
             chrome_options.binary_location = "/opt/bin/headless-chromium"
-            self._driver = webdriver.Chrome(chrome_options=chrome_options)
+            self._driver = webdriver.Chrome(chrome_options=chrome_options) # type: ignore hack for lambda
         else:
             chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
             self._driver = webdriver.Chrome(options=chrome_options)
-
-        
 
         if self.download_location:
             self.enable_download_in_headless_chrome()
@@ -134,7 +132,7 @@ class WebDriverWrapper:
             "var x = document.getElementsByTagName('a'); var i; for (i = 0; i < x.length; i++) { x[i].target = '_self'; }"
         )
         # add missing support for chrome "send_command"  to selenium webdriver
-        self._driver.command_executor._commands["send_command"] = (
+        self._driver.command_executor._commands["send_command"] = ( # type: ignore hack for lambda
             "POST",
             "/session/$sessionId/chromium/send_command",
         )

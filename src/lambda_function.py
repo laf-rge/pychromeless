@@ -11,7 +11,7 @@ from email.message import Message
 from functools import partial  # noqa # pylint: disable=unused-import
 from locale import LC_NUMERIC, atof, setlocale
 from operator import itemgetter
-from typing import Any
+from typing import Any, cast
 
 import boto3
 import crunchtime
@@ -195,7 +195,7 @@ def online_cc_fee(*args, **kwargs) -> dict:
 
 
 def send_email(subject, message, recipients=None):
-    parameters = SSMParameterStore(prefix="/prod")["email"]
+    parameters = cast(SSMParameterStore, SSMParameterStore(prefix="/prod")["email"])
     from_email = parameters["from_email"]
     style_tag = """
     <style>
@@ -212,7 +212,7 @@ def send_email(subject, message, recipients=None):
     if recipients is not None:
         receiver_emails = recipients
     else:
-        receiver_emails = parameters["receiver_email"].split(", ")
+        receiver_emails = str(parameters["receiver_email"]).split(", ")
     charset = "UTF-8"
     client = boto3.client("ses")
     return client.send_email(

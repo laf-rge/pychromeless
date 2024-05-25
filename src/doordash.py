@@ -6,6 +6,7 @@ import json
 import os
 import zipfile
 from time import sleep
+from typing import cast
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -29,7 +30,9 @@ class Doordash:
 
     def __init__(self):
         self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
-        self._parameters = SSMParameterStore(prefix="/prod")["doordash"]
+        self._parameters = cast(
+            SSMParameterStore, SSMParameterStore(prefix="/prod")["doordash"]
+        )
 
     """
     """
@@ -44,10 +47,10 @@ class Doordash:
         driver.get("https://merchant-portal.doordash.com/")
         driver.find_element(
             By.XPATH, '//input[@data-anchor-id="IdentityLoginPageEmailField"]'
-        ).send_keys(self._parameters["user"] + Keys.ENTER)
+        ).send_keys(str(self._parameters["user"]) + Keys.ENTER)
         driver.find_element(
             By.XPATH, '//input[@data-anchor-id="IdentityLoginPagePasswordField"]'
-        ).send_keys(self._parameters["password"])
+        ).send_keys(str(self._parameters["password"]))
         driver.find_element(By.ID, "login-submit-button").click()
         input("pause...")
         return

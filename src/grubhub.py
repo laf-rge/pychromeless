@@ -1,6 +1,7 @@
 import datetime
 import os
 from time import sleep
+from typing import cast
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -13,7 +14,9 @@ class Grubhub:
 
     def __init__(self):
         self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
-        self._parameters = SSMParameterStore(prefix="/prod")["grubhub"]
+        self._parameters = cast(
+            SSMParameterStore, SSMParameterStore(prefix="/prod")["grubhub"]
+        )
 
     """
     """
@@ -26,10 +29,10 @@ class Grubhub:
 
         driver.get("https://restaurant.grubhub.com/financials/deposit-history/1669366/")
         sleep(3)
-        driver.find_elements(By.XPATH, "//input")[0].send_keys(self._parameters["user"])
+        driver.find_elements(By.XPATH, "//input")[0].send_keys(str(self._parameters["user"]))
         sleep(4)
         driver.find_elements(By.XPATH, "//input")[1].send_keys(
-            self._parameters["password"] + Keys.ENTER
+            str(self._parameters["password"]) + Keys.ENTER
         )
         sleep(4)
         return
