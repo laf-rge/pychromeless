@@ -29,7 +29,9 @@ class Grubhub:
 
         driver.get("https://restaurant.grubhub.com/financials/deposit-history/1669366/")
         sleep(3)
-        driver.find_elements(By.XPATH, "//input")[0].send_keys(str(self._parameters["user"]))
+        driver.find_elements(By.XPATH, "//input")[0].send_keys(
+            str(self._parameters["user"])
+        )
         sleep(4)
         driver.find_elements(By.XPATH, "//input")[1].send_keys(
             str(self._parameters["password"]) + Keys.ENTER
