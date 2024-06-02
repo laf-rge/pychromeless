@@ -605,8 +605,10 @@ secret_name = "prod/qbo"
 region_name = "us-east-2"
 
 # Create a Secrets Manager client
-session = Session()
-client = session.client(service_name="secretsmanager", region_name=region_name)
+session = boto3.session.Session()
+client = session.client(
+    service_name="secretsmanager", region_name=region_name, minorversion=70
+)
 
 
 def get_secret() -> bytes | str:
