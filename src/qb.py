@@ -597,7 +597,9 @@ def refresh_session():
     s["refresh_token"] = AUTH_CLIENT.refresh_token
     put_secret(json.dumps(s))
     # QuickBooks.enable_global()
-    CLIENT = QuickBooks(auth_client=AUTH_CLIENT, company_id="1401432085")
+    CLIENT = QuickBooks(
+        auth_client=AUTH_CLIENT, company_id="1401432085", minorversion=70
+    )
     return CLIENT
 
 
@@ -605,10 +607,8 @@ secret_name = "prod/qbo"
 region_name = "us-east-2"
 
 # Create a Secrets Manager client
-session = boto3.session.Session()
-client = session.client(
-    service_name="secretsmanager", region_name=region_name, minorversion=70
-)
+session = Session()
+client = session.client(service_name="secretsmanager", region_name=region_name)
 
 
 def get_secret() -> bytes | str:

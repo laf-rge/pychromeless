@@ -2,9 +2,9 @@ import datetime
 import os
 import calendar
 import openpyxl
-import boto3
 import flexepos
 import json
+import boto3
 from itertools import islice
 from decimal import Decimal, InvalidOperation
 from locale import LC_NUMERIC, setlocale
@@ -53,7 +53,9 @@ class Tips:
 
     def __init__(self):
         self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
-        self._parameters : SSMParameterStore = cast(SSMParameterStore, SSMParameterStore(prefix="/prod")["wheniwork"])
+        self._parameters: SSMParameterStore = cast(
+            SSMParameterStore, SSMParameterStore(prefix="/prod")["wheniwork"]
+        )
         self._a = WhenIWork()
         self._a.login(
             self._parameters["user"],

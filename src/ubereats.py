@@ -24,7 +24,9 @@ class UberEats:
 
     def __init__(self):
         self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
-        self._parameters = cast(SSMParameterStore, SSMParameterStore(prefix="/prod")["ubereats"])
+        self._parameters = cast(
+            SSMParameterStore, SSMParameterStore(prefix="/prod")["ubereats"]
+        )
         self._month_abbr_to_num = {
             name: num for num, name in enumerate(calendar.month_abbr) if num
         }
@@ -92,7 +94,7 @@ class UberEats:
         start_date = (
             driver.find_element(By.XPATH, '//input[@aria-label="Select a date range."]')
             .get_attribute("value")
-            .split()[0] # type: ignore
+            .split()[0]  # type: ignore
         )
         driver.find_element(By.XPATH, '//input[@aria-label="Select a date range."]')
         while start_date != str(qdate).replace("-", "/"):

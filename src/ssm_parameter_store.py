@@ -1,5 +1,5 @@
 # This code has been heavily modifed from the original version.
-# 
+#
 # Copyright (c) 2018 Bao Nguyen <b@nqbao.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,14 +25,20 @@
 import datetime
 from typing import Any, Dict, List, Optional, Union
 
-from boto3 import client
+import boto3
+
 
 class SSMParameterStore:
     """
     Provide a dictionary-like interface to access AWS SSM Parameter Store.
     """
 
-    def __init__(self, prefix: Optional[str] = None, ssm_client: Optional[Any] = None, ttl: Optional[int] = None):
+    def __init__(
+        self,
+        prefix: Optional[str] = None,
+        ssm_client: Optional[Any] = None,
+        ttl: Optional[int] = None,
+    ):
         """
         Initialize the SSMParameterStore.
 
@@ -42,12 +48,14 @@ class SSMParameterStore:
             ttl (Optional[int]): Time-to-live for cache in seconds.
         """
         self._prefix: str = (prefix or "").rstrip("/") + "/"
-        self._client: Any = ssm_client or client("ssm")
+        self._client: Any = ssm_client or boto3.client("ssm")
         self._keys: Optional[Dict[str, Dict[str, Any]]] = None
         self._substores: Dict[str, SSMParameterStore] = {}
         self._ttl: Optional[int] = ttl
 
-    def get(self, name: str, **kwargs: Any) -> Union[str, List[str], "SSMParameterStore", Any]:
+    def get(
+        self, name: str, **kwargs: Any
+    ) -> Union[str, List[str], "SSMParameterStore", Any]:
         """
         Get a parameter or a substore.
 
@@ -71,7 +79,9 @@ class SSMParameterStore:
             raise KeyError(name)
         elif self._keys[name]["type"] == "prefix":
             if abs_key not in self._substores:
-                store = self.__class__(prefix=abs_key, ssm_client=self._client, ttl=self._ttl)
+                store = self.__class__(
+                    prefix=abs_key, ssm_client=self._client, ttl=self._ttl
+                )
                 store._keys = self._keys[name]["children"]
                 self._substores[abs_key] = store
 
@@ -95,7 +105,7 @@ class SSMParameterStore:
 
         for page in pager:
             for p in page["Parameters"]:
-                paths = p["Name"][len(self._prefix):].split("/")
+                paths = p["Name"][len(self._prefix) :].split("/")
                 self._update_keys(self._keys, paths)
 
     @classmethod
@@ -148,11 +158,15 @@ class SSMParameterStore:
         entry = self._keys[name]
 
         # simple ttl
-        if self._ttl is False or (entry["expire"] and entry["expire"] <= datetime.datetime.now()):
+        if self._ttl is False or (
+            entry["expire"] and entry["expire"] <= datetime.datetime.now()
+        ):
             entry.pop("value", None)
 
         if "value" not in entry:
-            parameter = self._client.get_parameter(Name=abs_key, WithDecryption=True)["Parameter"]
+            parameter = self._client.get_parameter(Name=abs_key, WithDecryption=True)[
+                "Parameter"
+            ]
             value = parameter["Value"]
             if parameter["Type"] == "StringList":
                 value = value.split(",")
@@ -160,7 +174,9 @@ class SSMParameterStore:
             entry["value"] = value
 
             if self._ttl:
-                entry["expire"] = datetime.datetime.now() + datetime.timedelta(seconds=self._ttl)
+                entry["expire"] = datetime.datetime.now() + datetime.timedelta(
+                    seconds=self._ttl
+                )
             else:
                 entry["expire"] = None
 
