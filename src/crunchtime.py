@@ -72,7 +72,9 @@ class Crunchtime:
         )
         # WebDriverWait(driver, 10).until(lambda driver: driver.switch_to.active_element.tag_name == 'div')
         sleep(4)
-        ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+        driver.find_elements(By.XPATH, '//div[@ces-selenium-id="tool_close"]')[
+            1
+        ].click()
         return
 
     def get_inventory_report(self, store, year, month):
