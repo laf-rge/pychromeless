@@ -4,11 +4,13 @@ import glob
 import os
 import re
 from time import sleep
+from typing import cast
+
+import qb
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
-import qb
 from ssm_parameter_store import SSMParameterStore
 from webdriver_wrapper import WebDriverWrapper
 
@@ -22,7 +24,9 @@ class Crunchtime:
     def __init__(self):
         self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
         self._driver = WebDriverWrapper(download_location="/tmp")
-        self._parameters = SSMParameterStore(prefix="/prod")["crunchtime"]
+        self._parameters = cast(
+            SSMParameterStore, SSMParameterStore(prefix="/prod")["crunchtime"]
+        )
         self._driver = WebDriverWrapper(download_location="/tmp")
 
     """
@@ -38,47 +42,69 @@ class Crunchtime:
         driver.get("https://jerseymikes.net-chef.com/standalone/modern.ct#Login")
         username_element = driver.find_element(By.XPATH, '//input[@name="username"]')
         username_element.clear()
-        username_element.send_keys(self._parameters["user"])
-        WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
+        username_element.send_keys(str(self._parameters["user"]))
+        WebDriverWait(driver, 10).until(
+            lambda driver: driver.execute_script("return document.readyState")
+            == "complete"
+        )
         password_element = driver.find_element(By.XPATH, '//input[@name="password"]')
         password_element.clear()
-        password_element.send_keys(self._parameters["password"])
-        WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
+        password_element.send_keys(str(self._parameters["password"]))
+        WebDriverWait(driver, 10).until(
+            lambda driver: driver.execute_script("return document.readyState")
+            == "complete"
+        )
         driver.find_element(By.XPATH, '//button[@tabindex="3"]').click()
-        WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
-        WebDriverWait(driver, 10).until(lambda driver: driver.switch_to.active_element == driver.find_element(By.XPATH, '//input[@name="locationId"]'))
+        WebDriverWait(driver, 10).until(
+            lambda driver: driver.execute_script("return document.readyState")
+            == "complete"
+        )
+        WebDriverWait(driver, 10).until(
+            lambda driver: driver.switch_to.active_element
+            == driver.find_element(By.XPATH, '//input[@name="locationId"]')
+        )
         driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(store)
-        driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(Keys.ENTER)
-        driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(Keys.ENTER)
-        #WebDriverWait(driver, 10).until(lambda driver: driver.switch_to.active_element.tag_name == 'div')
+        driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(
+            Keys.ENTER
+        )
+        driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(
+            Keys.ENTER
+        )
+        # WebDriverWait(driver, 10).until(lambda driver: driver.switch_to.active_element.tag_name == 'div')
         sleep(4)
-        ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+        driver.find_elements(By.XPATH, '//div[@ces-selenium-id="tool_close"]')[
+            1
+        ].click()
         return
 
     def get_inventory_report(self, store, year, month):
         self._login(store)
         driver = self._driver._driver
-        driver.get("https://jerseymikes.net-chef.com/ncext/index.ct#inventoryMenu~actualtheoreticalcost?parentModule=inventoryMenu")
+        driver.get(
+            "https://jerseymikes.net-chef.com/ncext/index.ct#inventoryMenu~actualtheoreticalcost?parentModule=inventoryMenu"
+        )
         sleep(3)
-        element = driver.find_element(By.NAME, 'startDateCombo')
+        element = driver.find_element(By.NAME, "startDateCombo")
         loop_detection = 0
-        while (loop_detection < 30 and
-                driver.switch_to.active_element.get_attribute(
-                'value') != '{0}/01/{1}'.format(
-                    str(month).zfill(2), year)):
-            ActionChains(driver).move_to_element(element).click().send_keys(Keys.ARROW_DOWN).send_keys(Keys.RETURN).perform()
+        while loop_detection < 30 and driver.switch_to.active_element.get_attribute(
+            "value"
+        ) != "{0}/01/{1}".format(str(month).zfill(2), year):
+            ActionChains(driver).move_to_element(element).click().send_keys(
+                Keys.ARROW_DOWN
+            ).send_keys(Keys.RETURN).perform()
             loop_detection += 1
         element = driver.find_element(By.NAME, "endDateCombo")
         loop_detection = 0
         while (
-                loop_detection < 30
-                and driver.find_element(By.NAME, "endDateCombo").get_attribute(
-                    "value")[:2]
-                != str(month).zfill(2)
-                and driver.find_element(By.NAME, "endDateCombo").get_attribute(
-                    "value")[6:] != year
-                ):
-            ActionChains(driver).move_to_element(element).click().send_keys(Keys.ARROW_DOWN).send_keys(Keys.RETURN).perform()
+            loop_detection < 30
+            and driver.find_element(By.NAME, "endDateCombo").get_attribute("value")[:2]  # type: ignore
+            != str(month).zfill(2)
+            and driver.find_element(By.NAME, "endDateCombo").get_attribute("value")[6:]  # type: ignore
+            != year  # type: ignore
+        ):
+            ActionChains(driver).move_to_element(element).click().send_keys(
+                Keys.ARROW_DOWN
+            ).send_keys(Keys.RETURN).perform()
             loop_detection += 1
         if loop_detection == 30:
             print(f"Valid end date not found skipping {store}")
@@ -95,22 +121,20 @@ class Crunchtime:
         self._export(driver, True)
 
     def _export(self, driver, export_combo):
-        elem = driver.find_element(By.CSS_SELECTOR, 
-            "[ces-selenium-id='toolbar_filtersBar']"
+        elem = driver.find_element(
+            By.CSS_SELECTOR, "[ces-selenium-id='toolbar_filtersBar']"
         ).find_element(By.CSS_SELECTOR, "[ces-selenium-id='button']")
         sleep(10)
         elem.click()
         sleep(6)
-        export = driver.find_element(By.CSS_SELECTOR, 
-            "[ces-selenium-id='tool_export']"
-        )
-        if export.get_attribute('data-qtip') == "Nothing to Export.":
+        export = driver.find_element(By.CSS_SELECTOR, "[ces-selenium-id='tool_export']")
+        if export.get_attribute("data-qtip") == "Nothing to Export.":
             print("Nothing to export.")
             return
         export.click()
         # set to CSV
-        element = driver.find_element(By.CSS_SELECTOR, 
-            "[ces-selenium-id='combobox_exportFormat'"
+        element = driver.find_element(
+            By.CSS_SELECTOR, "[ces-selenium-id='combobox_exportFormat'"
         )
         element_id = "{0}-inputEl".format(element.get_property("id"))
         element.find_element(By.ID, element_id).send_keys(Keys.ARROW_DOWN)
@@ -119,8 +143,8 @@ class Crunchtime:
         element.find_element(By.ID, element_id).send_keys(Keys.ENTER)
         # set export
         if export_combo:
-            element = driver.find_element(By.CSS_SELECTOR, 
-                "[ces-selenium-id='combobox_multiExportCombo'"
+            element = driver.find_element(
+                By.CSS_SELECTOR, "[ces-selenium-id='combobox_multiExportCombo'"
             )
             element_id = "{0}-inputEl".format(element.get_property("id"))
             element.find_element(By.ID, element_id).send_keys(Keys.ARROW_DOWN)
@@ -139,25 +163,29 @@ class Crunchtime:
             with open(filename, newline="", encoding="utf-8-sig") as csvfile:
                 invreader = csv.reader(csvfile)
                 header = next(invreader)
-                notes_header = "Information generated from CrunchTime at {0} for {1}".format(
-                    header[2], header[0]
+                notes_header = (
+                    "Information generated from CrunchTime at {0} for {1}".format(
+                        header[2], header[0]
+                    )
                 )
                 items = []
                 total = 0
                 for row in invreader:
-                    if row[0] == 'Total Cost of Goods Sold':
+                    if row[0] == "Total Cost of Goods Sold":
                         total = row[2]
                         print(total)
-                    elif row[0] == 'P&L Substructure':
+                    elif row[0] == "P&L Substructure":
                         header = row
-                    elif row[0] != '' or row[1] == '':
+                    elif row[0] != "" or row[1] == "":
                         continue
                     else:
-                        items.append([qb.inventory_ref_lookup(
-                            row[1].split()[0]),
-                            row[2],
-                            ", ".join(' : '.join(x) for x in zip(header,row))
-                        ])
+                        items.append(
+                            [
+                                qb.inventory_ref_lookup(row[1].split()[0]),
+                                row[2],
+                                ", ".join(" : ".join(x) for x in zip(header, row)),
+                            ]
+                        )
                 qb.sync_inventory(year, month, items, notes_header, total, store)
             os.remove(filename)
 
@@ -171,14 +199,17 @@ class Crunchtime:
             with open(filename, newline="", encoding="utf-8-sig") as csvfile:
                 glreader = csv.reader(csvfile)
                 header = next(glreader)
-                notes_header = "Information generated from CrunchTime at {0} for {1}".format(
-                    header[2], header[0]
+                notes_header = (
+                    "Information generated from CrunchTime at {0} for {1}".format(
+                        header[2], header[0]
+                    )
                 )
                 next(glreader)  # skip header line
                 items = []
                 vendor = None
                 invoice_num = 0
                 invoice_date = None
+                notes = ""
                 for row in glreader:
                     if len(row) != 3:
                         continue
@@ -199,8 +230,8 @@ class Crunchtime:
                             and invoice_date.year >= 2020
                         ):
                             vendor = qb.vendor_lookup("PAPER")
-                        elif i[3].strip() in ['20358', '20395', '20400', '20407']:
-                            #hotfix for store to store
+                        elif i[3].strip() in ["20358", "20395", "20400", "20407"]:
+                            # hotfix for store to store
                             vendor = None
                         else:
                             vendor = qb.vendor_lookup(i[3].strip())
@@ -208,9 +239,14 @@ class Crunchtime:
                         continue
                     elif row[1] == "Total: ":
                         # send invoice
-                        if vendor: #skip if store to store
+                        if vendor:  # skip if store to store
                             qb.sync_bill(
-                                vendor, invoice_num, invoice_date, notes, items, str(store)
+                                vendor,
+                                invoice_num,
+                                invoice_date,
+                                notes,
+                                items,
+                                str(store),
                             )
                         continue
                     else:

@@ -8,7 +8,7 @@ from decimal import Decimal
 from functools import reduce
 from locale import LC_NUMERIC, atof, setlocale
 
-import boto3
+from boto3.session import Session
 from botocore.exceptions import ClientError
 from intuitlib.client import AuthClient
 from quickbooks import QuickBooks
@@ -23,10 +23,10 @@ from quickbooks.objects import (
     Deposit,
     DepositLine,
     DepositLineDetail,
+    Item,
     JournalEntry,
     JournalEntryLine,
     JournalEntryLineDetail,
-    Item,
     SalesItemLine,
     SalesItemLineDetail,
     SalesReceipt,
@@ -208,15 +208,17 @@ def create_daily_sales(txdate, daily_reports):
             line.LineNum = line_num
             if line_item in daily_report and daily_report[line_item]:
                 if daily_report[line_item].startswith("N"):
-                    line.Amount = 0
+                    line.Amount = Decimal(0)
                 else:
-                    line.Amount = atof(daily_report[line_item].strip("$")) * line_id[1]
+                    line.Amount = (
+                        Decimal(atof(daily_report[line_item].strip("$"))) * line_id[1]
+                    )
                 amount_total += Decimal(line.Amount)
                 line.Description = "{} imported from ({})".format(
                     line_item, daily_report[line_item]
                 )
             else:
-                line.Amount = 0
+                line.Amount = Decimal(0)
                 line.Description = "Nothing captured."
             line.SalesItemLineDetail = SalesItemLineDetail()
             item = Item.query(
@@ -237,11 +239,13 @@ def create_daily_sales(txdate, daily_reports):
             for payin_line in line.Description.split("\n")[1:]:
                 if payin_line.startswith("TOTAL"):
                     continue
-                amount = amount + Decimal(atof(pattern.search(payin_line).group()))
+                mg = pattern.search(payin_line)
+                if mg:
+                    amount = amount + Decimal(atof(mg.group()))
             line.Amount = amount.quantize(TWOPLACES)
             amount_total += amount
         else:
-            line.Amount = 0
+            line.Amount = Decimal(0)
         line.SalesItemLineDetail = SalesItemLineDetail()
         item = Item.query("select * from Item where id = '{}'".format(43), qb=CLIENT)[0]
         line.SalesItemLineDetail.ItemRef = item.to_ref()
@@ -259,7 +263,7 @@ def create_daily_sales(txdate, daily_reports):
                 amount_total
             ).quantize(TWOPLACES)
         else:
-            line.Amount = 0
+            line.Amount = Decimal(0)
         line.SalesItemLineDetail = SalesItemLineDetail()
         item = Item.query("select * from Item where id = '{}'".format(31), qb=CLIENT)[0]
         line.SalesItemLineDetail.ItemRef = item.to_ref()
@@ -370,9 +374,9 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
     bill.PrivateNote = notes
     bill.DepartmentRef = None if not department else store_refs[department]
 
-    if item_sign > 0:
+    if isinstance(bill, Bill):
         bill.SalesTermRef = supplier.TermRef
-    bill.DueDate = None
+        bill.DueDate = None
 
     # clear the lines
     bill.Line = []
@@ -593,7 +597,9 @@ def refresh_session():
     s["refresh_token"] = AUTH_CLIENT.refresh_token
     put_secret(json.dumps(s))
     # QuickBooks.enable_global()
-    CLIENT = QuickBooks(auth_client=AUTH_CLIENT, company_id="1401432085")
+    CLIENT = QuickBooks(
+        auth_client=AUTH_CLIENT, company_id="1401432085", minorversion=70
+    )
     return CLIENT
 
 
@@ -601,16 +607,15 @@ secret_name = "prod/qbo"
 region_name = "us-east-2"
 
 # Create a Secrets Manager client
-session = boto3.session.Session()
-client = session.client(
-    service_name="secretsmanager", region_name=region_name, minorversion=70
-)
+session = Session()
+client = session.client(service_name="secretsmanager", region_name=region_name)
 
 
-def get_secret():
+def get_secret() -> bytes | str:
     # In this sample we only handle the specific exceptions for the 'GetSecretValue' API.
     # See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
     # We rethrow the exception by default.
+    get_secret_value_response = None
     try:
         get_secret_value_response = client.get_secret_value(SecretId=secret_name)
     except ClientError as e:
@@ -634,13 +639,15 @@ def get_secret():
             # We can't find the resource that you asked for.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
-    else:
-        # Decrypts secret using the associated KMS CMK.
-        # Depending on whether the secret is a string or binary, one of these fields will be populated.
+    # Decrypts secret using the associated KMS CMK.
+    # Depending on whether the secret is a string or binary, one of these fields will be populated.
+    if get_secret_value_response:
         if "SecretString" in get_secret_value_response:
             return get_secret_value_response["SecretString"]
         else:
             return base64.b64decode(get_secret_value_response["SecretBinary"])
+    else:
+        raise Exception("Secrets issue.")
 
 
 def put_secret(secret_string):
