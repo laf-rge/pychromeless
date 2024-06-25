@@ -43,7 +43,9 @@ class Flexepos:
         driver.get("https://fms.flexepos.com/FlexeposWeb/")
         sleep(5)
         driver.find_element(By.ID, "login:username").clear()
-        driver.find_element(By.ID, "login:username").send_keys(str(self._parameters["user"]))
+        driver.find_element(By.ID, "login:username").send_keys(
+            str(self._parameters["user"])
+        )
         driver.find_element(By.ID, "login:password").clear()
         driver.find_element(By.ID, "login:password").send_keys(
             str(self._parameters["password"]) + Keys.ENTER
@@ -554,6 +556,39 @@ class Flexepos:
         finally:
             if driver:
                 self._driver.close()
+
+    def toggleMealDeal(self, stores):
+        driver = None
+        rv = {}
+        try:
+            self._login()
+            driver = self._driver._driver
+            sleep(2)
+            driver.find_element(By.ID, "menu:1:j_id23_header").click()
+            driver.find_element(By.ID, "menu:1:j_id24:8:j_id25").click()
+            for store in stores:
+                driver.find_element(By.ID, "parameters:store").clear()
+                driver.find_element(By.ID, "parameters:store").send_keys(store)
+                driver.find_element(By.ID, "parameters:search").click()
+                sleep(7)
+                deal_row = driver.find_element(By.XPATH, "//input[@value='1594']")
+                deal_text = deal_row.get_attribute("name").rstrip(":pluId")
+                for toggle_type in ["pickup", "delivery"]:
+                    driver.find_element(
+                        By.ID, f"{deal_text}:availability:0:{toggle_type}"
+                    ).click()
+                driver.find_element(By.ID, "parameters:save_bottom").click()
+                sleep(15)
+                driver.find_element(By.ID, "parameters:continue").click()
+                sleep(7)
+                rv[store] = driver.find_element(
+                    By.ID, f"{deal_text}:availability:0:pickup"
+                ).is_selected()
+        finally:
+            if driver:
+                self._driver.close()
+
+        return rv
 
     """
     The gift card periods are Thursday to Wednesday with funding on Friday's. Comparing your 
