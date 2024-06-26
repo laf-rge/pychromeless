@@ -5,6 +5,7 @@ import io
 import json
 import os
 import zipfile
+import re
 from time import sleep
 from typing import cast
 
@@ -78,10 +79,13 @@ class Doordash:
 
         payout_ids = []
         for tr in driver.find_elements(By.TAG_NAME, "tr")[1:]:
+            cells = tr.find_elements(By.TAG_NAME, "td")
+            payout_id = cells[1].text
+            store_id = re.search(r"\((\d+)\)", cells[3].text).group(1)
+            if store_id == "20025":
+                continue
             payout_ids.append(
-                tr.find_elements(By.TAG_NAME, "td")[1]
-                .find_element(By.TAG_NAME, "a")
-                .get_attribute("href")
+                f"https://merchant-portal.doordash.com/merchant/financials/payout-details/{company_id}/{store_map[store_id]}/{payout_id}"
             )
 
         for payout_id in payout_ids:
@@ -96,17 +100,18 @@ class Doordash:
             txdate = datetime.datetime.strptime(
                 txdate_str, "Payout on %B %d, %Y"
             ).date()
-            notes = driver.find_element(
-                By.XPATH, "//*[starts-with(text(),'Sales')]/../../../../../../../.."
-            ).text.split("\n")
-            notes = {
-                notes[i]: notes[i + 1].replace("$", "") for i in range(0, len(notes), 2)
-            }
+            sections = driver.find_elements(By.TAG_NAME, "section")
+            notes: dict[str, str] = {}
+            for section in sections:
+                spans = section.find_elements(By.TAG_NAME, "span")
+                notes[spans[0].text] = spans[1].text.replace("$", "")
             lines.append(["1361", "Subtotal", notes["Subtotal"]])
-            lines.append(["1361", "Tax", notes["Tax"]])
-            lines.append(["6310", "DoorDash services", notes["DoorDash services"]])
-            lines.append(["4830", "Amendments", notes["Amendments"]])
-            # customer fees and customer fees tax not implemented
+            lines.append(["1361", "Tax", notes["Tax (subtotal)"]])
+            lines.append(["6310", "Commission", notes["Commission"]])
+            lines.append(["6310", "Merchant fees", notes["Merchant fees"]])
+            lines.append(["4830", "Error charges", notes["Error charges"]])
+            lines.append(["4830", "Adjustments", notes["Adjustments"]])
+            # tips, merchant fee tax and customer fees tax not implemented
             store = store_inv_map.get(payout_id.split("/")[7], None)
             if store is None:
                 continue
