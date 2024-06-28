@@ -12,8 +12,37 @@ from selenium.webdriver.support.ui import Select, WebDriverWait
 from ssm_parameter_store import SSMParameterStore
 from webdriver_wrapper import WebDriverWrapper
 
-"""
-"""
+
+# Tag IDs dictionary
+TAG_IDS = {
+    "login_username": "login:username",
+    "login_password": "login:password",
+    "menu_header": "menu:{}:j_id23_header",
+    "menu_item": "menu:{}:j_id24:{}:j_id25",
+    "parameters_store": "parameters:store",
+    "parameters_group": "parameters:group",
+    "start_date": "parameters:startDateCalendarInputDate",
+    "end_date": "parameters:endDateCalendarInputDate",
+    "group_by": "parameters:GroupById",
+    "submit": "parameters:submit",
+    "switch_off": "j_id37_switch_off",
+    "online_orders_list": "onlineOrdersList",
+    "total_sales": "TotalSales",
+    "payments": "Payments",
+    "total_tax": "TotalTax",
+    "gift_cards_sold": "j_id318_header",
+    "register_audit": "j_id240_header",
+    "deposits": "Deposits",
+    "cc_tips_1": "j_id86:1:j_id100:0:j_id105",
+    "cc_tips_2": "j_id143_body",
+    "online_cc_tips_1": "j_id111:1:j_id125:0:j_id130",
+    "online_cc_tips_2": "j_id143_body",
+    "transactions": "transactions",
+    "journal_scope": "parameters:journalScope",
+    "royalty_list": "RoyaltyList",
+    "gift_card_sales": "j_id125",
+    "gift_card_redeemed": "j_id176",
+}
 
 
 def onDay(weekdate, weekday):
@@ -42,12 +71,12 @@ class Flexepos:
         )
         driver.get("https://fms.flexepos.com/FlexeposWeb/")
         sleep(5)
-        driver.find_element(By.ID, "login:username").clear()
-        driver.find_element(By.ID, "login:username").send_keys(
+        driver.find_element(By.ID, TAG_IDS["login_username"]).clear()
+        driver.find_element(By.ID, TAG_IDS["login_username"]).send_keys(
             str(self._parameters["user"])
         )
-        driver.find_element(By.ID, "login:password").clear()
-        driver.find_element(By.ID, "login:password").send_keys(
+        driver.find_element(By.ID, TAG_IDS["login_password"]).clear()
+        driver.find_element(By.ID, TAG_IDS["login_password"]).send_keys(
             str(self._parameters["password"]) + Keys.ENTER
         )
         return
@@ -67,32 +96,26 @@ class Flexepos:
 
         try:
             sleep(2)
-            driver.find_element(By.ID, "menu:0:j_id23_header").click()
+            driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
             sleep(2)
-            driver.find_element(By.ID, "menu:0:j_id24:13:j_id25").click()
+            driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 13)).click()
             sleep(1)
             for store in stores:
                 payment_data[store] = {}
                 sleep(3)
-                driver.find_element(By.ID, "parameters:store").clear()
-                driver.find_element(By.ID, "parameters:store").send_keys(store)
-                driver.find_element(
-                    By.ID, "parameters:startDateCalendarInputDate"
-                ).clear()
-                driver.find_element(
-                    By.ID, "parameters:startDateCalendarInputDate"
-                ).send_keys(span_date_start)
-                driver.find_element(
-                    By.ID, "parameters:endDateCalendarInputDate"
-                ).clear()
-                driver.find_element(
-                    By.ID, "parameters:endDateCalendarInputDate"
-                ).send_keys(span_date_end)
-                driver.find_element(By.ID, "parameters:GroupById").click()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
+                driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
+                driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(
+                    span_date_start
+                )
+                driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
+                driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(span_date_end)
+                driver.find_element(By.ID, TAG_IDS["group_by"]).click()
                 Select(
-                    driver.find_element(By.ID, "parameters:GroupById")
+                    driver.find_element(By.ID, TAG_IDS["group_by"])
                 ).select_by_visible_text("Summary")
-                driver.find_element(By.ID, "parameters:submit").click()
+                driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 sleep(5)
                 soup = BeautifulSoup(driver.page_source, features="html.parser")
                 online_table = soup.find("table", attrs={"class": "table-standard"})
@@ -103,7 +126,7 @@ class Flexepos:
                 for row in rows[1:]:
                     r = [ele.text.strip() for ele in row.find_all("td")]
                     payment_data[store][r[0]] = r[4]
-                driver.find_element(By.ID, "j_id37_switch_off").click()
+                driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
         finally:
             if driver:
                 self._driver.close()
@@ -128,31 +151,27 @@ class Flexepos:
 
         try:
             sleep(2)
-            driver.find_element(By.ID, "menu:2:j_id23_header").click()
+            driver.find_element(By.ID, TAG_IDS["menu_header"].format(2)).click()
             sleep(2)
-            driver.find_element(By.ID, "menu:2:j_id24:1:j_id25").click()
+            driver.find_element(By.ID, TAG_IDS["menu_item"].format(2, 1)).click()
             sleep(1)
             for store in stores:
                 payment_data[store] = {}
                 sleep(3)
-                driver.find_element(By.ID, "parameters:store").clear()
-                driver.find_element(By.ID, "parameters:store").send_keys(store)
-                driver.find_element(
-                    By.ID, "parameters:startDateCalendarInputDate"
-                ).clear()
-                driver.find_element(
-                    By.ID, "parameters:startDateCalendarInputDate"
-                ).send_keys(span_date_start)
-                driver.find_element(
-                    By.ID, "parameters:endDateCalendarInputDate"
-                ).clear()
-                driver.find_element(
-                    By.ID, "parameters:endDateCalendarInputDate"
-                ).send_keys(span_date_end)
-                driver.find_element(By.ID, "parameters:submit").click()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
+                driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
+                driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(
+                    span_date_start
+                )
+                driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
+                driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(span_date_end)
+                driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 sleep(5)
                 soup = BeautifulSoup(driver.page_source, features="html.parser")
-                online_table = soup.find("table", attrs={"id": "onlineOrdersList"})
+                online_table = soup.find(
+                    "table", attrs={"id": TAG_IDS["online_orders_list"]}
+                )
                 if not online_table or not isinstance(online_table, Tag):
                     payment_data.pop(store, None)
                     continue
@@ -174,7 +193,7 @@ class Flexepos:
                     payment_data[store]["Patent Fee"] = row[5]
                     payment_data[store]["ECommerce Fee"] = row[6]
                     payment_data[store]["Total Fees"] = row[7]
-                driver.find_element(By.ID, "j_id37_switch_off").click()
+                driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
         finally:
             if driver:
                 self._driver.close()
@@ -193,23 +212,15 @@ class Flexepos:
             for store in stores:
                 driver.get("https://fms.flexepos.com/FlexeposWeb/home.seam")
                 sales_data[store] = {}
-                driver.find_element(By.ID, "menu:0:j_id23_header").click()
-                driver.find_element(By.ID, "menu:0:j_id24:1:j_id25").click()
+                driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
+                driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 1)).click()
                 sleep(1)
-                driver.find_element(By.ID, "parameters:store").clear()
-                driver.find_element(By.ID, "parameters:store").send_keys(store)
-                driver.find_element(
-                    By.ID, "parameters:startDateCalendarInputDate"
-                ).clear()
-                driver.find_element(
-                    By.ID, "parameters:startDateCalendarInputDate"
-                ).send_keys(tx_date_str)
-                driver.find_element(
-                    By.ID, "parameters:endDateCalendarInputDate"
-                ).clear()
-                driver.find_element(
-                    By.ID, "parameters:endDateCalendarInputDate"
-                ).send_keys(tx_date_str)
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
+                driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
+                driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(tx_date_str)
+                driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
+                driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(tx_date_str)
                 checkboxes = filter(
                     None,
                     ("parameters:j_id{}," * 15).format(*range(68, 98, 2)).split(","),
@@ -236,10 +247,12 @@ class Flexepos:
                 ):
                     if state != checkbox.is_selected():
                         checkbox.click()
-                driver.find_element(By.ID, "parameters:submit").click()
+                driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 sleep(4)
                 soup = BeautifulSoup(driver.page_source, features="html.parser")
-                totalsales_table = soup.find("table", attrs={"id": "TotalSales"})
+                totalsales_table = soup.find(
+                    "table", attrs={"id": TAG_IDS["total_sales"]}
+                )
                 if not totalsales_table or not isinstance(totalsales_table, Tag):
                     continue
                 rows = totalsales_table.find_all("tr")
@@ -254,7 +267,7 @@ class Flexepos:
                     sales_data[store]["Donations"] = row[4]
 
                 # Payment Breakdown
-                payment_table = soup.find("table", attrs={"id": "Payments"})
+                payment_table = soup.find("table", attrs={"id": TAG_IDS["payments"]})
                 if not payment_table or not isinstance(payment_table, Tag):
                     continue
                 rows = payment_table.find_all("tr")
@@ -267,7 +280,6 @@ class Flexepos:
                     sales_data[store]["Online Gift Card"] = None
                     sales_data[store]["House Account"] = None
                     sales_data[store]["Remote Payment"] = None
-                    # sales_data[store]["Third Party"] = None
                 else:
                     row = [ele.text.strip() for ele in rows[4].find_all("td")]
                     sales_data[store]["Cash"] = row[1]
@@ -278,11 +290,9 @@ class Flexepos:
                     sales_data[store]["Online Gift Card"] = row[6]
                     sales_data[store]["House Account"] = row[7]
                     sales_data[store]["Remote Payment"] = row[8]
-                    # using new third party breakdown
-                    # sales_data[store]["Third Party"] = row[9]
 
                 # Collected Tax
-                payment_table = soup.find("table", attrs={"id": "TotalTax"})
+                payment_table = soup.find("table", attrs={"id": TAG_IDS["total_tax"]})
                 if not payment_table or not isinstance(payment_table, Tag):
                     continue
                 rows = payment_table.find_all("tr")
@@ -294,7 +304,7 @@ class Flexepos:
 
                 # Gift Cards Sold
                 gift_cards_sold = driver.find_element(
-                    By.ID, "j_id318_header"
+                    By.ID, TAG_IDS["gift_cards_sold"]
                 ).text.split(":")
                 sales_data[store][gift_cards_sold[0].strip()[2:]] = gift_cards_sold[
                     1
@@ -302,14 +312,14 @@ class Flexepos:
 
                 # Register Audit
                 register_audit = driver.find_element(
-                    By.ID, "j_id240_header"
+                    By.ID, TAG_IDS["register_audit"]
                 ).text.split(":")
                 sales_data[store][register_audit[0].strip()[2:]] = register_audit[
                     1
                 ].strip()
 
                 # Bank Deposits
-                deposit_table = soup.find("table", attrs={"id": "Deposits"})
+                deposit_table = soup.find("table", attrs={"id": TAG_IDS["deposits"]})
                 if not deposit_table or not isinstance(deposit_table, Tag):
                     continue
                 rows = deposit_table.find_all("tr")
@@ -320,82 +330,73 @@ class Flexepos:
                     ]
                 )
 
-                driver.find_element(By.ID, "menu:0:j_id29_header").click()
-                driver.find_element(By.ID, "menu:0:j_id30:9:j_id31").click()
-                driver.find_element(By.ID, "parameters:submit").click()
+                driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
+                driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 9)).click()
+                driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 driver.implicitly_wait(10)
-                if len(driver.find_elements(By.ID, "j_id86:1:j_id100:0:j_id105")) > 0:
-                    cctips = driver.find_element(
-                        By.ID, "j_id86:1:j_id100:0:j_id105"
-                    ).text
+                if len(driver.find_elements(By.ID, TAG_IDS["cc_tips_1"])) > 0:
+                    cctips = driver.find_element(By.ID, TAG_IDS["cc_tips_1"]).text
                 else:
-                    cctips = driver.find_element(By.ID, "j_id143_body").text
+                    cctips = driver.find_element(By.ID, TAG_IDS["cc_tips_2"]).text
                 sales_data[store]["CC Tips"] = cctips
-                if len(driver.find_elements(By.ID, "j_id111:1:j_id125:0:j_id130")) > 0:
+                if len(driver.find_elements(By.ID, TAG_IDS["online_cc_tips_1"])) > 0:
                     cctips = driver.find_element(
-                        By.ID, "j_id111:1:j_id125:0:j_id130"
+                        By.ID, TAG_IDS["online_cc_tips_1"]
                     ).text
                 else:
-                    cctips = driver.find_element(By.ID, "j_id143_body").text
+                    cctips = driver.find_element(
+                        By.ID, TAG_IDS["online_cc_tips_2"]
+                    ).text
                 driver.implicitly_wait(5)
                 sales_data[store]["Online CC Tips"] = cctips
 
                 # get pay ins
-                driver.find_element(By.ID, "menu:1:j_id29_switch_off").click()
-                driver.find_element(By.ID, "menu:1:j_id30:6:j_id31").click()
-                driver.find_element(By.ID, "parameters:types").send_keys("Payins")
-                driver.find_element(By.ID, "parameters:submit").click()
+                driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
+                driver.find_element(By.ID, TAG_IDS["menu_item"].format(1, 6)).click()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(
+                    "Payins"
+                )
+                driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 driver.implicitly_wait(0)
-                # input('pause')
                 sleep(2)
-                if len(driver.find_elements(By.ID, "transactions")) > 0:
-                    payins = driver.find_element(By.ID, "transactions").text
+                if len(driver.find_elements(By.ID, TAG_IDS["transactions"])) > 0:
+                    payins = driver.find_element(By.ID, TAG_IDS["transactions"]).text
                 else:
                     payins = driver.find_element(By.ID, "j_id84").text
                 driver.implicitly_wait(5)
                 sales_data[store]["Payins"] = payins
 
                 # get pay outs
-
-                if driver.find_element(By.ID, "j_id37_switch_off").is_displayed():
-                    driver.find_element(By.ID, "j_id37_switch_off").click()
-                driver.find_element(By.ID, "parameters:types").send_keys(
+                if driver.find_element(By.ID, TAG_IDS["switch_off"]).is_displayed():
+                    driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(
                     "Store Payouts"
                 )
-                driver.find_element(By.ID, "parameters:submit").click()
+                driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 driver.implicitly_wait(0)
-                if len(driver.find_elements(By.ID, "transactions")) > 0:
-                    payouts = driver.find_element(By.ID, "transactions").text
+                if len(driver.find_elements(By.ID, TAG_IDS["transactions"])) > 0:
+                    payouts = driver.find_element(By.ID, TAG_IDS["transactions"]).text
                 else:
                     payouts = driver.find_element(By.ID, "j_id84").text
                 driver.implicitly_wait(5)
                 sales_data[store]["Payouts"] = payouts
 
                 # break down third party
-
-                driver.find_element(By.ID, "menu:0:j_id29_header").click()
+                driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
                 sleep(2)
-                driver.find_element(By.ID, "menu:0:j_id30:13").click()
+                driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 13)).click()
                 sleep(1)
-                driver.find_element(By.ID, "parameters:store").clear()
-                driver.find_element(By.ID, "parameters:store").send_keys(store)
-                driver.find_element(
-                    By.ID, "parameters:startDateCalendarInputDate"
-                ).clear()
-                driver.find_element(
-                    By.ID, "parameters:startDateCalendarInputDate"
-                ).send_keys(tx_date_str)
-                driver.find_element(
-                    By.ID, "parameters:endDateCalendarInputDate"
-                ).clear()
-                driver.find_element(
-                    By.ID, "parameters:endDateCalendarInputDate"
-                ).send_keys(tx_date_str)
-                driver.find_element(By.ID, "parameters:GroupById").click()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
+                driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
+                driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(tx_date_str)
+                driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
+                driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(tx_date_str)
+                driver.find_element(By.ID, TAG_IDS["group_by"]).click()
                 Select(
-                    driver.find_element(By.ID, "parameters:GroupById")
+                    driver.find_element(By.ID, TAG_IDS["group_by"])
                 ).select_by_visible_text("Summary")
-                driver.find_element(By.ID, "parameters:submit").click()
+                driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 sleep(5)
                 soup = BeautifulSoup(driver.page_source, features="html.parser")
                 online_table = soup.find("table", attrs={"class": "table-standard"})
@@ -407,7 +408,6 @@ class Flexepos:
         finally:
             if driver:
                 self._driver.close()
-            pass
         return sales_data
 
     """
@@ -421,29 +421,25 @@ class Flexepos:
             driver = self._driver._driver
             driver.set_page_load_timeout(60)
             sleep(2)
-            driver.find_element(By.ID, "menu:1:j_id23_header").click()
+            driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
             sleep(2)
-            driver.find_element(By.ID, "menu:1:j_id24:4:j_id25").click()
+            driver.find_element(By.ID, TAG_IDS["menu_item"].format(1, 4)).click()
             for store_number in stores:
                 sleep(2)
-                if driver.find_element(By.ID, "j_id37_switch_off").is_displayed():
-                    driver.find_element(By.ID, "j_id37_switch_off").click()
-                driver.find_element(By.ID, "parameters:store").clear()
-                driver.find_element(By.ID, "parameters:store").send_keys(store_number)
-                driver.find_element(
-                    By.ID, "parameters:startDateCalendarInputDate"
-                ).click()
-                driver.find_element(
-                    By.ID, "parameters:startDateCalendarInputDate"
-                ).clear()
-                driver.find_element(
-                    By.ID, "parameters:startDateCalendarInputDate"
-                ).send_keys(qdate)
-                driver.find_element(By.ID, "parameters:journalScope").click()
+                if driver.find_element(By.ID, TAG_IDS["switch_off"]).is_displayed():
+                    driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(
+                    store_number
+                )
+                driver.find_element(By.ID, TAG_IDS["start_date"]).click()
+                driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
+                driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(qdate)
+                driver.find_element(By.ID, TAG_IDS["journal_scope"]).click()
                 Select(
-                    driver.find_element(By.ID, "parameters:journalScope")
+                    driver.find_element(By.ID, TAG_IDS["journal_scope"])
                 ).select_by_visible_text("Store")
-                driver.find_element(By.ID, "parameters:submit").click()
+                driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 WebDriverWait(driver, 45)
                 if len(driver.find_elements(By.ID, "j_id78_body")) > 0:
                     drawer_opens[store_number] = driver.find_element(
@@ -467,30 +463,22 @@ class Flexepos:
         try:
             self._login()
             driver = self._driver._driver
-            driver.find_element(By.ID, "menu:0:j_id23_header").click()
-            driver.find_element(By.ID, "menu:0:j_id24:18:j_id25").click()
+            driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 18)).click()
             for store in stores:
-                driver.find_element(By.ID, "parameters:store").clear()
-                driver.find_element(By.ID, "parameters:store").send_keys(store)
-                driver.find_element(
-                    By.ID, "parameters:startDateCalendarInputDate"
-                ).click()
-                driver.find_element(
-                    By.ID, "parameters:startDateCalendarInputDate"
-                ).clear()
-                driver.find_element(
-                    By.ID, "parameters:startDateCalendarInputDate"
-                ).send_keys(start_date.strftime("%m%d%Y"))
-                driver.find_element(
-                    By.ID, "parameters:endDateCalendarInputDate"
-                ).click()
-                driver.find_element(
-                    By.ID, "parameters:endDateCalendarInputDate"
-                ).clear()
-                driver.find_element(
-                    By.ID, "parameters:endDateCalendarInputDate"
-                ).send_keys(end_date.strftime("%m%d%Y"))
-                driver.find_element(By.ID, "parameters:submit").click()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
+                driver.find_element(By.ID, TAG_IDS["start_date"]).click()
+                driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
+                driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(
+                    start_date.strftime("%m%d%Y")
+                )
+                driver.find_element(By.ID, TAG_IDS["end_date"]).click()
+                driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
+                driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(
+                    end_date.strftime("%m%d%Y")
+                )
+                driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 driver.implicitly_wait(0)
                 sleep(8)
                 soup = BeautifulSoup(driver.page_source, features="html.parser")
@@ -517,28 +505,28 @@ class Flexepos:
             self._login()
             driver = self._driver._driver
             sleep(2)
-            driver.find_element(By.ID, "menu:2:j_id23_header").click()
+            driver.find_element(By.ID, TAG_IDS["menu_header"].format(2)).click()
             sleep(2)
-            driver.find_element(By.ID, "menu:2:j_id24:0:j_id25").click()
+            driver.find_element(By.ID, TAG_IDS["menu_item"].format(2, 0)).click()
             driver.find_element(By.ID, "search:searchType:1").click()
-            driver.find_element(By.ID, "parameters:group").clear()
-            driver.find_element(By.ID, "parameters:group").send_keys(group)
+            driver.find_element(By.ID, TAG_IDS["parameters_group"]).clear()
+            driver.find_element(By.ID, TAG_IDS["parameters_group"]).send_keys(group)
             sleep(2)
-            driver.find_element(By.ID, "parameters:startDateCalendarInputDate").click()
-            driver.find_element(By.ID, "parameters:startDateCalendarInputDate").clear()
-            driver.find_element(
-                By.ID, "parameters:startDateCalendarInputDate"
-            ).send_keys(start_date.strftime("%m%d%Y"))
-            driver.find_element(By.ID, "parameters:endDateCalendarInputDate").click()
-            driver.find_element(By.ID, "parameters:endDateCalendarInputDate").clear()
-            driver.find_element(By.ID, "parameters:endDateCalendarInputDate").send_keys(
+            driver.find_element(By.ID, TAG_IDS["start_date"]).click()
+            driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
+            driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(
+                start_date.strftime("%m%d%Y")
+            )
+            driver.find_element(By.ID, TAG_IDS["end_date"]).click()
+            driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
+            driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(
                 end_date.strftime("%m%d%Y")
             )
-            driver.find_element(By.ID, "parameters:submit").click()
+            driver.find_element(By.ID, TAG_IDS["submit"]).click()
             driver.implicitly_wait(0)
             sleep(8)
             soup = BeautifulSoup(driver.page_source, features="html.parser")
-            royalty_table = soup.find("table", attrs={"id": "RoyaltyList"})
+            royalty_table = soup.find("table", attrs={"id": TAG_IDS["royalty_list"]})
             if not royalty_table or not isinstance(royalty_table, Tag):
                 rows = []
             else:
@@ -564,12 +552,12 @@ class Flexepos:
             self._login()
             driver = self._driver._driver
             sleep(2)
-            driver.find_element(By.ID, "menu:1:j_id23_header").click()
-            driver.find_element(By.ID, "menu:1:j_id24:8:j_id25").click()
+            driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_item"].format(1, 8)).click()
             for store in stores:
-                driver.find_element(By.ID, "parameters:store").clear()
-                driver.find_element(By.ID, "parameters:store").send_keys(store)
-                driver.find_element(By.ID, "parameters:search").click()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
+                driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
+                driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 sleep(7)
                 deal_row = driver.find_element(By.XPATH, "//input[@value='1594']")
                 deal_text = deal_row.get_attribute("name").rstrip(":pluId")
@@ -577,7 +565,7 @@ class Flexepos:
                     driver.find_element(
                         By.ID, f"{deal_text}:availability:0:{toggle_type}"
                     ).click()
-                driver.find_element(By.ID, "parameters:save_bottom").click()
+                driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 sleep(15)
                 driver.find_element(By.ID, "parameters:continue").click()
                 sleep(7)
@@ -606,23 +594,23 @@ class Flexepos:
 
     Add the instore amounts minus the gift cards redeemed. 
 
-    Should the online ammount get minused from the JM online deposit?
+    Should the online amount get minused from the JM online deposit?
     No, since the online gift card entry is charged minus to online credit card   
     [ store, txdate, sold, instore, online]
     """
 
     def getGiftCardACH(self, stores, start_date, end_date):
         if end_date <= start_date:
-            raise Exception("End date can not be before start date.")
+            raise Exception("End date cannot be before start date.")
         driver = None
         try:
             self._login()
             driver = self._driver._driver
             # navigate to gift card report
             sleep(2)
-            driver.find_element(By.ID, "menu:0:j_id23_header").click()
+            driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
             sleep(2)
-            driver.find_element(By.ID, "menu:0:j_id24:10:j_id25").click()
+            driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 10)).click()
             sleep(2)
             step_date = onDay(start_date, 4)  # always Friday
             results = []
@@ -636,36 +624,32 @@ class Flexepos:
                     if not search_ele.is_displayed():
                         driver.find_element(By.ID, "j_id37_header").click()
 
-                    driver.find_element(By.ID, "parameters:store").clear()
-                    driver.find_element(By.ID, "parameters:store").send_keys(store)
-                    driver.find_element(
-                        By.ID, "parameters:startDateCalendarInputDate"
-                    ).click()
-                    driver.find_element(
-                        By.ID, "parameters:startDateCalendarInputDate"
-                    ).clear()
-                    driver.find_element(
-                        By.ID, "parameters:startDateCalendarInputDate"
-                    ).send_keys(period_start.strftime("%m%d%Y"))
-                    driver.find_element(
-                        By.ID, "parameters:endDateCalendarInputDate"
-                    ).click()
-                    driver.find_element(
-                        By.ID, "parameters:endDateCalendarInputDate"
-                    ).clear()
-                    driver.find_element(
-                        By.ID, "parameters:endDateCalendarInputDate"
-                    ).send_keys(period_end.strftime("%m%d%Y"))
+                    driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
+                    driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(
+                        store
+                    )
+                    driver.find_element(By.ID, TAG_IDS["start_date"]).click()
+                    driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
+                    driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(
+                        period_start.strftime("%m%d%Y")
+                    )
+                    driver.find_element(By.ID, TAG_IDS["end_date"]).click()
+                    driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
+                    driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(
+                        period_end.strftime("%m%d%Y")
+                    )
 
                     Select(
                         driver.find_element(By.ID, "parameters:GroupByList")
                     ).select_by_index(1)
-                    driver.find_element(By.ID, "parameters:submit").click()
+                    driver.find_element(By.ID, TAG_IDS["submit"]).click()
                     driver.implicitly_wait(0)
                     sleep(8)
                     soup = BeautifulSoup(driver.page_source, features="html.parser")
 
-                    giftcardsales = soup.find("table", attrs={"id": "j_id125"})
+                    giftcardsales = soup.find(
+                        "table", attrs={"id": TAG_IDS["gift_card_sales"]}
+                    )
                     if giftcardsales:
                         lines.append(
                             [
@@ -677,7 +661,9 @@ class Flexepos:
                                 .text.strip(),
                             ]
                         )
-                    giftcardredeemed = soup.find("table", attrs={"id": "j_id176"})
+                    giftcardredeemed = soup.find(
+                        "table", attrs={"id": TAG_IDS["gift_card_redeemed"]}
+                    )
 
                     if giftcardredeemed:
                         lines.append(
