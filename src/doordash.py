@@ -81,7 +81,8 @@ class Doordash:
         for tr in driver.find_elements(By.TAG_NAME, "tr")[1:]:
             cells = tr.find_elements(By.TAG_NAME, "td")
             payout_id = cells[1].text
-            store_id = re.search(r"\((\d+)\)", cells[3].text).group(1)
+            matches = re.search(r"\((\d+)\)", cells[3].text)
+            store_id = matches.group(1) if matches else "20025"
             if store_id == "20025":
                 continue
             payout_ids.append(
