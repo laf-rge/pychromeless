@@ -17,14 +17,17 @@ from webdriver_wrapper import WebDriverWrapper
 TAG_IDS = {
     "login_username": "login:username",
     "login_password": "login:password",
-    "menu_header": "menu:{}:j_id23_header",
-    "menu_item": "menu:{}:j_id24:{}:j_id25",
+    "menu_header_root": "menu:{}:j_id23_header",
+    "menu_header": "menu:{}:j_id29_header",
+    "menu_item_root": "menu:{}:j_id24:{}:j_id25",
+    "menu_item": "menu:{}:j_id30:{}:j_id31",
     "parameters_store": "parameters:store",
     "parameters_group": "parameters:group",
     "start_date": "parameters:startDateCalendarInputDate",
     "end_date": "parameters:endDateCalendarInputDate",
     "group_by": "parameters:GroupById",
     "submit": "parameters:submit",
+    "types": "parameters:types",
     "switch_off": "j_id37_switch_off",
     "online_orders_list": "onlineOrdersList",
     "total_sales": "TotalSales",
@@ -62,7 +65,7 @@ class Flexepos:
     """
 
     def _login(self):
-        self._driver = WebDriverWrapper(download_location="/tmp")
+        self._driver = WebDriverWrapper()
         driver = self._driver._driver
         driver.implicitly_wait(25)
         driver.set_page_load_timeout(45)
@@ -96,9 +99,9 @@ class Flexepos:
 
         try:
             sleep(2)
-            driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(0)).click()
             sleep(2)
-            driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 13)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(0, 13)).click()
             sleep(1)
             for store in stores:
                 payment_data[store] = {}
@@ -151,9 +154,9 @@ class Flexepos:
 
         try:
             sleep(2)
-            driver.find_element(By.ID, TAG_IDS["menu_header"].format(2)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(2)).click()
             sleep(2)
-            driver.find_element(By.ID, TAG_IDS["menu_item"].format(2, 1)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(2, 1)).click()
             sleep(1)
             for store in stores:
                 payment_data[store] = {}
@@ -212,8 +215,12 @@ class Flexepos:
             for store in stores:
                 driver.get("https://fms.flexepos.com/FlexeposWeb/home.seam")
                 sales_data[store] = {}
-                driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
-                driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 1)).click()
+                driver.find_element(
+                    By.ID, TAG_IDS["menu_header_root"].format(0)
+                ).click()
+                driver.find_element(
+                    By.ID, TAG_IDS["menu_item_root"].format(0, 1)
+                ).click()
                 sleep(1)
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
@@ -353,9 +360,7 @@ class Flexepos:
                 # get pay ins
                 driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
                 driver.find_element(By.ID, TAG_IDS["menu_item"].format(1, 6)).click()
-                driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(
-                    "Payins"
-                )
+                driver.find_element(By.ID, TAG_IDS["types"]).send_keys("Payins")
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 driver.implicitly_wait(0)
                 sleep(2)
@@ -369,9 +374,7 @@ class Flexepos:
                 # get pay outs
                 if driver.find_element(By.ID, TAG_IDS["switch_off"]).is_displayed():
                     driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
-                driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(
-                    "Store Payouts"
-                )
+                driver.find_element(By.ID, TAG_IDS["types"]).send_keys("Store Payouts")
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 driver.implicitly_wait(0)
                 if len(driver.find_elements(By.ID, TAG_IDS["transactions"])) > 0:
@@ -421,9 +424,9 @@ class Flexepos:
             driver = self._driver._driver
             driver.set_page_load_timeout(60)
             sleep(2)
-            driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(1)).click()
             sleep(2)
-            driver.find_element(By.ID, TAG_IDS["menu_item"].format(1, 4)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(1, 4)).click()
             for store_number in stores:
                 sleep(2)
                 if driver.find_element(By.ID, TAG_IDS["switch_off"]).is_displayed():
@@ -463,8 +466,8 @@ class Flexepos:
         try:
             self._login()
             driver = self._driver._driver
-            driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
-            driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 18)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(0)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(0, 18)).click()
             for store in stores:
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
@@ -505,9 +508,9 @@ class Flexepos:
             self._login()
             driver = self._driver._driver
             sleep(2)
-            driver.find_element(By.ID, TAG_IDS["menu_header"].format(2)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(2)).click()
             sleep(2)
-            driver.find_element(By.ID, TAG_IDS["menu_item"].format(2, 0)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(2, 0)).click()
             driver.find_element(By.ID, "search:searchType:1").click()
             driver.find_element(By.ID, TAG_IDS["parameters_group"]).clear()
             driver.find_element(By.ID, TAG_IDS["parameters_group"]).send_keys(group)
@@ -552,8 +555,8 @@ class Flexepos:
             self._login()
             driver = self._driver._driver
             sleep(2)
-            driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
-            driver.find_element(By.ID, TAG_IDS["menu_item"].format(1, 8)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(1)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(1, 8)).click()
             for store in stores:
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
@@ -608,9 +611,9 @@ class Flexepos:
             driver = self._driver._driver
             # navigate to gift card report
             sleep(2)
-            driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(0)).click()
             sleep(2)
-            driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 10)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(0, 10)).click()
             sleep(2)
             step_date = onDay(start_date, 4)  # always Friday
             results = []
