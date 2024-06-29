@@ -3,7 +3,7 @@ import datetime
 import os
 from functools import partial
 from time import sleep
-from typing import cast
+from typing import Optional, cast
 
 from bs4 import BeautifulSoup, Tag
 from selenium.webdriver.common.by import By
@@ -361,10 +361,11 @@ class Flexepos:
                 driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
                 driver.find_element(By.ID, TAG_IDS["menu_item"].format(1, 6)).click()
                 driver.find_element(By.ID, TAG_IDS["types"]).send_keys("Payins")
-                self.setDateRange(driver, tx_date_str)
-                driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                driver.implicitly_wait(0)
                 sleep(2)
+                self.setDateRange(driver, tx_date_str)
+                sleep(2)
+                driver.find_element(By.ID, TAG_IDS["submit"]).click()
+                driver.implicitly_wait(2)
                 if len(driver.find_elements(By.ID, TAG_IDS["transactions"])) > 0:
                     payins = driver.find_element(By.ID, TAG_IDS["transactions"]).text
                 else:
@@ -376,8 +377,12 @@ class Flexepos:
                 if driver.find_element(By.ID, TAG_IDS["switch_off"]).is_displayed():
                     driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
                 driver.find_element(By.ID, TAG_IDS["types"]).send_keys("Store Payouts")
+                sleep(2)
+                self.setDateRange(driver, tx_date_str)
+                sleep(2)
+                self.setDateRange(driver, tx_date_str)
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                driver.implicitly_wait(0)
+                driver.implicitly_wait(2)
                 if len(driver.find_elements(By.ID, TAG_IDS["transactions"])) > 0:
                     payouts = driver.find_element(By.ID, TAG_IDS["transactions"]).text
                 else:
@@ -411,11 +416,16 @@ class Flexepos:
                 self._driver.close()
         return sales_data
 
-    def setDateRange(self, driver, tx_date_str):
+    def setDateRange(self, driver, tx_date_str, tx_end_date_str: Optional[str] = None):
+        sleep(2)
+        driver.find_element(By.ID, TAG_IDS["start_date"]).click()
         driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
         driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(tx_date_str)
+        driver.find_element(By.ID, TAG_IDS["end_date"]).click()
         driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
-        driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(tx_date_str)
+        driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(
+            tx_end_date_str if tx_end_date_str else tx_date_str
+        )
 
     """
     """
@@ -475,15 +485,8 @@ class Flexepos:
             for store in stores:
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
-                driver.find_element(By.ID, TAG_IDS["start_date"]).click()
-                driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
-                driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(
-                    start_date.strftime("%m%d%Y")
-                )
-                driver.find_element(By.ID, TAG_IDS["end_date"]).click()
-                driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
-                driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(
-                    end_date.strftime("%m%d%Y")
+                self.setDateRange(
+                    driver, start_date.strftime("%m%d%Y"), end_date.strftime("%m%d%Y")
                 )
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 driver.implicitly_wait(0)
@@ -519,15 +522,8 @@ class Flexepos:
             driver.find_element(By.ID, TAG_IDS["parameters_group"]).clear()
             driver.find_element(By.ID, TAG_IDS["parameters_group"]).send_keys(group)
             sleep(2)
-            driver.find_element(By.ID, TAG_IDS["start_date"]).click()
-            driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
-            driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(
-                start_date.strftime("%m%d%Y")
-            )
-            driver.find_element(By.ID, TAG_IDS["end_date"]).click()
-            driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
-            driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(
-                end_date.strftime("%m%d%Y")
+            self.setDateRange(
+                driver, start_date.strftime("%m%d%Y"), end_date.strftime("%m%d%Y")
             )
             driver.find_element(By.ID, TAG_IDS["submit"]).click()
             driver.implicitly_wait(0)
@@ -635,17 +631,11 @@ class Flexepos:
                     driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(
                         store
                     )
-                    driver.find_element(By.ID, TAG_IDS["start_date"]).click()
-                    driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
-                    driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(
-                        period_start.strftime("%m%d%Y")
+                    self.setDateRange(
+                        driver,
+                        period_start.strftime("%m%d%Y"),
+                        period_end.strftime("%m%d%Y"),
                     )
-                    driver.find_element(By.ID, TAG_IDS["end_date"]).click()
-                    driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
-                    driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(
-                        period_end.strftime("%m%d%Y")
-                    )
-
                     Select(
                         driver.find_element(By.ID, "parameters:GroupByList")
                     ).select_by_index(1)
