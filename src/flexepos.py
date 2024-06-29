@@ -65,8 +65,8 @@ class Flexepos:
     """
 
     def _login(self):
-        self._driver = WebDriverWrapper()
-        driver = self._driver._driver
+        self._driver = initialise_driver()
+        driver = self._driver
         driver.implicitly_wait(25)
         driver.set_page_load_timeout(45)
         driver.get(
