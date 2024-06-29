@@ -361,6 +361,7 @@ class Flexepos:
                 driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
                 driver.find_element(By.ID, TAG_IDS["menu_item"].format(1, 6)).click()
                 driver.find_element(By.ID, TAG_IDS["types"]).send_keys("Payins")
+                self.setDateRange(driver, tx_date_str)
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 driver.implicitly_wait(0)
                 sleep(2)
@@ -391,10 +392,7 @@ class Flexepos:
                 sleep(1)
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
-                driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
-                driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(tx_date_str)
-                driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
-                driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(tx_date_str)
+                self.setDateRange(driver, tx_date_str)
                 driver.find_element(By.ID, TAG_IDS["group_by"]).click()
                 Select(
                     driver.find_element(By.ID, TAG_IDS["group_by"])
@@ -412,6 +410,12 @@ class Flexepos:
             if driver:
                 self._driver.close()
         return sales_data
+
+    def setDateRange(self, driver, tx_date_str):
+        driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
+        driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(tx_date_str)
+        driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
+        driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(tx_date_str)
 
     """
     """
