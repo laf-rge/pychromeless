@@ -10,7 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from ssm_parameter_store import SSMParameterStore
-from webdriver_wrapper import WebDriverWrapper
+from webdriver import initialise_driver
 
 
 # Tag IDs dictionary
@@ -90,13 +90,13 @@ class Flexepos:
         span_date_end = span_dates[1].strftime("%m%d%Y")
 
         self._login()
-        driver = self._driver._driver
+        driver = self._driver
 
         payment_data = {}
 
         try:
             sleep(2)
-            driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(0)).click()
             sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 13)).click()
             sleep(1)
@@ -145,7 +145,7 @@ class Flexepos:
         span_date_end = span_dates[1].strftime("%m%d%Y")
 
         self._login()
-        driver = self._driver._driver
+        driver = self._driver
 
         payment_data = {}
 
@@ -205,7 +205,7 @@ class Flexepos:
 
     def getDailySales(self, stores, tx_date):
         self._login()
-        driver = self._driver._driver
+        driver = self._driver
         sales_data = {}
         tx_date_str = tx_date.strftime("%m%d%Y")
         try:
@@ -418,7 +418,7 @@ class Flexepos:
         driver = None
         try:
             self._login()
-            driver = self._driver._driver
+            driver = self._driver
             driver.set_page_load_timeout(60)
             sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
@@ -462,7 +462,7 @@ class Flexepos:
         driver = None
         try:
             self._login()
-            driver = self._driver._driver
+            driver = self._driver
             driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
             driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 18)).click()
             for store in stores:
@@ -503,7 +503,7 @@ class Flexepos:
         driver = None
         try:
             self._login()
-            driver = self._driver._driver
+            driver = self._driver
             sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_header"].format(2)).click()
             sleep(2)
@@ -550,7 +550,7 @@ class Flexepos:
         rv = {}
         try:
             self._login()
-            driver = self._driver._driver
+            driver = self._driver
             sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
             driver.find_element(By.ID, TAG_IDS["menu_item"].format(1, 8)).click()
@@ -605,10 +605,10 @@ class Flexepos:
         driver = None
         try:
             self._login()
-            driver = self._driver._driver
+            driver = self._driver
             # navigate to gift card report
             sleep(2)
-            driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(0)).click()
             sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 10)).click()
             sleep(2)

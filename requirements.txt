@@ -1,8 +1,7 @@
-selenium==3.141.0
-chromedriver-binary==2.37.0
+selenium>=4.0.0
 requests-oauthlib>=1.2.0
 python-quickbooks>=0.9.1
-urllib3==1.26.19
+urllib3>=1.26.19
 oauthlib>=3.0.1
 botocore>=1.12.134
 boto3

@@ -28,7 +28,7 @@ from wmcgdrive import WMCGdrive
 
 # warning! this won't work if we multiply
 TWOPLACES = Decimal(10) ** -2
-setlocale(LC_NUMERIC, "")
+setlocale(LC_NUMERIC, "en_US.UTF-8")
 pattern = re.compile(r"\d+\.\d\d")
 
 if os.environ.get("AWS_EXECUTION_ENV") is not None:
