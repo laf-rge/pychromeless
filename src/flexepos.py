@@ -1,6 +1,5 @@
 import calendar
 import datetime
-import os
 from functools import partial
 from time import sleep
 from typing import Optional, cast
@@ -56,7 +55,6 @@ class Flexepos:
     """"""
 
     def __init__(self):
-        self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
         self._parameters = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["flexepos"]
         )

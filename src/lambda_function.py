@@ -3,7 +3,6 @@ import calendar
 import datetime
 import email
 import io
-import os
 import re
 import traceback
 from decimal import Decimal
