@@ -563,7 +563,10 @@ class Flexepos:
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 sleep(7)
                 deal_row = driver.find_element(By.XPATH, "//input[@value='1594']")
-                deal_text = deal_row.get_attribute("name").rstrip(":pluId")
+                deal_row_name = deal_row.get_attribute("name")
+                if not deal_row_name:
+                    raise
+                deal_text = deal_row_name.rstrip(":pluId")
                 for toggle_type in ["pickup", "delivery"]:
                     driver.find_element(
                         By.ID, f"{deal_text}:availability:0:{toggle_type}"

@@ -8,7 +8,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from ssm_parameter_store import SSMParameterStore
-from webdriver_wrapper import WebDriverWrapper
+from webdriver import initialise_driver
 
 store_map = {
     "20025": "8d6b329b-4976-4ef7-8411-3a416614a726",
@@ -48,8 +48,8 @@ class UberEats:
     """
 
     def _login(self):
-        self._driver = WebDriverWrapper(download_location="/tmp")
-        driver = self._driver._driver
+        self._driver = initialise_driver()
+        driver = self._driver
         driver.implicitly_wait(25)
         driver.set_page_load_timeout(45)
 
@@ -74,7 +74,9 @@ class UberEats:
         return
 
     def __get_month_year(self):
-        driver = cast(WebDriverWrapper, self._driver)._driver
+        if not self._driver:
+            raise
+        driver = self._driver
         sleep(2)
         month = driver.find_element(
             By.XPATH, '//button[@aria-label="Previous month."]/following-sibling::*'
@@ -89,7 +91,9 @@ class UberEats:
         return month, year
 
     def _click_date(self, qdate):
-        driver = cast(WebDriverWrapper, self._driver)._driver
+        if not self._driver:
+            raise
+        driver = self._driver
         ActionChains(driver).send_keys(Keys.RETURN).perform()
         start_date = (
             driver.find_element(By.XPATH, '//input[@aria-label="Select a date range."]')
@@ -257,7 +261,9 @@ class UberEats:
             qdate = datetime.date(2024, 3, 18)
         if not self._driver:
             self._login()
-        driver = cast(WebDriverWrapper, self._driver)._driver
+        if not self._driver:
+            raise
+        driver = self._driver
         driver.get(
             "https://restaurant.uber.com/v2/payments?restaurantUUID=" + store_map[store]
         )
