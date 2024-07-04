@@ -591,7 +591,7 @@ def refresh_session():
             environment="production",
         )
     # if we already created one and the secret has updated lets use the new one
-    AUTH_CLIENT.access_token = (s["access_token"],)
+    AUTH_CLIENT.access_token = s["access_token"]
     AUTH_CLIENT.refresh_token = s["refresh_token"]
     # caution! invalid requests return {"error":"invalid_grant"} quietly
     AUTH_CLIENT.refresh()
