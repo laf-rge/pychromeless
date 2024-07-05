@@ -16,24 +16,27 @@ def initialise_driver(download_location: Optional[str] = None) -> webdriver.Chro
     CHROME_HEADLESS = int(os.environ.get("CHROME_HEADLESS", "0"))
     if CHROME_HEADLESS > 1:
         chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+        chrome_options.add_experimental_option("detach", True)
         driver = webdriver.Chrome(options=chrome_options)
-        driver.execute_script(
-            "var x = document.getElementsByTagName('a'); var i; for (i = 0; i < x.length; i++) { x[i].target = '_self'; }"
-        )
-        # add missing support for chrome "send_command"  to selenium webdriver
-        driver.command_executor._commands["send_command"] = (  # type: ignore hack for lambda
-            "POST",
-            "/session/$sessionId/chromium/send_command",
-        )
+        if download_location:
+            driver.execute_script(
+                "var x = document.getElementsByTagName('a'); var i; for (i = 0; i < x.length; i++) { x[i].target = '_self'; }"
+            )
+            # add missing support for chrome "send_command"  to selenium webdriver
+            driver.command_executor._commands["send_command"] = (  # type: ignore hack for lambda
+                "POST",
+                "/session/$sessionId/chromium/send_command",
+            )
 
-        params = {
-            "cmd": "Page.setDownloadBehavior",
-            "params": {"behavior": "allow", "downloadPath": download_location},
-        }
-        command_result = driver.execute("send_command", params)
-        print("response from browser:")
-        for key in command_result:
-            print("result:" + key + ":" + str(command_result[key]))
+            params = {
+                "cmd": "Page.setDownloadBehavior",
+                "params": {"behavior": "allow", "downloadPath": download_location},
+            }
+            command_result = driver.execute("send_command", params)
+            print("response from browser:")
+            for key in command_result:
+                print("result:" + key + ":" + str(command_result[key]))
+        driver.switch_to.new_window("tab")
     else:
         chrome_options.add_experimental_option(
             "prefs",

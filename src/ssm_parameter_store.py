@@ -23,7 +23,7 @@
 # https://medium.com/@nqbao/how-to-use-aws-ssm-parameter-store-easily-in-python-94fda04fea84
 
 import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Self
 
 import boto3
 
@@ -53,9 +53,7 @@ class SSMParameterStore:
         self._substores: Dict[str, SSMParameterStore] = {}
         self._ttl: Optional[int] = ttl
 
-    def get(
-        self, name: str, **kwargs: Any
-    ) -> Union[str, List[str], "SSMParameterStore", Any]:
+    def get(self, name: str, **kwargs: Any) -> Union[str, List[str], Self, Any]:
         """
         Get a parameter or a substore.
 
@@ -198,7 +196,7 @@ class SSMParameterStore:
         except KeyError:
             return False
 
-    def __getitem__(self, name: str) -> Union[str, List[str], "SSMParameterStore"]:
+    def __getitem__(self, name: str) -> Union[str, List[str], Self]:
         """
         Get a parameter using the subscript notation.
 
