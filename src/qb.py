@@ -367,6 +367,10 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
     else:
         bill = query[0]
 
+    if len(getattr(bill, "LinkedTxn", [])) > 0:
+        print("Already linked to bank transaction skipping {}".format(invoice_num))
+        return
+
     bill.TxnDate = qb_date_format(invoice_date)
 
     bill.VendorRef = supplier.to_ref()
