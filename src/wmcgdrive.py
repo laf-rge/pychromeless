@@ -1,6 +1,5 @@
 import io
 import json
-import os
 from typing import cast
 
 from google.oauth2 import service_account
@@ -12,7 +11,6 @@ from ssm_parameter_store import SSMParameterStore
 
 class WMCGdrive:
     def __init__(self):
-        self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
         self._parameters = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["gcp"]
         )

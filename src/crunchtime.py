@@ -12,7 +12,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from ssm_parameter_store import SSMParameterStore
-from webdriver_wrapper import WebDriverWrapper
+from webdriver import initialise_driver
 
 """
 """
@@ -22,18 +22,16 @@ class Crunchtime:
     """"""
 
     def __init__(self):
-        self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
-        self._driver = WebDriverWrapper(download_location="/tmp")
+        self._driver = initialise_driver(download_location="/tmp")
         self._parameters = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["crunchtime"]
         )
-        self._driver = WebDriverWrapper(download_location="/tmp")
 
     """
     """
 
     def _login(self, store):
-        driver = self._driver._driver
+        driver = self._driver
         driver.implicitly_wait(25)
 
         driver.set_page_load_timeout(45)
@@ -41,15 +39,21 @@ class Crunchtime:
         driver.get("https://jerseymikes.net-chef.com/ceslogin/auto/logout.ct")
         driver.get("https://jerseymikes.net-chef.com/standalone/modern.ct#Login")
         username_element = driver.find_element(By.XPATH, '//input[@name="username"]')
-        username_element.clear()
-        username_element.send_keys(str(self._parameters["user"]))
+        driver.execute_script(
+            f"arguments[0].value = '{self._parameters["user"]}'", username_element
+        )
+        sleep(4)
+        username_element.send_keys("w" + Keys.BACK_SPACE)
         WebDriverWait(driver, 10).until(
             lambda driver: driver.execute_script("return document.readyState")
             == "complete"
         )
         password_element = driver.find_element(By.XPATH, '//input[@name="password"]')
-        password_element.clear()
-        password_element.send_keys(str(self._parameters["password"]))
+        driver.execute_script(
+            f"arguments[0].value = '{self._parameters["password"]}'", password_element
+        )
+        sleep(4)
+        password_element.send_keys("w" + Keys.BACK_SPACE)
         WebDriverWait(driver, 10).until(
             lambda driver: driver.execute_script("return document.readyState")
             == "complete"
@@ -59,6 +63,7 @@ class Crunchtime:
             lambda driver: driver.execute_script("return document.readyState")
             == "complete"
         )
+        sleep(3)
         WebDriverWait(driver, 10).until(
             lambda driver: driver.switch_to.active_element
             == driver.find_element(By.XPATH, '//input[@name="locationId"]')
@@ -79,7 +84,7 @@ class Crunchtime:
 
     def get_inventory_report(self, store, year, month):
         self._login(store)
-        driver = self._driver._driver
+        driver = self._driver
         driver.get(
             "https://jerseymikes.net-chef.com/ncext/index.ct#inventoryMenu~actualtheoreticalcost?parentModule=inventoryMenu"
         )
@@ -113,7 +118,7 @@ class Crunchtime:
 
     def get_gl_report(self, store):
         self._login(store)
-        driver = self._driver._driver
+        driver = self._driver
         driver.get(
             "https://jerseymikes.net-chef.com/ncext/index.ct#purchasingMenu~purchasesByGL?parentModule=purchasingMenu"
         )
@@ -194,7 +199,7 @@ class Crunchtime:
             self.get_gl_report(store)
             filenames = glob.glob("/tmp/PurchasesByGL_LocationDetails_*.csv")
             if len(filenames) == 0:
-                continue
+                print("Warning: no files found.")
             filename = filenames[0]
             with open(filename, newline="", encoding="utf-8-sig") as csvfile:
                 glreader = csv.reader(csvfile)
@@ -240,6 +245,7 @@ class Crunchtime:
                     elif row[1] == "Total: ":
                         # send invoice
                         if vendor:  # skip if store to store
+                            print(f"syncing {vendor}:{invoice_num}")
                             qb.sync_bill(
                                 vendor,
                                 invoice_num,

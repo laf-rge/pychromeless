@@ -1,19 +1,17 @@
 import datetime
-import os
 from time import sleep
 from typing import cast
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from ssm_parameter_store import SSMParameterStore
-from webdriver_wrapper import WebDriverWrapper
+from webdriver import initialise_driver
 
 
 class Grubhub:
     """"""
 
     def __init__(self):
-        self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
         self._parameters = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["grubhub"]
         )
@@ -22,8 +20,8 @@ class Grubhub:
     """
 
     def _login(self):
-        self._driver = WebDriverWrapper(download_location="/tmp")
-        driver = self._driver._driver
+        self._driver = initialise_driver()
+        driver = self._driver
         driver.implicitly_wait(25)
         driver.set_page_load_timeout(45)
 
@@ -53,7 +51,7 @@ class Grubhub:
         try:
             self._login()
             input("pause")
-            driver = self._driver._driver
+            driver = self._driver
             driver.get(
                 "https://restaurant.grubhub.com/financials/deposit-history/3192172,6177240,7583896,7585040/"
             )

@@ -367,6 +367,10 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
     else:
         bill = query[0]
 
+    if len(getattr(bill, "LinkedTxn", [])) > 0:
+        print("Already linked to bank transaction skipping {}".format(invoice_num))
+        return
+
     bill.TxnDate = qb_date_format(invoice_date)
 
     bill.VendorRef = supplier.to_ref()
@@ -590,7 +594,9 @@ def refresh_session():
             refresh_token=s["refresh_token"],
             environment="production",
         )
-
+    # if we already created one and the secret has updated lets use the new one
+    AUTH_CLIENT.access_token = s["access_token"]
+    AUTH_CLIENT.refresh_token = s["refresh_token"]
     # caution! invalid requests return {"error":"invalid_grant"} quietly
     AUTH_CLIENT.refresh()
     s["access_token"] = AUTH_CLIENT.access_token

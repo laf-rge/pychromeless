@@ -1,15 +1,16 @@
-FROM --platform=linux/amd64 public.ecr.aws/lambda/python:3.10
+FROM  --platform=linux/amd64 amazon/aws-lambda-python:3.12
+LABEL MAINTAINER=william@wagonermanagement.com
 ARG TARGETARCH
-MAINTAINER william@wagonermanagement.com
+# install chrome dependencies
+RUN dnf install -y atk cups-libs gtk3 libXcomposite alsa-lib \
+    libXcursor libXdamage libXext libXi libXrandr libXScrnSaver \
+    libXtst pango at-spi2-atk libXt xorg-x11-server-Xvfb glibc-all-langpacks \
+    xorg-x11-xauth dbus-glib dbus-glib-devel nss mesa-libgbm jq unzip
+
+COPY ./chrome-installer.sh ./chrome-installer.sh
+RUN ./chrome-installer.sh
+RUN rm ./chrome-installer.sh
 
 COPY requirements.txt ${LAMBDA_TASK_ROOT}
 RUN pip3 install -r requirements.txt
-RUN yum install libX11 GConf2 -y unzip && \
-    curl -Lo "/tmp/chromedriver.zip" "https://chromedriver.storage.googleapis.com/2.32/chromedriver_linux64.zip" && \
-    curl -Lo "/tmp/headless-chromium.zip" "https://github.com/adieuadieu/serverless-chrome/releases/download/v1.0.0-29/stable-headless-chromium-amazonlinux-2017-03.zip" && \
-    unzip /tmp/chromedriver.zip -d /opt/bin/ && \
-    unzip /tmp/headless-chromium.zip -d /opt/bin/ && \
-    rm /tmp/headless-chromium.zip && \
-    rm /tmp/chromedriver.zip && \
-    chmod +x /opt/bin/chromedriver
 COPY src ${LAMBDA_TASK_ROOT}

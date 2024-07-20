@@ -1,6 +1,5 @@
 import calendar
 import datetime
-import os
 from functools import partial
 from time import sleep
 from typing import Optional, cast
@@ -10,7 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from ssm_parameter_store import SSMParameterStore
-from webdriver_wrapper import WebDriverWrapper
+from webdriver import initialise_driver
 
 
 # Tag IDs dictionary
@@ -56,7 +55,6 @@ class Flexepos:
     """"""
 
     def __init__(self):
-        self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
         self._parameters = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["flexepos"]
         )
@@ -65,8 +63,8 @@ class Flexepos:
     """
 
     def _login(self):
-        self._driver = WebDriverWrapper()
-        driver = self._driver._driver
+        self._driver = initialise_driver()
+        driver = self._driver
         driver.implicitly_wait(25)
         driver.set_page_load_timeout(45)
         driver.get(
@@ -93,7 +91,7 @@ class Flexepos:
         span_date_end = span_dates[1].strftime("%m%d%Y")
 
         self._login()
-        driver = self._driver._driver
+        driver = self._driver
 
         payment_data = {}
 
@@ -148,7 +146,7 @@ class Flexepos:
         span_date_end = span_dates[1].strftime("%m%d%Y")
 
         self._login()
-        driver = self._driver._driver
+        driver = self._driver
 
         payment_data = {}
 
@@ -208,7 +206,7 @@ class Flexepos:
 
     def getDailySales(self, stores, tx_date):
         self._login()
-        driver = self._driver._driver
+        driver = self._driver
         sales_data = {}
         tx_date_str = tx_date.strftime("%m%d%Y")
         try:
@@ -435,7 +433,7 @@ class Flexepos:
         driver = None
         try:
             self._login()
-            driver = self._driver._driver
+            driver = self._driver
             driver.set_page_load_timeout(60)
             sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(1)).click()
@@ -479,7 +477,7 @@ class Flexepos:
         driver = None
         try:
             self._login()
-            driver = self._driver._driver
+            driver = self._driver
             driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(0)).click()
             driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(0, 18)).click()
             for store in stores:
@@ -513,7 +511,7 @@ class Flexepos:
         driver = None
         try:
             self._login()
-            driver = self._driver._driver
+            driver = self._driver
             sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(2)).click()
             sleep(2)
@@ -553,7 +551,7 @@ class Flexepos:
         rv = {}
         try:
             self._login()
-            driver = self._driver._driver
+            driver = self._driver
             sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(1)).click()
             driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(1, 8)).click()
@@ -563,7 +561,10 @@ class Flexepos:
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 sleep(7)
                 deal_row = driver.find_element(By.XPATH, "//input[@value='1594']")
-                deal_text = deal_row.get_attribute("name").rstrip(":pluId")
+                deal_row_name = deal_row.get_attribute("name")
+                if not deal_row_name:
+                    raise
+                deal_text = deal_row_name.rstrip(":pluId")
                 for toggle_type in ["pickup", "delivery"]:
                     driver.find_element(
                         By.ID, f"{deal_text}:availability:0:{toggle_type}"
@@ -608,7 +609,7 @@ class Flexepos:
         driver = None
         try:
             self._login()
-            driver = self._driver._driver
+            driver = self._driver
             # navigate to gift card report
             sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(0)).click()

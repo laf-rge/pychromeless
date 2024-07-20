@@ -1,5 +1,4 @@
 import datetime
-import os
 import calendar
 import openpyxl
 import flexepos
@@ -52,7 +51,6 @@ class Tips:
     """ """
 
     def __init__(self):
-        self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
         self._parameters: SSMParameterStore = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["wheniwork"]
         )

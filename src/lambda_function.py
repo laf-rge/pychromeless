@@ -3,7 +3,6 @@ import calendar
 import datetime
 import email
 import io
-import os
 import re
 import traceback
 from decimal import Decimal
@@ -28,11 +27,8 @@ from wmcgdrive import WMCGdrive
 
 # warning! this won't work if we multiply
 TWOPLACES = Decimal(10) ** -2
-setlocale(LC_NUMERIC, "")
+setlocale(LC_NUMERIC, "en_US.UTF-8")
 pattern = re.compile(r"\d+\.\d\d")
-
-if os.environ.get("AWS_EXECUTION_ENV") is not None:
-    import chromedriver_binary  # noqa # pylint: disable=unused-import
 
 global_stores = ["20358", "20395", "20400", "20407"]
 

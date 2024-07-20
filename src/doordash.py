@@ -12,7 +12,7 @@ from typing import cast
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from ssm_parameter_store import SSMParameterStore
-from webdriver_wrapper import WebDriverWrapper
+from webdriver import initialise_driver
 
 store_map = {
     "20358": "23026026",
@@ -30,7 +30,6 @@ class Doordash:
     """"""
 
     def __init__(self):
-        self.in_aws = os.environ.get("AWS_EXECUTION_ENV") is not None
         self._parameters = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["doordash"]
         )
@@ -39,8 +38,8 @@ class Doordash:
     """
 
     def _login(self):
-        self._driver = WebDriverWrapper(download_location="/tmp")
-        driver = self._driver._driver
+        self._driver = initialise_driver()
+        driver = self._driver
         driver.implicitly_wait(25)
         driver.set_page_load_timeout(45)
 
@@ -58,7 +57,7 @@ class Doordash:
 
     def get_payments(self, stores, start_date, end_date):
         self._login()
-        driver = self._driver._driver
+        driver = self._driver
 
         results = []
 
@@ -129,7 +128,7 @@ class Doordash:
 
     def get_payments_old(self, stores, start_date, end_date):
         self._login()
-        driver = self._driver._driver
+        driver = self._driver
 
         results = []
 
