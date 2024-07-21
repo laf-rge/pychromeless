@@ -15,16 +15,16 @@ data "aws_caller_identity" "current" {
 
 resource "aws_lambda_function" "authorizer" {
   function_name = "authorizer-${terraform.workspace}"
-  description   = "[${terraform.workspace}] Sends an email report on store operations."
+  description   = "[${terraform.workspace}] Validates MSAL tokens."
 
-  role         = aws_iam_role.flexepos_lambda_role.arn
-  package_type = "Image"
-  image_uri    = "${data.aws_ecr_repository.wmc_ecr.repository_url}@${data.aws_ecr_image.wmc_image.id}"
-  image_config {
-    command = ["validate_token.lambda_handler"]
-  }
-  timeout     = 480
-  memory_size = 960
+  role        = aws_iam_role.flexepos_lambda_role.arn
+  filename    = "../deploy/validate_token.zip"
+  handler     = "validate_token.lambda_handler"
+  runtime     = "python3.12"
+  timeout     = 30
+  memory_size = 128
+
+  source_code_hash = filebase64sha256("../deploy/validate_token.zip")
 
   environment {
     variables = local.lambda_env_authorizer
@@ -190,6 +190,17 @@ resource "aws_lambda_permission" "apigw-mpvs" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.get_mpvs.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # The /*/* portion grants access from any method on any resource
+  # within the API Gateway "REST API".
+  source_arn = "${aws_api_gateway_rest_api.josiah.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "apigw-auth" {
+  statement_id  = "AllowAPIGatewayInvoke-auth"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.authorizer.function_name
   principal     = "apigateway.amazonaws.com"
 
   # The /*/* portion grants access from any method on any resource

@@ -1,7 +1,7 @@
 resource "aws_api_gateway_authorizer" "azure_auth" {
-  name                   = "msal"
-  rest_api_id            = aws_api_gateway_rest_api.josiah.id
-  authorizer_uri         = aws_lambda_function.authorizer.invoke_arn
+  name           = "msal"
+  rest_api_id    = aws_api_gateway_rest_api.josiah.id
+  authorizer_uri = aws_lambda_function.authorizer.invoke_arn
 }
 
 resource "aws_api_gateway_rest_api" "josiah" {
@@ -20,7 +20,7 @@ resource "aws_api_gateway_method" "proxy_root" {
   resource_id   = aws_api_gateway_rest_api.josiah.root_resource_id
   http_method   = "POST"
   authorization = "CUSTOM"
-authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
   request_parameters = {
     "method.request.querystring.day"   = true,
     "method.request.querystring.month" = true,
@@ -73,8 +73,8 @@ resource "aws_api_gateway_integration_response" "lambda_root_response" {
   status_code = aws_api_gateway_method_response.root_method_response_200.status_code
   response_templates = {
     "application/json" = jsonencode({
-      body = "Josiah is on it!",
-      headers = {"Access-Control-Allow-Origin": "*"},
+      body    = "Josiah is on it!",
+      headers = { "Access-Control-Allow-Origin" : "*" },
     })
   }
   response_parameters = {
@@ -83,13 +83,13 @@ resource "aws_api_gateway_integration_response" "lambda_root_response" {
 }
 
 resource "aws_api_gateway_integration" "integration-OPTIONS" {
-  http_method          = "OPTIONS"
+  http_method = "OPTIONS"
   request_templates = {
     "application/json" = "{\"statusCode\": 200}"
   }
-  rest_api_id   = aws_api_gateway_rest_api.josiah.id
-  resource_id   = aws_api_gateway_rest_api.josiah.root_resource_id
-  type                 = "MOCK"
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_rest_api.josiah.root_resource_id
+  type        = "MOCK"
 }
 
 resource "aws_api_gateway_method_response" "root_options_response_200" {
@@ -97,9 +97,9 @@ resource "aws_api_gateway_method_response" "root_options_response_200" {
   resource_id = aws_api_gateway_rest_api.josiah.root_resource_id
   http_method = aws_api_gateway_method.proxy_root_options.http_method
   status_code = "200"
-  response_parameters = {"method.response.header.Access-Control-Allow-Origin"= true, 
-  "method.response.header.Access-Control-Allow-Headers"=true,
-  "method.response.header.Access-Control-Allow-Methods"=true }
+  response_parameters = { "method.response.header.Access-Control-Allow-Origin" = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+  "method.response.header.Access-Control-Allow-Methods" = true }
 }
 
 resource "aws_api_gateway_method" "proxy_root_options" {
@@ -107,13 +107,13 @@ resource "aws_api_gateway_method" "proxy_root_options" {
   resource_id   = aws_api_gateway_rest_api.josiah.root_resource_id
   http_method   = aws_api_gateway_integration.integration-OPTIONS.http_method
   authorization = "NONE"
-authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
 }
 
 resource "aws_api_gateway_integration_response" "proxy_root_options-200" {
   http_method = aws_api_gateway_method.proxy_root_options.http_method
-  rest_api_id   = aws_api_gateway_rest_api.josiah.id
-  resource_id   = aws_api_gateway_rest_api.josiah.root_resource_id
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_rest_api.josiah.root_resource_id
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
@@ -175,9 +175,9 @@ resource "aws_api_gateway_method_response" "email_tips_method_response_200" {
   resource_id = aws_api_gateway_resource.email_tips_resource.id
   http_method = aws_api_gateway_method.proxy_email_tips.http_method
   status_code = "200"
-  response_parameters = {"method.response.header.Access-Control-Allow-Origin"= true, 
-  "method.response.header.Access-Control-Allow-Headers"=true,
-  "method.response.header.Access-Control-Allow-Methods"=true }
+  response_parameters = { "method.response.header.Access-Control-Allow-Origin" = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+  "method.response.header.Access-Control-Allow-Methods" = true }
 }
 
 resource "aws_api_gateway_integration_response" "lambda_email_tips_response" {
@@ -187,12 +187,12 @@ resource "aws_api_gateway_integration_response" "lambda_email_tips_response" {
   status_code = aws_api_gateway_method_response.email_tips_method_response_200.status_code
   response_templates = {
     "application/json" = jsonencode({
-      body = "Josiah is on it!",
-      headers = {"Access-Control-Allow-Origin": "*"},
+      body    = "Josiah is on it!",
+      headers = { "Access-Control-Allow-Origin" : "*" },
     })
   }
   response_parameters = {
-     "method.response.header.Access-Control-Allow-Origin" = "'*'"
+    "method.response.header.Access-Control-Allow-Origin" = "'*'"
   }
 }
 
@@ -201,17 +201,17 @@ resource "aws_api_gateway_method" "method_email_tips_options" {
   resource_id   = aws_api_gateway_resource.email_tips_resource.id
   http_method   = "OPTIONS"
   authorization = "NONE"
-authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
 }
 
 resource "aws_api_gateway_integration" "integration_email_tips_OPTIONS" {
-  http_method          = aws_api_gateway_method.method_email_tips_options.http_method
+  http_method = aws_api_gateway_method.method_email_tips_options.http_method
   request_templates = {
     "application/json" = "{\"statusCode\": 200}"
   }
-  rest_api_id   = aws_api_gateway_rest_api.josiah.id
-  resource_id   = aws_api_gateway_resource.email_tips_resource.id
-  type                 = "MOCK"
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.email_tips_resource.id
+  type        = "MOCK"
 }
 
 resource "aws_api_gateway_method_response" "email_tips_method_response_options" {
@@ -219,15 +219,15 @@ resource "aws_api_gateway_method_response" "email_tips_method_response_options" 
   resource_id = aws_api_gateway_resource.email_tips_resource.id
   http_method = aws_api_gateway_method.method_email_tips_options.http_method
   status_code = "200"
-  response_parameters = {"method.response.header.Access-Control-Allow-Origin"= true, 
-  "method.response.header.Access-Control-Allow-Headers"=true,
-  "method.response.header.Access-Control-Allow-Methods"=true }
+  response_parameters = { "method.response.header.Access-Control-Allow-Origin" = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+  "method.response.header.Access-Control-Allow-Methods" = true }
 }
 
 resource "aws_api_gateway_integration_response" "email_tips_options-200" {
   http_method = aws_api_gateway_method.method_email_tips_options.http_method
-  rest_api_id   = aws_api_gateway_rest_api.josiah.id
-  resource_id   = aws_api_gateway_resource.email_tips_resource.id
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.email_tips_resource.id
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
@@ -267,9 +267,9 @@ resource "aws_api_gateway_method_response" "transform_tips_method_response_200" 
   resource_id = aws_api_gateway_resource.transform_tips_resource.id
   http_method = aws_api_gateway_method.proxy_transform_tips.http_method
   status_code = "200"
-  response_parameters = {"method.response.header.Access-Control-Allow-Origin"= true, 
-  "method.response.header.Access-Control-Allow-Headers"=true,
-  "method.response.header.Access-Control-Allow-Methods"=true }
+  response_parameters = { "method.response.header.Access-Control-Allow-Origin" = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+  "method.response.header.Access-Control-Allow-Methods" = true }
 }
 
 resource "aws_api_gateway_method" "method_transform_tips_options" {
@@ -277,17 +277,17 @@ resource "aws_api_gateway_method" "method_transform_tips_options" {
   resource_id   = aws_api_gateway_resource.transform_tips_resource.id
   http_method   = "OPTIONS"
   authorization = "NONE"
-authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
 }
 
 resource "aws_api_gateway_integration" "integration_transform_tips_OPTIONS" {
-  http_method          = aws_api_gateway_method.method_transform_tips_options.http_method
+  http_method = aws_api_gateway_method.method_transform_tips_options.http_method
   request_templates = {
     "application/json" = "{\"statusCode\": 200}"
   }
-  rest_api_id   = aws_api_gateway_rest_api.josiah.id
-  resource_id   = aws_api_gateway_resource.transform_tips_resource.id
-  type                 = "MOCK"
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.transform_tips_resource.id
+  type        = "MOCK"
 }
 
 resource "aws_api_gateway_method_response" "transform_tips_method_response_options" {
@@ -295,15 +295,15 @@ resource "aws_api_gateway_method_response" "transform_tips_method_response_optio
   resource_id = aws_api_gateway_resource.transform_tips_resource.id
   http_method = aws_api_gateway_method.method_transform_tips_options.http_method
   status_code = "200"
-  response_parameters = {"method.response.header.Access-Control-Allow-Origin"= true, 
-  "method.response.header.Access-Control-Allow-Headers"=true,
-  "method.response.header.Access-Control-Allow-Methods"=true }
+  response_parameters = { "method.response.header.Access-Control-Allow-Origin" = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+  "method.response.header.Access-Control-Allow-Methods" = true }
 }
 
 resource "aws_api_gateway_integration_response" "transform_tips_options-200" {
   http_method = aws_api_gateway_method.method_transform_tips_options.http_method
-  rest_api_id   = aws_api_gateway_rest_api.josiah.id
-  resource_id   = aws_api_gateway_resource.transform_tips_resource.id
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.transform_tips_resource.id
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
@@ -343,9 +343,9 @@ resource "aws_api_gateway_method_response" "get_mpvs_method_response_200" {
   resource_id = aws_api_gateway_resource.get_mpvs_resource.id
   http_method = aws_api_gateway_method.proxy_get_mpvs.http_method
   status_code = "200"
-  response_parameters = {"method.response.header.Access-Control-Allow-Origin"= true, 
-  "method.response.header.Access-Control-Allow-Headers"=true,
-  "method.response.header.Access-Control-Allow-Methods"=true }
+  response_parameters = { "method.response.header.Access-Control-Allow-Origin" = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+  "method.response.header.Access-Control-Allow-Methods" = true }
 }
 
 resource "aws_api_gateway_method" "method_get_mpvs_options" {
@@ -353,17 +353,17 @@ resource "aws_api_gateway_method" "method_get_mpvs_options" {
   resource_id   = aws_api_gateway_resource.get_mpvs_resource.id
   http_method   = "OPTIONS"
   authorization = "NONE"
-authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
 }
 
 resource "aws_api_gateway_integration" "integration_get_mpvs_OPTIONS" {
-  http_method          = aws_api_gateway_method.method_get_mpvs_options.http_method
+  http_method = aws_api_gateway_method.method_get_mpvs_options.http_method
   request_templates = {
     "application/json" = "{\"statusCode\": 200}"
   }
-  rest_api_id   = aws_api_gateway_rest_api.josiah.id
-  resource_id   = aws_api_gateway_resource.get_mpvs_resource.id
-  type                 = "MOCK"
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.get_mpvs_resource.id
+  type        = "MOCK"
 }
 
 resource "aws_api_gateway_method_response" "get_mpvs_method_response_options" {
@@ -371,15 +371,15 @@ resource "aws_api_gateway_method_response" "get_mpvs_method_response_options" {
   resource_id = aws_api_gateway_resource.get_mpvs_resource.id
   http_method = aws_api_gateway_method.method_get_mpvs_options.http_method
   status_code = "200"
-  response_parameters = {"method.response.header.Access-Control-Allow-Origin"= true, 
-  "method.response.header.Access-Control-Allow-Headers"=true,
-  "method.response.header.Access-Control-Allow-Methods"=true }
+  response_parameters = { "method.response.header.Access-Control-Allow-Origin" = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+  "method.response.header.Access-Control-Allow-Methods" = true }
 }
 
 resource "aws_api_gateway_integration_response" "get_mpvs_options-200" {
   http_method = aws_api_gateway_integration.integration_get_mpvs_OPTIONS.http_method
-  rest_api_id   = aws_api_gateway_rest_api.josiah.id
-  resource_id   = aws_api_gateway_resource.get_mpvs_resource.id
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.get_mpvs_resource.id
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
@@ -394,13 +394,14 @@ resource "aws_api_gateway_deployment" "josiah" {
     aws_api_gateway_integration.lambda_root,
     aws_api_gateway_integration.lambda_email_tips,
     aws_api_gateway_integration.lambda_transform_tips,
-    aws_api_gateway_integration.lambda_get_mpvs
+    aws_api_gateway_integration.lambda_get_mpvs,
+    aws_lambda_function.authorizer,
   ]
 
-  rest_api_id = aws_api_gateway_rest_api.josiah.id
-  stage_name  = "test"
+  rest_api_id       = aws_api_gateway_rest_api.josiah.id
+  stage_name        = "test"
   stage_description = "Deployed at ${timestamp()}"
-  description = "Deployed at ${timestamp()}"
+  description       = "Deployed at ${timestamp()}"
   lifecycle {
     create_before_destroy = true
   }
