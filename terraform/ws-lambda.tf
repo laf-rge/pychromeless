@@ -1,12 +1,3 @@
-# MSAL Authorizer for WebSocket API
-resource "aws_apigatewayv2_authorizer" "msal" {
-  name             = "msal"
-  api_id           = aws_apigatewayv2_api.websocket.id
-  authorizer_type  = "REQUEST"
-  authorizer_uri   = aws_lambda_function.authorizer.invoke_arn
-  identity_sources = ["route.request.header.Authorization"]
-}
-
 # Connect Lambda Function
 resource "aws_lambda_function" "connect" {
   function_name = "${local.common_tags.Name}-connect"
