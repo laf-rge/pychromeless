@@ -49,12 +49,21 @@ class Grubhub:
         # if datetime.date.today() - start_date >= datetime.timedelta(days=30):
         #    raise ValueError("Dates outside of 30 days is not supported.")
         try:
-            self._login()
+            # self._login()
+            self._driver = initialise_driver()
             input("pause")
             driver = self._driver
-            driver.get(
-                "https://restaurant.grubhub.com/financials/deposit-history/3192172,6177240,7583896,7585040/"
-            )
+            try:
+                driver.get(
+                    "https://restaurant.grubhub.com/financials/deposit-history/3192172,6177240,7583896,7585040/"
+                )
+            except:
+                driver.switch_to.window(driver.window_handles[0])
+            finally:
+                driver.get(
+                    "https://restaurant.grubhub.com/financials/deposit-history/3192172,6177240,7583896,7585040/"
+                )
+
             sleep(2)
             driver.find_element(By.CLASS_NAME, "date-picker-input__date-button").click()
             driver.find_element(By.LINK_TEXT, "Last 30 days").click()
@@ -71,6 +80,7 @@ class Grubhub:
                 ).date()
                 store = tr.text.split()[4].strip(" ()")
                 tr.click()
+                sleep(2)
                 txt = (
                     driver.find_element(
                         By.XPATH,

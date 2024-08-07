@@ -12,9 +12,6 @@ resource "aws_lambda_permission" "api_gateway_authorizer" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.authorizer.function_name
   principal     = "apigateway.amazonaws.com"
-
-  # The source ARN for a WebSocket API
-  source_arn = "${aws_apigatewayv2_api.websocket.execution_arn}/authorizers/${aws_apigatewayv2_authorizer.msal.id}"
 }
 
 # WebSocket API Gateway Stage

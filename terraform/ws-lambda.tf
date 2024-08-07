@@ -83,14 +83,6 @@ resource "aws_lambda_permission" "default_ws" {
   source_arn    = "${aws_apigatewayv2_api.websocket.execution_arn}/*/*"
 }
 
-# Lambda permission for the custom authorizer
-resource "aws_lambda_permission" "api_gateway_custom_authorizer" {
-  statement_id  = "AllowAPIGatewayInvokeCustomAuthorizer"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.authorizer.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.websocket.execution_arn}/authorizers/${aws_apigatewayv2_authorizer.msal.id}"
-}
 resource "aws_lambda_permission" "ws-apigw-auth" {
   statement_id  = "AllowAPIGatewayInvoke-ws"
   action        = "lambda:InvokeFunction"
