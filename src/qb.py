@@ -604,7 +604,10 @@ def refresh_session():
     put_secret(json.dumps(s))
     # QuickBooks.enable_global()
     CLIENT = QuickBooks(
-        auth_client=AUTH_CLIENT, company_id="1401432085", minorversion=70
+        auth_client=AUTH_CLIENT,
+        company_id="1401432085",
+        minorversion=70,
+        use_decimal=True,
     )
     return CLIENT
 

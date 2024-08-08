@@ -211,6 +211,7 @@ class Flexepos:
         tx_date_str = tx_date.strftime("%m%d%Y")
         try:
             for store in stores:
+                sleep(2)
                 driver.get("https://fms.flexepos.com/FlexeposWeb/home.seam")
                 sales_data[store] = {}
                 driver.find_element(
@@ -478,6 +479,7 @@ class Flexepos:
         try:
             self._login()
             driver = self._driver
+            sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(0)).click()
             driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(0, 18)).click()
             for store in stores:
