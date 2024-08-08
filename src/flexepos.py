@@ -70,6 +70,7 @@ class Flexepos:
         driver.get(
             "https://fms.flexepos.com/FlexeposWeb/login.seam?actionMethod=home.xhtml%3Auser.clear"
         )
+        sleep(2)
         driver.get("https://fms.flexepos.com/FlexeposWeb/")
         sleep(5)
         driver.find_element(By.ID, TAG_IDS["login_username"]).clear()
