@@ -165,6 +165,7 @@ Josiah<br/>
 
             except Exception as ex:
                 print("error " + str(txdate))
+                traceback.print_exc()
                 print(ex)
                 retry -= 1
     txdate = txdates[0]

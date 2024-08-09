@@ -44,7 +44,7 @@ resource "aws_lambda_function" "invoice_sync" {
     command = ["lambda_function.invoice_sync_handler"]
   }
   timeout     = 480
-  memory_size = 960
+  memory_size = 10240
 
   environment {
     variables = local.lambda_env_invoice_sync
@@ -64,7 +64,7 @@ resource "aws_lambda_function" "daily_journal" {
     command = ["lambda_function.daily_journal_handler"]
   }
   timeout     = 480
-  memory_size = 960
+  memory_size = 10240
 
   environment {
     variables = local.lambda_env_daily_journal
@@ -84,7 +84,7 @@ resource "aws_lambda_function" "daily_sales" {
     command = ["lambda_function.daily_sales_handler"]
   }
   timeout     = 480
-  memory_size = 960
+  memory_size = 10240
 
   environment {
     variables = local.lambda_env_daily_sales
@@ -104,7 +104,7 @@ resource "aws_lambda_function" "email_tips" {
     command = ["lambda_function.email_tips_handler"]
   }
   timeout     = 480
-  memory_size = 960
+  memory_size = 10240
 
   environment {
     variables = local.lambda_env_email_tips
@@ -124,7 +124,7 @@ resource "aws_lambda_function" "transform_tips" {
     command = ["lambda_function.transform_tips_handler"]
   }
   timeout     = 480
-  memory_size = 960
+  memory_size = 10240
 
   environment {
     variables = local.lambda_env_transform_tips
@@ -144,7 +144,7 @@ resource "aws_lambda_function" "get_mpvs" {
     command = ["lambda_function.get_mpvs_handler"]
   }
   timeout     = 480
-  memory_size = 960
+  memory_size = 10240
 
   environment {
     variables = local.lambda_env_get_mpvs
