@@ -365,12 +365,12 @@ class Flexepos:
                 self.setDateRange(driver, tx_date_str)
                 sleep(2)
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                driver.implicitly_wait(2)
+                sleep(2)
                 if len(driver.find_elements(By.ID, TAG_IDS["transactions"])) > 0:
                     payins = driver.find_element(By.ID, TAG_IDS["transactions"]).text
                 else:
                     payins = driver.find_element(By.ID, "j_id84").text
-                driver.implicitly_wait(5)
+                sleep(5)
                 sales_data[store]["Payins"] = payins
 
                 # get pay outs
