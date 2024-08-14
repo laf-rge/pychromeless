@@ -187,6 +187,9 @@ def create_daily_sales(txdate, daily_reports):
 
     for store, sref in store_refs.items():
         if store in existing_receipts:
+            if len(existing_receipts[store].LinkedTxn) > 0:
+                print("skipping already linked txn for", store)
+                continue
             new_receipts[store] = existing_receipts[store]
             # clear old lines
             new_receipts[store].Line.clear()
@@ -576,6 +579,7 @@ def vendor_lookup(gl_vendor_name):
             "SYSFRA": Vendor.where("DisplayName like 'Sysco San%'", qb=CLIENT)[0],
             "SYSSAC": Vendor.where("DisplayName like 'Sysco Sac%'", qb=CLIENT)[0],
             "SAL": Vendor.where("DisplayName like 'Sala%'", qb=CLIENT)[0],
+            "DONOGH": Vendor.where("DisplayName like 'Donoghue%'", qb=CLIENT)[0],
         }
     return vendor[gl_vendor_name]
 
