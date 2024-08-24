@@ -3,7 +3,7 @@ variable "settings" {
     account_number  = "262877227567"
     region          = "us-east-2"
     owner           = "william@wagonermanagement.com"
-    accounting      = "20025"
+    accounting      = "WMC"
     s3_bucket       = "wagonermanagementcorp"
     flexepos_cred   = "4235601104097358741"
     crunchtime_cred = "3333641072972018802"
@@ -63,6 +63,14 @@ locals {
     }
   }
 
+  websocket = {
+    prod = {
+      PATH           = "/opt/bin"
+      PYTHONPATH     = "/var/task/src:/opt/lib"
+      DYNAMODB_TABLE = aws_dynamodb_table.websocket_connections.name
+    }
+  }
+
   lambda_env_invoice_sync   = local.invoice_sync[terraform.workspace]
   lambda_env_daily_journal  = local.daily_journal[terraform.workspace]
   lambda_env_daily_sales    = local.daily_sales[terraform.workspace]
@@ -70,6 +78,7 @@ locals {
   lambda_env_transform_tips = local.transform_tips[terraform.workspace]
   lambda_env_get_mpvs       = local.get_mpvs[terraform.workspace]
   lambda_env_authorizer     = local.authorizer[terraform.workspace]
+  lambda_env_websocket      = local.websocket[terraform.workspace]
 
   common_tags = {
     Owner      = var.settings["owner"]

@@ -70,6 +70,7 @@ class Flexepos:
         driver.get(
             "https://fms.flexepos.com/FlexeposWeb/login.seam?actionMethod=home.xhtml%3Auser.clear"
         )
+        sleep(2)
         driver.get("https://fms.flexepos.com/FlexeposWeb/")
         sleep(5)
         driver.find_element(By.ID, TAG_IDS["login_username"]).clear()
@@ -211,6 +212,7 @@ class Flexepos:
         tx_date_str = tx_date.strftime("%m%d%Y")
         try:
             for store in stores:
+                sleep(2)
                 driver.get("https://fms.flexepos.com/FlexeposWeb/home.seam")
                 sales_data[store] = {}
                 driver.find_element(
@@ -363,12 +365,12 @@ class Flexepos:
                 self.setDateRange(driver, tx_date_str)
                 sleep(2)
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                driver.implicitly_wait(2)
+                sleep(2)
                 if len(driver.find_elements(By.ID, TAG_IDS["transactions"])) > 0:
                     payins = driver.find_element(By.ID, TAG_IDS["transactions"]).text
                 else:
                     payins = driver.find_element(By.ID, "j_id84").text
-                driver.implicitly_wait(5)
+                sleep(5)
                 sales_data[store]["Payins"] = payins
 
                 # get pay outs
@@ -478,6 +480,7 @@ class Flexepos:
         try:
             self._login()
             driver = self._driver
+            sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(0)).click()
             driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(0, 18)).click()
             for store in stores:
