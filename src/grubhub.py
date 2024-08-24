@@ -57,7 +57,7 @@ class Grubhub:
                 driver.get(
                     "https://restaurant.grubhub.com/financials/deposit-history/3192172,6177240,7583896,7585040/"
                 )
-            except:
+            except Exception:
                 driver.switch_to.window(driver.window_handles[0])
             finally:
                 driver.get(
