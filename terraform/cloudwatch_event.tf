@@ -1,20 +1,20 @@
 resource "aws_cloudwatch_event_rule" "flexepos_daily" {
   name                = "flexepos-daily-${terraform.workspace}"
   description         = "Trigger ${terraform.workspace} actions"
-  schedule_expression = "cron(0 13 * * ? *)"
+  schedule_expression = "cron(0 13 * * ? *)" # 6 AM PST
   depends_on          = [aws_lambda_function.invoice_sync]
 }
 
-resource "aws_cloudwatch_event_rule" "flexepos_monthly" {
-  name                = "flexepos-monthly-${terraform.workspace}"
+resource "aws_cloudwatch_event_rule" "flexepos_daily_3am" {
+  name                = "flexepos-daily-3am-${terraform.workspace}"
   description         = "Trigger ${terraform.workspace} actions"
-  schedule_expression = "cron(0 6 * * ? *)"
+  schedule_expression = "cron(0 10 * * ? *)" # 3 AM PST
   depends_on          = [aws_lambda_function.invoice_sync]
 }
 
 resource "aws_cloudwatch_event_target" "invoke_invoice_sync" {
   target_id = "invoice_sync_daily"
-  rule      = aws_cloudwatch_event_rule.flexepos_daily.name
+  rule      = aws_cloudwatch_event_rule.flexepos_daily_3am.name
   arn       = aws_lambda_function.invoice_sync.arn
 }
 
