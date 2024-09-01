@@ -14,3 +14,4 @@ icecream
 pyjwt
 cryptography
 pandas
+pypdf2
