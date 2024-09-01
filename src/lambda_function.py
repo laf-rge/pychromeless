@@ -4,7 +4,7 @@ import datetime
 import email
 import io
 import re
-import traceback
+import logging
 from decimal import Decimal
 from email.message import Message
 from functools import partial  # noqa # pylint: disable=unused-import
@@ -25,6 +25,8 @@ from tips import Tips
 from ubereats import UberEats
 from wmcgdrive import WMCGdrive
 
+logger = logging.getLogger(__name__)
+
 # warning! this won't work if we multiply
 TWOPLACES = Decimal(10) ** -2
 setlocale(LC_NUMERIC, "en_US.UTF-8")
@@ -35,7 +37,7 @@ global_stores = ["20358", "20395", "20400", "20407"]
 
 def create_response(
     status_code: int,
-    body: str,
+    body: object,
     content_type: str = "application/json",
     filename: str | None = None,
 ) -> dict:
@@ -103,7 +105,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         txdates = [datetime.date.today() - datetime.timedelta(days=1)]
     # txdates = [datetime.date(2024,3,9)]
     # txdates = list(map(partial(datetime.date, 2024, 8), range(1, 8)))
-    print(txdates)
+    logger.info("Started daily sales", extra={"txdates": txdates})
     dj = Flexepos()
     for txdate in txdates:
         retry = 5
@@ -116,7 +118,10 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                     stores.remove("20407")
                 journal = dj.getDailySales(stores, txdate)
                 qb.create_daily_sales(txdate, journal)
-                print(txdate)
+                logger.info(
+                    "Successfully processed daily sales",
+                    extra={"txdate": txdate, "stores": stores},
+                )
                 retry = 0
                 subject = ""
                 message = ""
@@ -125,7 +130,10 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                     if (store == "20400" and txdate < datetime.date(2024, 1, 31)) or (
                         store == "20407" and txdate < datetime.date(2024, 3, 6)
                     ):
-                        print(f"skipping {store} on {txdate}")
+                        logger.info(
+                            "Skipping store",
+                            extra={"store": store, "txdate": txdate},
+                        )
                         continue
                     if (
                         journal[store]["Bank Deposits"] is None
@@ -163,10 +171,8 @@ Josiah<br/>
 (aka The Robot)""",
                     )
 
-            except Exception as ex:
-                print("error " + str(txdate))
-                traceback.print_exc()
-                print(ex)
+            except Exception:
+                logger.exception(f"error {txdate}")
                 retry -= 1
     txdate = txdates[0]
     payment_data = dj.getOnlinePayments(global_stores, txdate.year, txdate.month)
@@ -313,8 +319,6 @@ def email_tips_handler(*args, **kwargs) -> dict:
     month = datetime.date.today().month
     pay_period = 0
 
-    print(args)
-    print(len(args))
     event = {}
     if args is not None and len(args) > 0:
         event = args[0]
@@ -322,7 +326,7 @@ def email_tips_handler(*args, **kwargs) -> dict:
         year = int(event["year"])
         month = int(event["month"])
         pay_period = int(event["day"])
-    print(year, month, pay_period)
+    logger.info(f"year: {year}, month: {month}, pay_period: {pay_period}")
     t = Tips()
     t.emailTips(global_stores, datetime.date(year, month, 5), pay_period)
     return create_response(200, "Email Sent!")
@@ -344,7 +348,7 @@ def decode_upload(event: dict[str, Any]) -> dict[str, bytes]:
     msg: Message = email.message_from_bytes(ct.encode() + post_data)
 
     # checking if the message is multipart
-    print("Multipart check : ", msg.is_multipart())
+    logger.info(f"Multipart check : {msg.is_multipart()}")
     multipart_content = {}
     # if message is multipart
     if msg.is_multipart():
@@ -356,9 +360,11 @@ def decode_upload(event: dict[str, Any]) -> dict[str, bytes]:
                 if part.get_filename():
                     # fetching the filename
                     file_name = part.get_filename()
-                    print(file_name)
-                print(part.get_content_type())
-                print(part.get_param("name", header="content-disposition"))
+                    logger.info(f"file_name: {file_name}")
+                logger.info(f"part.get_content_type(): {part.get_content_type()}")
+                logger.info(
+                    f"part.get_param('name', header='content-disposition'): {part.get_param('name', header='content-disposition')}"
+                )
                 name_param = part.get_param("name", header="content-disposition")
                 if name_param:
                     multipart_content[name_param] = part.get_payload(decode=True)
@@ -382,7 +388,6 @@ def transform_tips_handler(*args, **kwargs) -> dict:
             tips_stream = open("tips-aug.xlsx", "rb")
         else:
             multipart_content = decode_upload(event)
-            print(multipart_content)
             tips_stream = io.BytesIO(multipart_content.get("file[]", b""))
             if "year" in multipart_content:
                 try:
@@ -390,18 +395,20 @@ def transform_tips_handler(*args, **kwargs) -> dict:
                     month = int(multipart_content["month"])
                     pay_period = int(multipart_content["pay_period"])
                 except Exception as ex:
-                    print(traceback.print_exc())
-                    return create_response(400, str(ex))
+                    error_body = {"message": "Error parsing the multipart content"}
+                    logger.exception(error_body["message"])
+                    return create_response(400, error_body)
         t = Tips()
         csv_tips = t.exportTipsTransform(tips_stream)
         lines = csv_tips.strip().split("\n")
-        print(lines)
         if len(lines) <= 1:
             # CSV text contains only the header and no data
             # Fail fast or handle the scenario accordingly
             return create_response(
                 400,
-                "No tips generated please save the file in Excel before uploading to fix.",
+                {
+                    "message": "No tips generated please save the file in Excel before uploading to fix."
+                },
             )
         if pay_period >= 3:
             csv = csv_tips
@@ -417,10 +424,10 @@ def transform_tips_handler(*args, **kwargs) -> dict:
             )
             csv = merged_data.to_csv(index=False)
 
-    except Exception as e:
-        print(e)
-        print(traceback.print_exc())
-        return create_response(400, str(e))
+    except Exception:
+        error_body = {"message": "Error parsing tips"}
+        logger.exception(error_body["message"])
+        return create_response(400, error_body)
     return create_response(200, csv, content_type="text/csv", filename="gusto_tips.csv")
 
 
@@ -441,13 +448,16 @@ def get_mpvs_handler(*args, **kwargs):
                 year = int(multipart_content["year"])
                 month = int(multipart_content["month"])
                 pay_period = int(multipart_content["pay_period"])
-            except Exception as ex:
-                return create_response(400, str(ex))
+            except Exception:
+                error_body = {"message": "Error parsing the multipart content"}
+                logger.exception(error_body["message"])
+                return create_response(400, error_body)
         t = Tips()
         csv = t.exportMealPeriodViolations(
             global_stores, datetime.date(year, month, 5), pay_period
         )
-    except Exception as e:
-        print(e)
-        return create_response(400, str(e))
+    except Exception:
+        error_body = {"message": "Error generating MPVs"}
+        logger.exception(error_body["message"])
+        return create_response(400, error_body)
     return create_response(200, csv, content_type="text/csv", filename="gusto_mpvs.csv")
