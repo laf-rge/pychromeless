@@ -394,7 +394,7 @@ def transform_tips_handler(*args, **kwargs) -> dict:
                     year = int(multipart_content["year"])
                     month = int(multipart_content["month"])
                     pay_period = int(multipart_content["pay_period"])
-                except Exception as ex:
+                except Exception:
                     error_body = {"message": "Error parsing the multipart content"}
                     logger.exception(error_body["message"])
                     return create_response(400, error_body)
