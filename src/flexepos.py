@@ -1,5 +1,6 @@
 import calendar
 import datetime
+import logging
 from functools import partial
 from time import sleep
 from typing import Optional, cast
@@ -10,6 +11,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from ssm_parameter_store import SSMParameterStore
 from webdriver import initialise_driver
+
+logger = logging.getLogger(__name__)
 
 
 # Tag IDs dictionary
@@ -697,8 +700,8 @@ class Flexepos:
         while qdate >= start_date:
             try:
                 daily_journal = self.getDailyJournal(stores, qdate.strftime("%m%d%Y"))
-            except Exception as ex:
-                print(ex)
+            except Exception:
+                logging.exception("Error getting daily journal")
                 sleep(1)
                 continue
             for store in stores:

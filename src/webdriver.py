@@ -6,8 +6,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def initialise_driver(download_location: Optional[str] = None) -> webdriver.Chrome:
@@ -32,9 +31,9 @@ def initialise_driver(download_location: Optional[str] = None) -> webdriver.Chro
                 "params": {"behavior": "allow", "downloadPath": download_location},
             }
             command_result = driver.execute("send_command", params)
-            print("response from browser:")
-            for key in command_result:
-                print("result:" + key + ":" + str(command_result[key]))
+            logger.info(
+                "response from browser", extra={"command_result": command_result}
+            )
         driver.switch_to.new_window("tab")
     else:
         chrome_options.add_experimental_option(

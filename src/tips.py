@@ -2,17 +2,14 @@ import datetime
 import calendar
 import openpyxl
 import flexepos
-import json
 import boto3
+import logging
 from itertools import islice
 from decimal import Decimal, InvalidOperation
 from locale import LC_NUMERIC, setlocale
 from openpyxl.worksheet.dimensions import ColumnDimension, DimensionHolder
 from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.utils import get_column_letter
-from pygments import highlight
-from pygments.lexers import JsonLexer
-from pygments.formatters import Terminal256Formatter
 from wheniwork import WhenIWork
 from ssm_parameter_store import SSMParameterStore
 from io import BytesIO
@@ -23,28 +20,13 @@ from collections import defaultdict
 from operator import itemgetter
 from typing import Any, cast
 
+logger = logging.getLogger(__name__)
+
 WHENIWORK_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
 
 # warning! this won't work if we multiply
 TWOPLACES = Decimal(10) ** -2
 setlocale(LC_NUMERIC, "")
-
-
-def color_print(json_obj):
-    class DateTimeEncoder(json.JSONEncoder):
-        def default(self, o):
-            if isinstance(o, (datetime.datetime, datetime.date)):
-                return o.isoformat()
-            return super().default(o)
-
-    print(
-        highlight(
-            json.dumps(json_obj, cls=DateTimeEncoder, indent=2),
-            JsonLexer(),
-            Terminal256Formatter(),
-        )
-    )
-    return
 
 
 class Tips:
@@ -363,8 +345,14 @@ class Tips:
                         )
                         break_duration = next_time - end_time
                         if break_duration < datetime.timedelta(minutes=30):
-                            print(
-                                f"WARNING: {day.isoformat()} {last_name}, {first_name} {str(break_duration)} break."
+                            logger.warning(
+                                "Lunch break less than 30 minutes",
+                                extra=dict(
+                                    day=day,
+                                    last_name=last_name,
+                                    first_name=first_name,
+                                    break_duration=break_duration,
+                                ),
                             )
 
         return sorted(mpvs, key=itemgetter("last_name", "first_name"))
@@ -409,8 +397,14 @@ class Tips:
                                     f"{row[0].value},{row[1].value},Crew (Primary),{decimal_value}"
                                 )
                         except (ValueError, InvalidOperation):
-                            print(
-                                f"Could not convert value {cell_value} of type {type(cell_value)}."
+                            logger.exception(
+                                "Could not convert value",
+                                extra=dict(
+                                    cell_value=cell_value,
+                                    row=row,
+                                    sheet_name=sheet_name,
+                                    type=type(cell_value),
+                                ),
                             )
         return "\n".join(text_csv)
 

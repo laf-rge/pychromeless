@@ -1,5 +1,6 @@
 import calendar
 import datetime
+import logging
 from time import sleep
 from typing import cast
 
@@ -8,6 +9,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from ssm_parameter_store import SSMParameterStore
 from webdriver import initialise_driver
+
+logger = logging.getLogger(__name__)
 
 store_map = {
     "20025": "8d6b329b-4976-4ef7-8411-3a416614a726",
@@ -79,7 +82,7 @@ class UberEats:
         month = driver.find_element(
             By.XPATH, '//button[@aria-label="Previous month."]/following-sibling::*'
         ).text
-        print(month)
+        logger.info(month)
         year = driver.find_element(
             By.XPATH,
             '//button[@aria-label="Previous month."]/following-sibling::*/following-sibling::*',
@@ -118,16 +121,16 @@ class UberEats:
                     year = self.__get_month_year()[1]
                     break
                 except Exception as ex:
-                    print("get year failed")
+                    logger.exception("get year failed")
                     raise ex
             while year != qdate.year:
                 if year > qdate.year:
-                    print("moving back a month - year search")
+                    logger.info("moving back a month - year search")
                     driver.find_element(
                         By.XPATH, '//button[@aria-label="Previous month."]'
                     ).click()
                 elif year < qdate.year:
-                    print("moving forward a month - year search")
+                    logger.info("moving forward a month - year search")
                     driver.find_element(
                         By.XPATH, '//button[@aria-label="Next month."]'
                     ).click()
@@ -138,20 +141,20 @@ class UberEats:
             try:
                 while month != qdate.month:
                     if month > qdate.month:
-                        print("going back a month - month search")
+                        logger.info("going back a month - month search")
                         driver.find_element(
                             By.XPATH, '//button[@aria-label="Previous month."]'
                         ).click()
                     else:
-                        print("going forward a month - month search")
+                        logger.info("going forward a month - month search")
                         driver.find_element(
                             By.XPATH, '//button[@aria-label="Next month."]'
                         ).click()
                     month = self.__get_month_year()[0]
             except Exception as ex:
-                print("month search failed trying anyway")
+                logger.exception("month search failed trying anyway")
                 raise ex
-            print('//div[contains(@aria-label, "{}")]'.format(date_text))
+            # print('//div[contains(@aria-label, "{}")]'.format(date_text))
             driver.find_element(
                 By.XPATH, '//div[contains(@aria-label, "{}")]'.format(date_text)
             ).click()
@@ -176,11 +179,11 @@ class UberEats:
 
             try:
                 while qdate < end_date:
-                    print(qdate)
+                    logger.info("Week of {}".format(qdate))
                     if (store == "20400" and qdate < datetime.date(2024, 1, 31)) or (
                         store == "20407" and qdate < datetime.date(2024, 3, 18)
                     ):
-                        print(f"skipping {store} {qdate}")
+                        logger.warn(f"skipping {store} {qdate} - not in date range")
                     else:
                         results.extend([self.get_payment(store, qdate)])
                     qdate = qdate + datetime.timedelta(days=7)
@@ -206,9 +209,9 @@ class UberEats:
         earnings.click()
 
         txt = earnings.find_element(By.XPATH, "..").text.split("\n")
-        print(txt)
+        # print(txt)
         invoice = {txt[i]: self.convert_num(txt[i + 1]) for i in range(0, len(txt), 2)}
-        print(invoice)
+        # print(invoice)
 
         # third party
         lines.append(["1362", "Sales", invoice["Sales"]])
@@ -228,7 +231,7 @@ class UberEats:
         #    lines.append(["1361", 'Total Taxes', invoice['Total Taxes']])
         lines.append(["6310", "Uber fees", invoice["Uber fees"]])
         notes += str(txt)
-        print(lines)
+        # print(lines)
 
         # pay day is always Monday
         result = [
@@ -238,11 +241,14 @@ class UberEats:
             lines,
             store,
         ]
-        print(
-            report_start,
-            report_end,
-            qdate,
-            qdate - datetime.timedelta(days=(qdate.weekday() - 8)),
+        logger.info(
+            "Complete",
+            extra={
+                "report_start": report_start,
+                "report_end": report_end,
+                "qdate": qdate,
+                "result": result,
+            },
         )
         return result
 
@@ -265,7 +271,7 @@ class UberEats:
         driver.get(
             "https://restaurant.uber.com/v2/payments?restaurantUUID=" + store_map[store]
         )
-        print("**", qdate)
+        logger.info("Getting payments for {}".format(qdate))
 
         qdate2 = qdate - datetime.timedelta(days=(qdate.weekday() + 7))
         if store == "20400" and qdate2 < datetime.date(2024, 1, 31):

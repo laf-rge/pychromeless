@@ -1,4 +1,5 @@
 import datetime
+import logging
 from time import sleep
 from typing import cast
 
@@ -7,6 +8,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from ssm_parameter_store import SSMParameterStore
 from webdriver import initialise_driver
+
+logger = logging.getLogger(__name__)
 
 
 class EZCater:
@@ -62,7 +65,7 @@ class EZCater:
             ):
                 results.extend([result])
             else:
-                print("skipping", result[4], str(result[1]))
+                logger.warning(f"skipping {result[4]} {result[1]}")
         return results
 
     def extract_deposit(self, data):

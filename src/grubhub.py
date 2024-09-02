@@ -1,4 +1,5 @@
 import datetime
+import logging
 from time import sleep
 from typing import cast
 
@@ -6,6 +7,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from ssm_parameter_store import SSMParameterStore
 from webdriver import initialise_driver
+
+logger = logging.getLogger(__name__)
 
 
 class Grubhub:
@@ -90,8 +93,7 @@ class Grubhub:
                     .replace("Total", "Total\n")
                     .split("\n")
                 )
-                print(txt)
-                print(txdate)
+                logger.info(txt, extra={"txdate": txdate, "store": store})
 
                 for i in range(0, len(txt), 2):
                     if i == 0:

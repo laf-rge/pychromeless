@@ -1,10 +1,17 @@
+import json
 import base64
 import calendar
-import datetime
 import email
 import io
 import re
 import logging
+import sys
+import os
+from datetime import date, datetime, timedelta
+from pythonjsonlogger import jsonlogger
+from pygments import highlight
+from pygments.lexers import JsonLexer
+from pygments.formatters import TerminalFormatter
 from decimal import Decimal
 from email.message import Message
 from functools import partial  # noqa # pylint: disable=unused-import
@@ -16,6 +23,7 @@ import boto3
 import crunchtime
 import pandas as pd
 import qb
+from botocore.exceptions import ClientError
 from doordash import Doordash
 from ezcater import EZCater
 from flexepos import Flexepos
@@ -25,6 +33,38 @@ from tips import Tips
 from ubereats import UberEats
 from wmcgdrive import WMCGdrive
 
+
+class CustomJsonEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, (datetime, date)):
+            return o.isoformat()
+        return super().default(o)
+
+
+class ColorizedJsonFormatter(jsonlogger.JsonFormatter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs, json_default=CustomJsonEncoder().default)
+
+    def format(self, record):
+        json_str = super().format(record)
+        return highlight(json_str, JsonLexer(), TerminalFormatter())
+
+
+def setup_json_logger():
+    json_handler = logging.StreamHandler(sys.stdout)
+    json_formatter = ColorizedJsonFormatter(
+        fmt="%(asctime)s %(levelname)s %(name)s %(message)s"
+    )
+    json_handler.setFormatter(json_formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.handlers = []
+    root_logger.addHandler(json_handler)
+    root_logger.setLevel(logging.INFO)
+
+
+if "AWS_LAMBDA_FUNCTION_NAME" not in os.environ:
+    setup_json_logger()
 logger = logging.getLogger(__name__)
 
 # warning! this won't work if we multiply
@@ -50,15 +90,15 @@ def create_response(
         headers["Content-Disposition"] = f"attachment; filename={filename}"
     return {
         "statusCode": status_code,
-        "body": body,
+        "body": json.dumps(body) if content_type == "application/json" else body,
         "headers": headers,
     }
 
 
 def third_party_deposit_handler(*args, **kwargs) -> dict:
-    start_date = datetime.date.today() - datetime.timedelta(days=28)
-    end_date = datetime.date.today()
-    # start_date = datetime.date(2022, 4, 1)
+    start_date = date.today() - timedelta(days=28)
+    end_date = date.today()
+    # start_date = date(2022, 4, 1)
     results = []
     try:
         dj = Flexepos()
@@ -71,22 +111,29 @@ def third_party_deposit_handler(*args, **kwargs) -> dict:
         results.extend(g.get_payments(start_date, end_date))
         e = EZCater()
         results.extend(e.get_payments(global_stores, start_date, end_date))
+    except Exception:
+        error_body = {
+            "message": "Exception in third_party_deposit_handler",
+            "exception": str(sys.exc_info()[0]),
+        }
+        logger.exception(error_body["message"])
+        return create_response(500, error_body)
     finally:
         for result in results:
             qb.sync_third_party_deposit(*result)
-    return create_response(200, "Success")
+    return create_response(200, {"message": "Success"})
 
 
 def invoice_sync_handler(*args, **kwargs) -> dict:
-    yesterday = datetime.date.today() - datetime.timedelta(days=1)
+    yesterday = date.today() - timedelta(days=1)
     ct = crunchtime.Crunchtime()
     ct.process_gl_report(global_stores)
     if yesterday.day < 6:
-        last_month = datetime.date.today() - datetime.timedelta(days=7)
+        last_month = date.today() - timedelta(days=7)
         ct.process_inventory_report(global_stores, last_month.year, last_month.month)
     else:
         ct.process_inventory_report(global_stores, yesterday.year, yesterday.month)
-    return create_response(200, "Success")
+    return create_response(200, {"message": "Success"})
 
 
 def daily_sales_handler(*args, **kwargs) -> dict:
@@ -95,16 +142,16 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         event = args[0]
     if "year" in event:
         txdates = [
-            datetime.date(
+            date(
                 year=int(event["year"]),
                 month=int(event["month"]),
                 day=int(event["day"]),
             )
         ]
     else:
-        txdates = [datetime.date.today() - datetime.timedelta(days=1)]
-    # txdates = [datetime.date(2024,3,9)]
-    # txdates = list(map(partial(datetime.date, 2024, 8), range(1, 8)))
+        txdates = [date.today() - timedelta(days=1)]
+    # txdates = [date(2024,3,9)]
+    # txdates = list(map(partial(date, 2024, 8), range(1, 8)))
     logger.info("Started daily sales", extra={"txdates": txdates})
     dj = Flexepos()
     for txdate in txdates:
@@ -112,9 +159,9 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         while retry:
             try:
                 stores = global_stores.copy()
-                if "20400" in stores and txdate < datetime.date(2024, 1, 31):
+                if "20400" in stores and txdate < date(2024, 1, 31):
                     stores.remove("20400")
-                if "20407" in stores and txdate < datetime.date(2024, 3, 6):
+                if "20407" in stores and txdate < date(2024, 3, 6):
                     stores.remove("20407")
                 journal = dj.getDailySales(stores, txdate)
                 qb.create_daily_sales(txdate, journal)
@@ -127,8 +174,8 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                 message = ""
                 for store in global_stores:
                     # store not open guard
-                    if (store == "20400" and txdate < datetime.date(2024, 1, 31)) or (
-                        store == "20407" and txdate < datetime.date(2024, 3, 6)
+                    if (store == "20400" and txdate < date(2024, 1, 31)) or (
+                        store == "20407" and txdate < date(2024, 3, 6)
                     ):
                         logger.info(
                             "Skipping store",
@@ -179,22 +226,22 @@ Josiah<br/>
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
     royalty_data = dj.getRoyaltyReport(
         "wmc",
-        datetime.date(txdate.year, txdate.month, 1),
-        datetime.date(
+        date(txdate.year, txdate.month, 1),
+        date(
             txdate.year, txdate.month, calendar.monthrange(txdate.year, txdate.month)[1]
         ),
     )
     qb.update_royalty(txdate.year, txdate.month, royalty_data)
-    return create_response(200, "Success")
+    return create_response(200, {"message": "Success"})
 
 
 def online_cc_fee(*args, **kwargs) -> dict:
-    txdate = datetime.date.today() - datetime.timedelta(days=1)
+    txdate = date.today() - timedelta(days=1)
 
     dj = Flexepos()
     payment_data = dj.getOnlinePayments(global_stores, txdate.year, txdate.month)
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
-    return create_response(200, "Success")
+    return create_response(200, {"message": "Success"})
 
 
 def send_email(subject, message, recipients=None):
@@ -262,7 +309,7 @@ def attendanceTable(start_date, end_date) -> str:
 
 
 def daily_journal_handler(*args, **kwargs) -> dict:
-    yesterday = datetime.date.today() - datetime.timedelta(days=1)
+    yesterday = date.today() - timedelta(days=1)
 
     subject = "Daily Journal Report {}".format(yesterday.strftime("%m/%d/%Y"))
 
@@ -305,18 +352,26 @@ def daily_journal_handler(*args, **kwargs) -> dict:
         message += f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n"
 
     message += "</pre><h2>Attendance Report:</h2><div>"
-    message += attendanceTable(yesterday, datetime.date.today())
+    message += attendanceTable(yesterday, date.today())
 
     message += "</div>\n\n<div><pre>Thanks!\nJosiah (aka The Robot)</pre></div>"
 
-    response = send_email(subject, message)
+    response = None
+    try:
+        response = send_email(subject, message)
+    except ClientError as e:
+        error_message = e.response.get("Error", {}).get(
+            "Message", "Unknown error occurred"
+        )
+        logger.exception(error_message)
+        return create_response(400, {"message": f"Email Failed: {error_message}"})
 
     return create_response(200, response)
 
 
 def email_tips_handler(*args, **kwargs) -> dict:
-    year = datetime.date.today().year
-    month = datetime.date.today().month
+    year = date.today().year
+    month = date.today().month
     pay_period = 0
 
     event = {}
@@ -328,8 +383,8 @@ def email_tips_handler(*args, **kwargs) -> dict:
         pay_period = int(event["day"])
     logger.info(f"year: {year}, month: {month}, pay_period: {pay_period}")
     t = Tips()
-    t.emailTips(global_stores, datetime.date(year, month, 5), pay_period)
-    return create_response(200, "Email Sent!")
+    t.emailTips(global_stores, date(year, month, 5), pay_period)
+    return create_response(200, {"message": "Email Sent!"})
 
 
 # https://github.com/srcecde/aws-tutorial-code/blob/master/lambda/lambda_api_multipart.py
@@ -373,8 +428,8 @@ def decode_upload(event: dict[str, Any]) -> dict[str, bytes]:
 
 def transform_tips_handler(*args, **kwargs) -> dict:
     csv = ""
-    year = datetime.date.today().day
-    month = datetime.date.today().month
+    year = date.today().day
+    month = date.today().month
     pay_period = 3
 
     try:
@@ -414,7 +469,7 @@ def transform_tips_handler(*args, **kwargs) -> dict:
             csv = csv_tips
         else:
             csv_mpvs = t.exportMealPeriodViolations(
-                global_stores, datetime.date(year, month, 5), pay_period
+                global_stores, date(year, month, 5), pay_period
             )
             merged_data = pd.merge(
                 pd.read_csv(io.StringIO(csv_tips)),
@@ -433,8 +488,8 @@ def transform_tips_handler(*args, **kwargs) -> dict:
 
 def get_mpvs_handler(*args, **kwargs):
     csv = ""
-    year = datetime.date.today().year
-    month = datetime.date.today().month
+    year = date.today().year
+    month = date.today().month
     pay_period = 2
 
     try:
@@ -454,7 +509,7 @@ def get_mpvs_handler(*args, **kwargs):
                 return create_response(400, error_body)
         t = Tips()
         csv = t.exportMealPeriodViolations(
-            global_stores, datetime.date(year, month, 5), pay_period
+            global_stores, date(year, month, 5), pay_period
         )
     except Exception:
         error_body = {"message": "Error generating MPVs"}

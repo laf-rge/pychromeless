@@ -3,6 +3,7 @@ import datetime
 import glob
 import os
 import re
+import logging
 from time import sleep
 from typing import cast
 
@@ -16,6 +17,8 @@ from webdriver import initialise_driver
 
 """
 """
+
+logger = logging.getLogger(__name__)
 
 
 class Crunchtime:
@@ -112,7 +115,10 @@ class Crunchtime:
             ).send_keys(Keys.RETURN).perform()
             loop_detection += 1
         if loop_detection == 30:
-            print(f"Valid end date not found skipping {store}")
+            logger.error(
+                "Valid end date not found skipping",
+                extra={"store": store, "year": year, "month": month},
+            )
             return
         self._export(driver, False)
 
@@ -134,7 +140,9 @@ class Crunchtime:
         sleep(6)
         export = driver.find_element(By.CSS_SELECTOR, "[ces-selenium-id='tool_export']")
         if export.get_attribute("data-qtip") == "Nothing to Export.":
-            print("Nothing to export.")
+            logger.warning(
+                "Nothing to export.",
+            )
             return
         export.click()
         # set to CSV
@@ -178,7 +186,10 @@ class Crunchtime:
                 for row in invreader:
                     if row[0] == "Total Cost of Goods Sold":
                         total = row[2]
-                        print(total)
+                        logger.info(
+                            "Total Cost of Goods Sold: {0}".format(total),
+                            extra={"store": store, "year": year, "month": month},
+                        )
                     elif row[0] == "P&L Substructure":
                         header = row
                     elif row[0] != "" or row[1] == "":
@@ -199,7 +210,10 @@ class Crunchtime:
             self.get_gl_report(store)
             filenames = glob.glob("/tmp/PurchasesByGL_LocationDetails_*.csv")
             if len(filenames) == 0:
-                print("Warning: no files found.")
+                logger.warning(
+                    "No files found.",
+                    extra={"store": store},
+                )
             filename = filenames[0]
             with open(filename, newline="", encoding="utf-8-sig") as csvfile:
                 glreader = csv.reader(csvfile)
@@ -245,7 +259,10 @@ class Crunchtime:
                     elif row[1] == "Total: ":
                         # send invoice
                         if vendor:  # skip if store to store
-                            print(f"syncing {vendor}:{invoice_num}")
+                            logger.info(
+                                "Syncing {0}:{1}".format(vendor, invoice_num),
+                                extra={"store": store},
+                            )
                             qb.sync_bill(
                                 vendor,
                                 invoice_num,

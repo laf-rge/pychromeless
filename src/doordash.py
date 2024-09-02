@@ -6,6 +6,7 @@ import json
 import os
 import zipfile
 import re
+import logging
 from time import sleep
 from typing import cast
 
@@ -13,6 +14,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from ssm_parameter_store import SSMParameterStore
 from webdriver import initialise_driver
+
+logger = logging.getLogger(__name__)
 
 store_map = {
     "20358": "23026026",
@@ -96,7 +99,7 @@ class Doordash:
             txdate_str = driver.find_element(
                 By.XPATH, "//*[contains(text(),'Payout on')]"
             ).text
-            print(txdate_str)
+            logger.info(f"txdate_str: {txdate_str}")
             txdate = datetime.datetime.strptime(
                 txdate_str, "Payout on %B %d, %Y"
             ).date()
@@ -166,7 +169,7 @@ class Doordash:
         with zipfile.ZipFile(filename) as z:
             directory = z.infolist()
             if len(directory) == 0:
-                print("no results in this time frame for Doordash")
+                logger.warning("No results in this time frame for Doordash")
                 return results
             with io.TextIOWrapper(z.open(directory[0]), encoding="utf-8") as f:
                 preader = csv.reader(f)

@@ -3,6 +3,7 @@ import calendar
 import datetime
 import json
 import re
+import logging
 from collections import OrderedDict
 from decimal import Decimal
 from functools import reduce
@@ -33,6 +34,8 @@ from quickbooks.objects import (
     Vendor,
     VendorCredit,
 )
+
+logger = logging.getLogger(__name__)
 
 # warning! this won't work if we multiply
 TWOPLACES = Decimal(10) ** -2
@@ -188,7 +191,13 @@ def create_daily_sales(txdate, daily_reports):
     for store, sref in store_refs.items():
         if store in existing_receipts:
             if len(existing_receipts[store].LinkedTxn) > 0:
-                print("skipping already linked txn for", store)
+                logger.warning(
+                    "skipping already linked transaction",
+                    extra={
+                        "store": store,
+                        "receipt": existing_receipts[store],
+                    },
+                )
                 continue
             new_receipts[store] = existing_receipts[store]
             # clear old lines
@@ -313,10 +322,13 @@ def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=No
             and Decimal(d.Line[0].Amount).quantize(TWOPLACES)
             == Decimal(atof(lines[0][2])).quantize(TWOPLACES)
         ):
-            print(
-                "Already imported skipping {} {} {}".format(
-                    deposit_date, d.Line[0].Amount, lines[0][2]
-                )
+            logger.warning(
+                "Skipping already imported deposit",
+                extra={
+                    "date": deposit_date,
+                    "store": department,
+                    "amount": lines[0][2],
+                },
             )
             return
     deposit = Deposit()
@@ -343,9 +355,8 @@ def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=No
 
     try:
         deposit.save(qb=CLIENT)
-    except Exception as ex:
-        print(deposit.to_json())
-        print(ex)
+    except Exception:
+        logger.exception("Failed to save deposit", extra={"deposit": deposit.to_json()})
 
 
 def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None):
@@ -371,7 +382,7 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
         bill = query[0]
 
     if len(getattr(bill, "LinkedTxn", [])) > 0:
-        print("Already linked to bank transaction skipping {}".format(invoice_num))
+        logger.warning("Skipping linked invoice", extra={"invoice_num": invoice_num})
         return
 
     bill.TxnDate = qb_date_format(invoice_date)
@@ -403,9 +414,8 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
 
     try:
         bill.save(qb=CLIENT)
-    except Exception as ex:
-        print(bill.to_json())
-        print(ex)
+    except Exception:
+        logger.exception("Failed to save bill", extra={"bill": bill.to_json()})
 
 
 def sync_third_party_transactions(year, month, payment_data):
@@ -456,9 +466,11 @@ def sync_third_party_transactions(year, month, payment_data):
 
         try:
             jentry.save(qb=CLIENT)
-        except Exception as ex:
-            print(jentry.to_json())
-            print(ex)
+        except Exception:
+            logger.exception(
+                "Failed to save journal entry",
+                extra={"journal_entry": jentry.to_json()},
+            )
 
 
 def sync_inventory(year, month, lines, notes, total, department):
@@ -521,9 +533,11 @@ def sync_inventory(year, month, lines, notes, total, department):
 
     try:
         jentry.save(qb=CLIENT)
-    except Exception as ex:
-        print(jentry.to_json())
-        print(ex)
+    except Exception:
+        logger.exception(
+            "Failed to save journal entry",
+            extra={"journal_entry": jentry.to_json()},
+        )
 
 
 def wmc_account_ref(acctNum):
@@ -740,7 +754,15 @@ def fix_deposit():
                         == "1330 Other Current Assets:Gift Cards"
                     ):
                         if "20358" in bill.Line[0].Description:
-                            print(bill.Line[0].Description, bill.DepartmentRef.name)
+                            logger.info(
+                                "Found deposit",
+                                extra={
+                                    "bill": bill.to_json(),
+                                    "bill.Line[0].Description": bill.Line[
+                                        0
+                                    ].Description,
+                                },
+                            )
                             modify_queue.append(bill)
                 r_count += 1
         for bill in modify_queue:

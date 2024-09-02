@@ -2,8 +2,6 @@ import io
 import json
 import logging
 import re
-import sys
-import io
 from collections import defaultdict
 from typing import cast
 
