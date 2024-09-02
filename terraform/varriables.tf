@@ -85,5 +85,9 @@ locals {
     Accounting = var.settings["accounting"]
     Name       = "flexepos-${terraform.workspace}"
   }
+  common_logging = {
+    log_format            = "JSON"
+    application_log_level = "INFO"
+  }
 }
 

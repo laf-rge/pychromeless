@@ -31,6 +31,10 @@ resource "aws_lambda_function" "authorizer" {
   }
 
   tags = local.common_tags
+  logging_config {
+    application_log_level = local.common_logging.application_log_level
+    log_format            = local.common_logging.log_format
+  }
 }
 
 resource "aws_lambda_function" "invoice_sync" {
@@ -51,6 +55,10 @@ resource "aws_lambda_function" "invoice_sync" {
   }
 
   tags = local.common_tags
+  logging_config {
+    application_log_level = local.common_logging.application_log_level
+    log_format            = local.common_logging.log_format
+  }
 }
 
 resource "aws_lambda_function" "daily_journal" {
@@ -71,6 +79,10 @@ resource "aws_lambda_function" "daily_journal" {
   }
 
   tags = local.common_tags
+  logging_config {
+    application_log_level = local.common_logging.application_log_level
+    log_format            = local.common_logging.log_format
+  }
 }
 
 resource "aws_lambda_function" "daily_sales" {
@@ -91,6 +103,10 @@ resource "aws_lambda_function" "daily_sales" {
   }
 
   tags = local.common_tags
+  logging_config {
+    application_log_level = local.common_logging.application_log_level
+    log_format            = local.common_logging.log_format
+  }
 }
 
 resource "aws_lambda_function" "email_tips" {
@@ -111,6 +127,10 @@ resource "aws_lambda_function" "email_tips" {
   }
 
   tags = local.common_tags
+  logging_config {
+    application_log_level = local.common_logging.application_log_level
+    log_format            = local.common_logging.log_format
+  }
 }
 
 resource "aws_lambda_function" "transform_tips" {
@@ -131,6 +151,10 @@ resource "aws_lambda_function" "transform_tips" {
   }
 
   tags = local.common_tags
+  logging_config {
+    application_log_level = local.common_logging.application_log_level
+    log_format            = local.common_logging.log_format
+  }
 }
 
 resource "aws_lambda_function" "get_mpvs" {
@@ -151,6 +175,10 @@ resource "aws_lambda_function" "get_mpvs" {
   }
 
   tags = local.common_tags
+  logging_config {
+    application_log_level = local.common_logging.application_log_level
+    log_format            = local.common_logging.log_format
+  }
 }
 
 resource "aws_lambda_permission" "apigw" {
