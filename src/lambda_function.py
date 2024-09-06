@@ -152,10 +152,13 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         txdates = [date.today() - timedelta(days=1)]
     # txdates = [date(2024,3,9)]
     # txdates = list(map(partial(date, 2024, 8), range(1, 8)))
-    logger.info("Started daily sales", extra={"txdates": txdates})
+    logger.info(
+        "Started daily sales",
+        extra={"txdates": [txdate.isoformat() for txdate in txdates]},
+    )
     dj = Flexepos()
     for txdate in txdates:
-        retry = 5
+        retry = 4
         while retry:
             try:
                 stores = global_stores.copy()
@@ -167,7 +170,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                 qb.create_daily_sales(txdate, journal)
                 logger.info(
                     "Successfully processed daily sales",
-                    extra={"txdate": txdate, "stores": stores},
+                    extra={"txdate": txdate.isoformat(), "stores": stores},
                 )
                 retry = 0
                 subject = ""
@@ -179,7 +182,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                     ):
                         logger.info(
                             "Skipping store",
-                            extra={"store": store, "txdate": txdate},
+                            extra={"store": store, "txdate": txdate.isoformat()},
                         )
                         continue
                     if (
@@ -218,8 +221,8 @@ Josiah<br/>
 (aka The Robot)""",
                     )
 
-            except Exception:
-                logger.exception(f"error {txdate}")
+            except:
+                logger.exception(f"error {txdate.isoformat()}")
                 retry -= 1
     txdate = txdates[0]
     payment_data = dj.getOnlinePayments(global_stores, txdate.year, txdate.month)

@@ -93,7 +93,7 @@ class Grubhub:
                     .replace("Total", "Total\n")
                     .split("\n")
                 )
-                logger.info(txt, extra={"txdate": txdate, "store": store})
+                logger.info(txt, extra={"txdate": txdate.isoformat(), "store": store})
 
                 for i in range(0, len(txt), 2):
                     if i == 0:

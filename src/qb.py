@@ -325,7 +325,7 @@ def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=No
             logger.warning(
                 "Skipping already imported deposit",
                 extra={
-                    "date": deposit_date,
+                    "date": qb_date_format(deposit_date),
                     "store": department,
                     "amount": lines[0][2],
                 },

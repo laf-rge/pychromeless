@@ -5,6 +5,15 @@ from typing import Optional
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import (
+    TimeoutException,
+    NoSuchElementException,
+    ElementNotInteractableException,
+)
+from selenium.webdriver.remote.webelement import WebElement
+
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +69,9 @@ def initialise_driver(download_location: Optional[str] = None) -> webdriver.Chro
         chrome_options.add_argument(f"--data-path={mkdtemp()}")
         chrome_options.add_argument(f"--disk-cache-dir={mkdtemp()}")
         chrome_options.add_argument("--remote-debugging-pipe")
-        chrome_options.add_argument("--verbose")
         chrome_options.add_argument("--log-path=/tmp")
+        chrome_options.add_argument("--disable-infobars")
+        chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.binary_location = "/opt/chrome/chrome-linux64/chrome"
         service = Service(
             executable_path="/opt/chrome-driver/chromedriver-linux64/chromedriver",
@@ -69,3 +79,19 @@ def initialise_driver(download_location: Optional[str] = None) -> webdriver.Chro
         )
         driver = webdriver.Chrome(service=service, options=chrome_options)
     return driver
+
+
+def wait_for_element(driver, locator, timeout=30) -> Optional[WebElement]:
+    try:
+        element = WebDriverWait(
+            driver,
+            timeout,
+            ignored_exceptions=[
+                NoSuchElementException,
+                ElementNotInteractableException,
+            ],
+        ).until(EC.presence_of_element_located(locator))
+        return element
+    except TimeoutException:
+        logger.warning(f"Element {locator} not found within {timeout} seconds")
+        return None

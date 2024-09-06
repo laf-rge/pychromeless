@@ -246,7 +246,7 @@ class UberEats:
             extra={
                 "report_start": report_start,
                 "report_end": report_end,
-                "qdate": qdate,
+                "qdate": qdate.isoformat(),
                 "result": result,
             },
         )

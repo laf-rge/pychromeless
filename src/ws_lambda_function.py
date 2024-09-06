@@ -7,7 +7,6 @@ import boto3.resources.factory
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
 
 def handle_connect(user_name, table, connection_id):

@@ -348,10 +348,10 @@ class Tips:
                             logger.warning(
                                 "Lunch break less than 30 minutes",
                                 extra=dict(
-                                    day=day,
+                                    day=day.isoformat(),
                                     last_name=last_name,
                                     first_name=first_name,
-                                    break_duration=break_duration,
+                                    break_duration=break_duration.total_seconds() / 60,
                                 ),
                             )
 

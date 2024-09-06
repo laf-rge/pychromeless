@@ -9,11 +9,21 @@ from bs4 import BeautifulSoup, Tag
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select, WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    ElementNotInteractableException,
+    WebDriverException,
+)
 from ssm_parameter_store import SSMParameterStore
-from webdriver import initialise_driver
+from webdriver import initialise_driver, wait_for_element
 
 logger = logging.getLogger(__name__)
 
+errors = (
+    NoSuchElementException,
+    ElementNotInteractableException,
+)
 
 # Tag IDs dictionary
 TAG_IDS = {
@@ -68,7 +78,6 @@ class Flexepos:
     def _login(self):
         self._driver = initialise_driver()
         driver = self._driver
-        driver.implicitly_wait(25)
         driver.set_page_load_timeout(45)
         driver.get(
             "https://fms.flexepos.com/FlexeposWeb/login.seam?actionMethod=home.xhtml%3Auser.clear"
@@ -104,7 +113,7 @@ class Flexepos:
             driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(0)).click()
             sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(0, 13)).click()
-            sleep(1)
+            sleep(2)
             for store in stores:
                 payment_data[store] = {}
                 sleep(3)
@@ -134,7 +143,12 @@ class Flexepos:
                 driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
         finally:
             if driver:
-                self._driver.close()
+                try:
+                    self._driver.close()
+                except WebDriverException:
+                    pass
+                logging.info("closed driver waiting for cleanup")
+                sleep(10)
 
         return payment_data
 
@@ -159,7 +173,7 @@ class Flexepos:
             driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(2)).click()
             sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(2, 1)).click()
-            sleep(1)
+            sleep(2)
             for store in stores:
                 payment_data[store] = {}
                 sleep(3)
@@ -224,7 +238,7 @@ class Flexepos:
                 driver.find_element(
                     By.ID, TAG_IDS["menu_item_root"].format(0, 1)
                 ).click()
-                sleep(1)
+                sleep(2)
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
                 driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
@@ -264,7 +278,7 @@ class Flexepos:
                     "table", attrs={"id": TAG_IDS["total_sales"]}
                 )
                 if not totalsales_table or not isinstance(totalsales_table, Tag):
-                    continue
+                    raise Exception("Failed to find total sales table")
                 rows = totalsales_table.find_all("tr")
                 if len(rows) != 6:
                     sales_data[store]["Pre-Discount Sales"] = None
@@ -279,7 +293,7 @@ class Flexepos:
                 # Payment Breakdown
                 payment_table = soup.find("table", attrs={"id": TAG_IDS["payments"]})
                 if not payment_table or not isinstance(payment_table, Tag):
-                    continue
+                    raise Exception("Failed to find payment table")
                 rows = payment_table.find_all("tr")
                 if len(rows) != 6:
                     sales_data[store]["Cash"] = None
@@ -304,7 +318,7 @@ class Flexepos:
                 # Collected Tax
                 payment_table = soup.find("table", attrs={"id": TAG_IDS["total_tax"]})
                 if not payment_table or not isinstance(payment_table, Tag):
-                    continue
+                    raise Exception("Failed to find collected tax table")
                 rows = payment_table.find_all("tr")
                 if len(rows) != 3:
                     sales_data[store]["Sales Tax"] = None
@@ -343,8 +357,8 @@ class Flexepos:
                 driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
                 driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 9)).click()
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                driver.implicitly_wait(10)
-                if len(driver.find_elements(By.ID, TAG_IDS["cc_tips_1"])) > 0:
+                cctips_element = wait_for_element(driver, (By.ID, TAG_IDS["cc_tips_1"]))
+                if cctips_element is not None:
                     cctips = driver.find_element(By.ID, TAG_IDS["cc_tips_1"]).text
                 else:
                     cctips = driver.find_element(By.ID, TAG_IDS["cc_tips_2"]).text
@@ -357,47 +371,62 @@ class Flexepos:
                     cctips = driver.find_element(
                         By.ID, TAG_IDS["online_cc_tips_2"]
                     ).text
-                driver.implicitly_wait(5)
                 sales_data[store]["Online CC Tips"] = cctips
 
                 # get pay ins
                 driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
-                driver.find_element(By.ID, TAG_IDS["menu_item"].format(1, 6)).click()
-                driver.find_element(By.ID, TAG_IDS["types"]).send_keys("Payins")
-                sleep(2)
+                WebDriverWait(driver, 45, ignored_exceptions=errors).until(
+                    lambda d: driver.find_element(
+                        By.ID, TAG_IDS["menu_item"].format(1, 6)
+                    ).click()
+                    or True
+                )
+                types_element = wait_for_element(driver, (By.ID, TAG_IDS["types"]))
+                if types_element:
+                    types_element.send_keys("Payins")
+                else:
+                    raise Exception("Failed to find payins types element")
                 self.setDateRange(driver, tx_date_str)
-                sleep(2)
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                sleep(2)
-                if len(driver.find_elements(By.ID, TAG_IDS["transactions"])) > 0:
+                sleep(4)
+                payins_element = wait_for_element(
+                    driver, (By.ID, TAG_IDS["transactions"])
+                )
+                if payins_element is not None:
                     payins = driver.find_element(By.ID, TAG_IDS["transactions"]).text
                 else:
                     payins = driver.find_element(By.ID, "j_id84").text
-                sleep(5)
                 sales_data[store]["Payins"] = payins
 
                 # get pay outs
                 if driver.find_element(By.ID, TAG_IDS["switch_off"]).is_displayed():
                     driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
-                driver.find_element(By.ID, TAG_IDS["types"]).send_keys("Store Payouts")
-                sleep(2)
-                self.setDateRange(driver, tx_date_str)
-                sleep(2)
+                WebDriverWait(driver, 45, ignored_exceptions=errors).until(
+                    lambda d: driver.find_element(By.ID, TAG_IDS["types"]).send_keys(
+                        "Store Payouts"
+                    )
+                    or True
+                )
                 self.setDateRange(driver, tx_date_str)
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                driver.implicitly_wait(2)
-                if len(driver.find_elements(By.ID, TAG_IDS["transactions"])) > 0:
-                    payouts = driver.find_element(By.ID, TAG_IDS["transactions"]).text
+                sleep(4)
+                payouts_element = wait_for_element(
+                    driver, (By.ID, TAG_IDS["transactions"])
+                )
+                if payouts_element is not None:
+                    payouts = payouts_element.text
                 else:
                     payouts = driver.find_element(By.ID, "j_id84").text
-                driver.implicitly_wait(5)
                 sales_data[store]["Payouts"] = payouts
 
                 # break down third party
                 driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
-                sleep(2)
-                driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 13)).click()
-                sleep(1)
+                WebDriverWait(driver, 45, ignored_exceptions=errors).until(
+                    lambda d: driver.find_element(
+                        By.ID, TAG_IDS["menu_item"].format(0, 13)
+                    ).click()
+                    or True
+                )
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
                 self.setDateRange(driver, tx_date_str)
@@ -416,7 +445,12 @@ class Flexepos:
                         sales_data[store][r[0]] = r[4]
         finally:
             if driver:
-                self._driver.close()
+                try:
+                    self._driver.close()
+                except WebDriverException:
+                    logger.exception("Error closing driver")
+                logger.info("closed driver waiting")
+                sleep(10)
         return sales_data
 
     def setDateRange(self, driver, tx_date_str, tx_end_date_str: Optional[str] = None):
@@ -467,7 +501,6 @@ class Flexepos:
                     ).text
                 else:
                     drawer_opens[store_number] = "No Jornal Data Found"
-                driver.implicitly_wait(5)
             driver.find_element(By.ID, "j_id3:j_id16").click()
         finally:
             if driver:
@@ -493,7 +526,6 @@ class Flexepos:
                     driver, start_date.strftime("%m%d%Y"), end_date.strftime("%m%d%Y")
                 )
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                driver.implicitly_wait(0)
                 sleep(8)
                 soup = BeautifulSoup(driver.page_source, features="html.parser")
                 tips_table = soup.find("table", attrs={"id": "j_id78"})
@@ -530,7 +562,6 @@ class Flexepos:
                 driver, start_date.strftime("%m%d%Y"), end_date.strftime("%m%d%Y")
             )
             driver.find_element(By.ID, TAG_IDS["submit"]).click()
-            driver.implicitly_wait(0)
             sleep(8)
             soup = BeautifulSoup(driver.page_source, features="html.parser")
             royalty_table = soup.find("table", attrs={"id": TAG_IDS["royalty_list"]})
@@ -647,7 +678,6 @@ class Flexepos:
                         driver.find_element(By.ID, "parameters:GroupByList")
                     ).select_by_index(1)
                     driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                    driver.implicitly_wait(0)
                     sleep(8)
                     soup = BeautifulSoup(driver.page_source, features="html.parser")
 
@@ -702,7 +732,7 @@ class Flexepos:
                 daily_journal = self.getDailyJournal(stores, qdate.strftime("%m%d%Y"))
             except Exception:
                 logging.exception("Error getting daily journal")
-                sleep(1)
+                sleep(2)
                 continue
             for store in stores:
                 with open(
