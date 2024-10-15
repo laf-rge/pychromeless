@@ -195,7 +195,7 @@ def create_daily_sales(txdate, daily_reports):
                     "skipping already linked transaction",
                     extra={
                         "store": store,
-                        "receipt": existing_receipts[store],
+                        "receipt": existing_receipts[store].to_json(),
                     },
                 )
                 continue

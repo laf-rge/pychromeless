@@ -120,7 +120,15 @@ def third_party_deposit_handler(*args, **kwargs) -> dict:
         return create_response(500, error_body)
     finally:
         for result in results:
-            qb.sync_third_party_deposit(*result)
+            try:
+                qb.sync_third_party_deposit(*result)
+            except Exception:
+                error_body = {
+                    "message": "Exception in third_party_deposit_handler",
+                    "exception": str(sys.exc_info()[0]),
+                }
+                logger.exception(error_body["message"])
+                logger.info(result)
     return create_response(200, {"message": "Success"})
 
 
