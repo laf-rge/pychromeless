@@ -98,37 +98,29 @@ def create_response(
 def third_party_deposit_handler(*args, **kwargs) -> dict:
     start_date = date.today() - timedelta(days=28)
     end_date = date.today()
-    # start_date = date(2022, 4, 1)
-    results = []
-    try:
-        dj = Flexepos()
-        results.extend(dj.getGiftCardACH(global_stores, start_date, end_date))
-        d = Doordash()
-        results.extend(d.get_payments(global_stores, start_date, end_date))
-        u = UberEats()
-        results.extend(u.get_payments(global_stores, start_date, end_date))
-        g = Grubhub()
-        results.extend(g.get_payments(start_date, end_date))
-        e = EZCater()
-        results.extend(e.get_payments(global_stores, start_date, end_date))
-    except Exception:
-        error_body = {
-            "message": "Exception in third_party_deposit_handler",
-            "exception": str(sys.exc_info()[0]),
-        }
-        logger.exception(error_body["message"])
-        return create_response(500, error_body)
-    finally:
-        for result in results:
-            try:
-                qb.sync_third_party_deposit(*result)
-            except Exception:
-                error_body = {
-                    "message": "Exception in third_party_deposit_handler",
-                    "exception": str(sys.exc_info()[0]),
-                }
-                logger.exception(error_body["message"])
-                logger.info(result)
+
+    services = [
+        (Flexepos(), "getGiftCardACH", global_stores, start_date, end_date),
+        (Doordash(), "get_payments", global_stores, start_date, end_date),
+        (UberEats(), "get_payments", global_stores, start_date, end_date),
+        (Grubhub(), "get_payments", start_date, end_date),
+        (EZCater(), "get_payments", global_stores, start_date, end_date),
+    ]
+
+    for service, method, *service_args in services:
+        try:
+            results = getattr(service, method)(*service_args)
+            for result in results:
+                try:
+                    qb.sync_third_party_deposit(*result)
+                except Exception:
+                    logger.exception(
+                        f"Exception in sync_third_party_deposit for {service.__class__.__name__}"
+                    )
+                    logger.info(result)
+        except Exception:
+            logger.exception(f"Exception in {service.__class__.__name__}")
+
     return create_response(200, {"message": "Success"})
 
 
