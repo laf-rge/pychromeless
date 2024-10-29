@@ -150,7 +150,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         ]
     else:
         txdates = [date.today() - timedelta(days=1)]
-    # txdates = [date(2024,3,9)]
+    # txdates = [date(2024, 10, 25), date(2024, 10, 26)]
     # txdates = list(map(partial(date, 2024, 8), range(1, 8)))
     logger.info(
         "Started daily sales",

@@ -23,7 +23,13 @@ def initialise_driver(download_location: Optional[str] = None) -> webdriver.Chro
     driver = None
     CHROME_HEADLESS = int(os.environ.get("CHROME_HEADLESS", "0"))
     if CHROME_HEADLESS > 1:
+        # chrome_options.debugger_address = "127.0.0.1:9222"
+        # chrome_options.add_argument(
+        #    r"--user-data-dir=/Users/wgreen/Library/Application Support/Google/Chrom--user-data-dir=/Users/wgreen/Library/Application Support/Google/Chromee"
+        # )
+        # chrome_options.add_argument(r"--profile-directory=Profile 3")
         chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+        chrome_options.add_argument("--no-sandbox")
         driver = webdriver.Chrome(options=chrome_options, keep_alive=True)
         if download_location:
             driver.execute_script(
@@ -81,7 +87,7 @@ def initialise_driver(download_location: Optional[str] = None) -> webdriver.Chro
     return driver
 
 
-def wait_for_element(driver, locator, timeout=30) -> Optional[WebElement]:
+def wait_for_element(driver, locator, timeout=10) -> Optional[WebElement]:
     try:
         element = WebDriverWait(
             driver,

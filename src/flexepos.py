@@ -78,13 +78,13 @@ class Flexepos:
     def _login(self):
         self._driver = initialise_driver()
         driver = self._driver
-        driver.set_page_load_timeout(45)
+        driver.set_page_load_timeout(15)
         driver.get(
             "https://fms.flexepos.com/FlexeposWeb/login.seam?actionMethod=home.xhtml%3Auser.clear"
         )
         sleep(2)
         driver.get("https://fms.flexepos.com/FlexeposWeb/")
-        sleep(5)
+        sleep(7)
         driver.find_element(By.ID, TAG_IDS["login_username"]).clear()
         driver.find_element(By.ID, TAG_IDS["login_username"]).send_keys(
             str(self._parameters["user"])
@@ -147,6 +147,7 @@ class Flexepos:
                     self._driver.close()
                 except WebDriverException:
                     pass
+                self._driver.quit()
                 logging.info("closed driver waiting for cleanup")
                 sleep(10)
 
@@ -215,7 +216,11 @@ class Flexepos:
                 driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
         finally:
             if driver:
-                self._driver.close()
+                try:
+                    self._driver.close()
+                except:
+                    pass
+                self._driver.quit()
 
         return payment_data
 
@@ -238,7 +243,7 @@ class Flexepos:
                 driver.find_element(
                     By.ID, TAG_IDS["menu_item_root"].format(0, 1)
                 ).click()
-                sleep(2)
+                sleep(4)
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
                 driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
@@ -375,7 +380,7 @@ class Flexepos:
 
                 # get pay ins
                 driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
-                WebDriverWait(driver, 45, ignored_exceptions=errors).until(
+                WebDriverWait(driver, 15, ignored_exceptions=errors).until(
                     lambda d: driver.find_element(
                         By.ID, TAG_IDS["menu_item"].format(1, 6)
                     ).click()
@@ -388,7 +393,7 @@ class Flexepos:
                     raise Exception("Failed to find payins types element")
                 self.setDateRange(driver, tx_date_str)
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                sleep(4)
+                sleep(2)
                 payins_element = wait_for_element(
                     driver, (By.ID, TAG_IDS["transactions"])
                 )
@@ -401,7 +406,7 @@ class Flexepos:
                 # get pay outs
                 if driver.find_element(By.ID, TAG_IDS["switch_off"]).is_displayed():
                     driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
-                WebDriverWait(driver, 45, ignored_exceptions=errors).until(
+                WebDriverWait(driver, 15, ignored_exceptions=errors).until(
                     lambda d: driver.find_element(By.ID, TAG_IDS["types"]).send_keys(
                         "Store Payouts"
                     )
@@ -421,7 +426,7 @@ class Flexepos:
 
                 # break down third party
                 driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
-                WebDriverWait(driver, 45, ignored_exceptions=errors).until(
+                WebDriverWait(driver, 15, ignored_exceptions=errors).until(
                     lambda d: driver.find_element(
                         By.ID, TAG_IDS["menu_item"].format(0, 13)
                     ).click()
@@ -449,6 +454,7 @@ class Flexepos:
                     self._driver.close()
                 except WebDriverException:
                     logger.exception("Error closing driver")
+                self._driver.quit()
                 logger.info("closed driver waiting")
                 sleep(10)
         return sales_data
@@ -494,7 +500,7 @@ class Flexepos:
                     driver.find_element(By.ID, TAG_IDS["journal_scope"])
                 ).select_by_visible_text("Store")
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                WebDriverWait(driver, 45)
+                WebDriverWait(driver, 15)
                 if len(driver.find_elements(By.ID, "j_id78_body")) > 0:
                     drawer_opens[store_number] = driver.find_element(
                         By.ID, "j_id78_body"
@@ -504,7 +510,11 @@ class Flexepos:
             driver.find_element(By.ID, "j_id3:j_id16").click()
         finally:
             if driver:
-                self._driver.close()
+                try:
+                    self._driver.close()
+                except:
+                    pass
+                self._driver.quit()
         return drawer_opens
 
     """
@@ -538,7 +548,12 @@ class Flexepos:
 
         finally:
             if driver:
-                self._driver.close()
+                try:
+                    self._driver.close()
+                except:
+                    pass
+                self._driver.quit()
+
         return rv
 
     """
@@ -581,7 +596,11 @@ class Flexepos:
             return royalty_data
         finally:
             if driver:
-                self._driver.close()
+                try:
+                    self._driver.close()
+                except:
+                    pass
+                self._driver.quit()
 
     def toggleMealDeal(self, stores):
         driver = None
@@ -615,7 +634,11 @@ class Flexepos:
                 ).is_selected()
         finally:
             if driver:
-                self._driver.close()
+                try:
+                    self._driver.close()
+                except:
+                    pass
+                self._driver.quit()
 
         return rv
 
@@ -723,7 +746,11 @@ class Flexepos:
             return results
         finally:
             if driver:
-                self._driver.close()
+                try:
+                    self._driver.close()
+                except:
+                    pass
+                self._driver.quit()
 
     def getDailyJournalExport(self, stores, start_date, end_date):
         qdate = end_date

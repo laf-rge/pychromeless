@@ -47,7 +47,7 @@ resource "aws_lambda_function" "invoice_sync" {
   image_config {
     command = ["lambda_function.invoice_sync_handler"]
   }
-  timeout     = 480
+  timeout     = 600
   memory_size = 10240
 
   environment {
