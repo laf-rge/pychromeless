@@ -64,21 +64,23 @@ def initialise_driver(download_location: Optional[str] = None) -> webdriver.Chro
             },
         )
         if CHROME_HEADLESS == 0:
-            chrome_options.add_argument("--headless=new")
+            chrome_options.add_argument("--headless=old")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-dev-tools")
         chrome_options.add_argument("--no-zygote")
-        chrome_options.add_argument("--single-process")
+        # chrome_options.add_argument("--single-process")
         chrome_options.add_argument(f"--user-data-dir={mkdtemp()}")
         chrome_options.add_argument(f"--data-path={mkdtemp()}")
         chrome_options.add_argument(f"--disk-cache-dir={mkdtemp()}")
-        chrome_options.add_argument("--remote-debugging-pipe")
+        # chrome_options.add_argument("--remote-debugging-pipe")
         chrome_options.add_argument("--log-path=/tmp")
         chrome_options.add_argument("--disable-infobars")
         chrome_options.add_argument("--window-size=1920,1080")
-        chrome_options.binary_location = "/opt/chrome/chrome-linux64/chrome"
+        chrome_options.binary_location = (
+            "/opt/chrome/chrome-headless-shell-linux64/chrome-headless-shell"
+        )
         service = Service(
             executable_path="/opt/chrome-driver/chromedriver-linux64/chromedriver",
             service_log_path="/tmp/chromedriver.log",
@@ -87,7 +89,7 @@ def initialise_driver(download_location: Optional[str] = None) -> webdriver.Chro
     return driver
 
 
-def wait_for_element(driver, locator, timeout=10) -> Optional[WebElement]:
+def wait_for_element(driver, locator, timeout=15) -> Optional[WebElement]:
     try:
         element = WebDriverWait(
             driver,

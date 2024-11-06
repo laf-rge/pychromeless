@@ -59,3 +59,24 @@ resource "aws_sns_topic_subscription" "email" {
   protocol  = "email"
   endpoint  = "william@wagonermanagement.com"
 }
+
+resource "aws_cloudwatch_metric_alarm" "lambda_500_errors" {
+  for_each = local.monitored_functions
+
+  alarm_name          = "${each.key}-500-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "5XXError"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "0"
+  alarm_description   = "This metric monitors ${each.key} for HTTP 500 errors"
+
+  dimensions = {
+    ApiName      = "${each.key}-api"
+    FunctionName = each.key
+  }
+
+  alarm_actions = [aws_sns_topic.lambda_alerts.arn]
+}

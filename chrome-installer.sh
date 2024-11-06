@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-VERSION="132.0.6804.0"
+VERSION="130.0.6723.93"
 PLATFORM="linux64"
 chrome_json="https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json"
 
@@ -9,7 +9,7 @@ chrome_json="https://googlechromelabs.github.io/chrome-for-testing/known-good-ve
 json_data=$(curl -s "$chrome_json")
 
 # Get Chrome download URL
-latest_chrome_linux_download_url="$(echo "$json_data" | jq -r ".versions[] | select(.version == \"$VERSION\") | .downloads.chrome[] | select(.platform == \"$PLATFORM\") | .url")"
+latest_chrome_linux_download_url="$(echo "$json_data" | jq -r ".versions[] | select(.version == \"$VERSION\") | .downloads.\"chrome-headless-shell\"[] | select(.platform == \"$PLATFORM\") | .url")"
 
 # Get ChromeDriver download URL (note the .downloads.chromedriver path)
 latest_chrome_driver_linux_download_url="$(echo "$json_data" | jq -r ".versions[] | select(.version == \"$VERSION\") | .downloads.chromedriver[] | select(.platform == \"$PLATFORM\") | .url")"

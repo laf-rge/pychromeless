@@ -148,8 +148,7 @@ class Flexepos:
                 except WebDriverException:
                     pass
                 self._driver.quit()
-                logging.info("closed driver waiting for cleanup")
-                sleep(10)
+                logging.info("closed driver")
 
         return payment_data
 
@@ -227,227 +226,221 @@ class Flexepos:
     """
     """
 
-    def getDailySales(self, stores, tx_date):
+    def getDailySales(self, store, tx_date):
         self._login()
         driver = self._driver
         sales_data = {}
         tx_date_str = tx_date.strftime("%m%d%Y")
         try:
-            for store in stores:
-                sleep(2)
-                driver.get("https://fms.flexepos.com/FlexeposWeb/home.seam")
-                sales_data[store] = {}
-                driver.find_element(
-                    By.ID, TAG_IDS["menu_header_root"].format(0)
-                ).click()
-                driver.find_element(
-                    By.ID, TAG_IDS["menu_item_root"].format(0, 1)
-                ).click()
-                sleep(4)
-                driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
-                driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
-                driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
-                driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(tx_date_str)
-                driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
-                driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(tx_date_str)
-                checkboxes = filter(
-                    None,
-                    ("parameters:j_id{}," * 15).format(*range(68, 98, 2)).split(","),
-                )
-                states = [
-                    True,
-                    False,
-                    False,
-                    False,
-                    False,
-                    False,
-                    False,
-                    True,
-                    True,
-                    True,
-                    True,
-                    False,
-                    True,
-                    False,
-                    False,
+            logger.info("getting sales", extra={"store": store, "date": tx_date_str})
+            sleep(2)
+            driver.get("https://fms.flexepos.com/FlexeposWeb/home.seam")
+            sales_data[store] = {}
+            driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(0)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(0, 1)).click()
+            sleep(4)
+            driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
+            driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
+            driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
+            driver.find_element(By.ID, TAG_IDS["start_date"]).send_keys(tx_date_str)
+            driver.find_element(By.ID, TAG_IDS["end_date"]).clear()
+            driver.find_element(By.ID, TAG_IDS["end_date"]).send_keys(tx_date_str)
+            checkboxes = filter(
+                None,
+                ("parameters:j_id{}," * 15).format(*range(68, 98, 2)).split(","),
+            )
+            states = [
+                True,
+                False,
+                False,
+                False,
+                False,
+                False,
+                False,
+                True,
+                True,
+                True,
+                True,
+                False,
+                True,
+                False,
+                False,
+            ]
+            for checkbox, state in zip(
+                map(partial(driver.find_element, By.NAME), checkboxes), states
+            ):
+                if state != checkbox.is_selected():
+                    checkbox.click()
+            driver.find_element(By.ID, TAG_IDS["submit"]).click()
+            sleep(4)
+            soup = BeautifulSoup(driver.page_source, features="html.parser")
+            totalsales_table = soup.find("table", attrs={"id": TAG_IDS["total_sales"]})
+            if not totalsales_table or not isinstance(totalsales_table, Tag):
+                raise Exception("Failed to find total sales table")
+            rows = totalsales_table.find_all("tr")
+            if len(rows) != 6:
+                sales_data[store]["Pre-Discount Sales"] = None
+                sales_data[store]["Discounts"] = None
+                sales_data[store]["Donations"] = None
+            else:
+                row = [ele.text.strip() for ele in rows[4].find_all("td")]
+                sales_data[store]["Pre-Discount Sales"] = row[3]
+                sales_data[store]["Discounts"] = row[2]
+                sales_data[store]["Donations"] = row[4]
+
+            # Payment Breakdown
+            payment_table = soup.find("table", attrs={"id": TAG_IDS["payments"]})
+            if not payment_table or not isinstance(payment_table, Tag):
+                raise Exception("Failed to find payment table")
+            rows = payment_table.find_all("tr")
+            if len(rows) != 6:
+                sales_data[store]["Cash"] = None
+                sales_data[store]["Check"] = None
+                sales_data[store]["InStore Credit Card"] = None
+                sales_data[store]["Online Credit Card"] = None
+                sales_data[store]["Gift Card"] = None
+                sales_data[store]["Online Gift Card"] = None
+                sales_data[store]["House Account"] = None
+                sales_data[store]["Remote Payment"] = None
+            else:
+                row = [ele.text.strip() for ele in rows[4].find_all("td")]
+                sales_data[store]["Cash"] = row[1]
+                sales_data[store]["Check"] = row[2]
+                sales_data[store]["InStore Credit Card"] = row[3]
+                sales_data[store]["Online Credit Card"] = row[4]
+                sales_data[store]["Gift Card"] = row[5]
+                sales_data[store]["Online Gift Card"] = row[6]
+                sales_data[store]["House Account"] = row[7]
+                sales_data[store]["Remote Payment"] = row[8]
+
+            # Collected Tax
+            payment_table = soup.find("table", attrs={"id": TAG_IDS["total_tax"]})
+            if not payment_table or not isinstance(payment_table, Tag):
+                raise Exception("Failed to find collected tax table")
+            rows = payment_table.find_all("tr")
+            if len(rows) != 3:
+                sales_data[store]["Sales Tax"] = None
+            else:
+                row = [ele.text.strip() for ele in rows[2].find_all("td")]
+                sales_data[store]["Sales Tax"] = row[7]
+
+            # Gift Cards Sold
+            gift_cards_sold = driver.find_element(
+                By.ID, TAG_IDS["gift_cards_sold"]
+            ).text.split(":")
+            sales_data[store][gift_cards_sold[0].strip()[2:]] = gift_cards_sold[
+                1
+            ].strip()
+
+            # Register Audit
+            register_audit = driver.find_element(
+                By.ID, TAG_IDS["register_audit"]
+            ).text.split(":")
+            sales_data[store][register_audit[0].strip()[2:]] = register_audit[1].strip()
+
+            # Bank Deposits
+            deposit_table = soup.find("table", attrs={"id": TAG_IDS["deposits"]})
+            if not deposit_table or not isinstance(deposit_table, Tag):
+                raise (Exception("Failed to find deposit table"))
+            rows = deposit_table.find_all("tr")
+            sales_data[store]["Bank Deposits"] = "".join(
+                [
+                    row.get_text().lstrip().replace("\n", " ").replace("   ", "\n")
+                    for row in rows[1:]
                 ]
-                for checkbox, state in zip(
-                    map(partial(driver.find_element, By.NAME), checkboxes), states
-                ):
-                    if state != checkbox.is_selected():
-                        checkbox.click()
-                driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                sleep(4)
-                soup = BeautifulSoup(driver.page_source, features="html.parser")
-                totalsales_table = soup.find(
-                    "table", attrs={"id": TAG_IDS["total_sales"]}
+            )
+
+            driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
+            driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 9)).click()
+            driver.find_element(By.ID, TAG_IDS["submit"]).click()
+            sleep(4)
+            cctips_element = wait_for_element(driver, (By.ID, TAG_IDS["cc_tips_1"]))
+            if cctips_element is not None:
+                cctips = driver.find_element(By.ID, TAG_IDS["cc_tips_1"]).text
+            else:
+                cctips = driver.find_element(By.ID, TAG_IDS["cc_tips_2"]).text
+            sales_data[store]["CC Tips"] = cctips
+            if len(driver.find_elements(By.ID, TAG_IDS["online_cc_tips_1"])) > 0:
+                cctips = driver.find_element(By.ID, TAG_IDS["online_cc_tips_1"]).text
+            else:
+                cctips = driver.find_element(By.ID, TAG_IDS["online_cc_tips_2"]).text
+            sales_data[store]["Online CC Tips"] = cctips
+
+            # get pay ins
+            driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
+            WebDriverWait(driver, 15, ignored_exceptions=errors).until(
+                lambda d: driver.find_element(
+                    By.ID, TAG_IDS["menu_item"].format(1, 6)
+                ).click()
+                or True
+            )
+            sleep(2)
+            types_element = wait_for_element(driver, (By.ID, TAG_IDS["types"]))
+            if types_element:
+                types_element.send_keys("Payins")
+            else:
+                raise Exception("Failed to find payins types element")
+            self.setDateRange(driver, tx_date_str)
+            driver.find_element(By.ID, TAG_IDS["submit"]).click()
+            sleep(4)
+            payins_element = wait_for_element(driver, (By.ID, TAG_IDS["transactions"]))
+            if payins_element is not None:
+                payins = driver.find_element(By.ID, TAG_IDS["transactions"]).text
+            else:
+                payins = wait_for_element(driver, (By.ID, "j_id84"))
+                if payins:
+                    payins = payins.text
+                else:
+                    raise Exception("Failed to find payins element")
+            sales_data[store]["Payins"] = payins
+
+            # get pay outs
+            if driver.find_element(By.ID, TAG_IDS["switch_off"]).is_displayed():
+                driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
+            sleep(4)
+            WebDriverWait(driver, 18, ignored_exceptions=errors).until(
+                lambda d: driver.find_element(By.ID, TAG_IDS["types"]).send_keys(
+                    "Store Payouts"
                 )
-                if not totalsales_table or not isinstance(totalsales_table, Tag):
-                    raise Exception("Failed to find total sales table")
-                rows = totalsales_table.find_all("tr")
-                if len(rows) != 6:
-                    sales_data[store]["Pre-Discount Sales"] = None
-                    sales_data[store]["Discounts"] = None
-                    sales_data[store]["Donations"] = None
-                else:
-                    row = [ele.text.strip() for ele in rows[4].find_all("td")]
-                    sales_data[store]["Pre-Discount Sales"] = row[3]
-                    sales_data[store]["Discounts"] = row[2]
-                    sales_data[store]["Donations"] = row[4]
+                or True
+            )
+            self.setDateRange(driver, tx_date_str)
+            driver.find_element(By.ID, TAG_IDS["submit"]).click()
+            sleep(10)
+            payouts_element = wait_for_element(driver, (By.ID, TAG_IDS["transactions"]))
+            if payouts_element is not None:
+                payouts = payouts_element.text
+            else:
+                payouts = driver.find_element(By.ID, "j_id84").text
+            sales_data[store]["Payouts"] = payouts
 
-                # Payment Breakdown
-                payment_table = soup.find("table", attrs={"id": TAG_IDS["payments"]})
-                if not payment_table or not isinstance(payment_table, Tag):
-                    raise Exception("Failed to find payment table")
-                rows = payment_table.find_all("tr")
-                if len(rows) != 6:
-                    sales_data[store]["Cash"] = None
-                    sales_data[store]["Check"] = None
-                    sales_data[store]["InStore Credit Card"] = None
-                    sales_data[store]["Online Credit Card"] = None
-                    sales_data[store]["Gift Card"] = None
-                    sales_data[store]["Online Gift Card"] = None
-                    sales_data[store]["House Account"] = None
-                    sales_data[store]["Remote Payment"] = None
-                else:
-                    row = [ele.text.strip() for ele in rows[4].find_all("td")]
-                    sales_data[store]["Cash"] = row[1]
-                    sales_data[store]["Check"] = row[2]
-                    sales_data[store]["InStore Credit Card"] = row[3]
-                    sales_data[store]["Online Credit Card"] = row[4]
-                    sales_data[store]["Gift Card"] = row[5]
-                    sales_data[store]["Online Gift Card"] = row[6]
-                    sales_data[store]["House Account"] = row[7]
-                    sales_data[store]["Remote Payment"] = row[8]
-
-                # Collected Tax
-                payment_table = soup.find("table", attrs={"id": TAG_IDS["total_tax"]})
-                if not payment_table or not isinstance(payment_table, Tag):
-                    raise Exception("Failed to find collected tax table")
-                rows = payment_table.find_all("tr")
-                if len(rows) != 3:
-                    sales_data[store]["Sales Tax"] = None
-                else:
-                    row = [ele.text.strip() for ele in rows[2].find_all("td")]
-                    sales_data[store]["Sales Tax"] = row[7]
-
-                # Gift Cards Sold
-                gift_cards_sold = driver.find_element(
-                    By.ID, TAG_IDS["gift_cards_sold"]
-                ).text.split(":")
-                sales_data[store][gift_cards_sold[0].strip()[2:]] = gift_cards_sold[
-                    1
-                ].strip()
-
-                # Register Audit
-                register_audit = driver.find_element(
-                    By.ID, TAG_IDS["register_audit"]
-                ).text.split(":")
-                sales_data[store][register_audit[0].strip()[2:]] = register_audit[
-                    1
-                ].strip()
-
-                # Bank Deposits
-                deposit_table = soup.find("table", attrs={"id": TAG_IDS["deposits"]})
-                if not deposit_table or not isinstance(deposit_table, Tag):
-                    continue
-                rows = deposit_table.find_all("tr")
-                sales_data[store]["Bank Deposits"] = "".join(
-                    [
-                        row.get_text().lstrip().replace("\n", " ").replace("   ", "\n")
-                        for row in rows[1:]
-                    ]
-                )
-
-                driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
-                driver.find_element(By.ID, TAG_IDS["menu_item"].format(0, 9)).click()
-                driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                cctips_element = wait_for_element(driver, (By.ID, TAG_IDS["cc_tips_1"]))
-                if cctips_element is not None:
-                    cctips = driver.find_element(By.ID, TAG_IDS["cc_tips_1"]).text
-                else:
-                    cctips = driver.find_element(By.ID, TAG_IDS["cc_tips_2"]).text
-                sales_data[store]["CC Tips"] = cctips
-                if len(driver.find_elements(By.ID, TAG_IDS["online_cc_tips_1"])) > 0:
-                    cctips = driver.find_element(
-                        By.ID, TAG_IDS["online_cc_tips_1"]
-                    ).text
-                else:
-                    cctips = driver.find_element(
-                        By.ID, TAG_IDS["online_cc_tips_2"]
-                    ).text
-                sales_data[store]["Online CC Tips"] = cctips
-
-                # get pay ins
-                driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
-                WebDriverWait(driver, 15, ignored_exceptions=errors).until(
-                    lambda d: driver.find_element(
-                        By.ID, TAG_IDS["menu_item"].format(1, 6)
-                    ).click()
-                    or True
-                )
-                types_element = wait_for_element(driver, (By.ID, TAG_IDS["types"]))
-                if types_element:
-                    types_element.send_keys("Payins")
-                else:
-                    raise Exception("Failed to find payins types element")
-                self.setDateRange(driver, tx_date_str)
-                driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                sleep(2)
-                payins_element = wait_for_element(
-                    driver, (By.ID, TAG_IDS["transactions"])
-                )
-                if payins_element is not None:
-                    payins = driver.find_element(By.ID, TAG_IDS["transactions"]).text
-                else:
-                    payins = driver.find_element(By.ID, "j_id84").text
-                sales_data[store]["Payins"] = payins
-
-                # get pay outs
-                if driver.find_element(By.ID, TAG_IDS["switch_off"]).is_displayed():
-                    driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
-                WebDriverWait(driver, 15, ignored_exceptions=errors).until(
-                    lambda d: driver.find_element(By.ID, TAG_IDS["types"]).send_keys(
-                        "Store Payouts"
-                    )
-                    or True
-                )
-                self.setDateRange(driver, tx_date_str)
-                driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                sleep(4)
-                payouts_element = wait_for_element(
-                    driver, (By.ID, TAG_IDS["transactions"])
-                )
-                if payouts_element is not None:
-                    payouts = payouts_element.text
-                else:
-                    payouts = driver.find_element(By.ID, "j_id84").text
-                sales_data[store]["Payouts"] = payouts
-
-                # break down third party
-                driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
-                WebDriverWait(driver, 15, ignored_exceptions=errors).until(
-                    lambda d: driver.find_element(
-                        By.ID, TAG_IDS["menu_item"].format(0, 13)
-                    ).click()
-                    or True
-                )
-                driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
-                driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
-                self.setDateRange(driver, tx_date_str)
-                driver.find_element(By.ID, TAG_IDS["group_by"]).click()
-                Select(
-                    driver.find_element(By.ID, TAG_IDS["group_by"])
-                ).select_by_visible_text("Summary")
-                driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                sleep(5)
-                soup = BeautifulSoup(driver.page_source, features="html.parser")
-                online_table = soup.find("table", attrs={"class": "table-standard"})
-                if online_table and isinstance(online_table, Tag):
-                    rows = online_table.find_all("tr")
-                    for row in rows[1:-1]:
-                        r = [ele.text.strip() for ele in row.find_all("td")]
-                        sales_data[store][r[0]] = r[4]
+            # break down third party
+            driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
+            WebDriverWait(driver, 15, ignored_exceptions=errors).until(
+                lambda d: driver.find_element(
+                    By.ID, TAG_IDS["menu_item"].format(0, 13)
+                ).click()
+                or True
+            )
+            driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
+            driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
+            self.setDateRange(driver, tx_date_str)
+            driver.find_element(By.ID, TAG_IDS["group_by"]).click()
+            Select(
+                driver.find_element(By.ID, TAG_IDS["group_by"])
+            ).select_by_visible_text("Summary")
+            driver.find_element(By.ID, TAG_IDS["submit"]).click()
+            sleep(5)
+            soup = BeautifulSoup(driver.page_source, features="html.parser")
+            online_table = soup.find("table", attrs={"class": "table-standard"})
+            if online_table and isinstance(online_table, Tag):
+                rows = online_table.find_all("tr")
+                for row in rows[1:-1]:
+                    r = [ele.text.strip() for ele in row.find_all("td")]
+                    sales_data[store][r[0]] = r[4]
+            logger.info(
+                "completed daily sales", extra={"store": store, "date": tx_date_str}
+            )
         finally:
             if driver:
                 try:
@@ -455,8 +448,8 @@ class Flexepos:
                 except WebDriverException:
                     logger.exception("Error closing driver")
                 self._driver.quit()
-                logger.info("closed driver waiting")
-                sleep(10)
+                logger.info("closed driver")
+                sleep(5)
         return sales_data
 
     def setDateRange(self, driver, tx_date_str, tx_end_date_str: Optional[str] = None):

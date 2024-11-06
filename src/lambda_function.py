@@ -150,68 +150,74 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         ]
     else:
         txdates = [date.today() - timedelta(days=1)]
-    # txdates = [date(2024, 10, 25), date(2024, 10, 26)]
+    # txdates = [date(2024, 10, 29), date(2024, 10, 31)]
     # txdates = list(map(partial(date, 2024, 8), range(1, 8)))
     logger.info(
         "Started daily sales",
         extra={"txdates": [txdate.isoformat() for txdate in txdates]},
     )
     dj = Flexepos()
+    success = False
     for txdate in txdates:
-        retry = 4
-        while retry:
-            try:
-                stores = global_stores.copy()
-                if "20400" in stores and txdate < date(2024, 1, 31):
-                    stores.remove("20400")
-                if "20407" in stores and txdate < date(2024, 3, 6):
-                    stores.remove("20407")
-                journal = dj.getDailySales(stores, txdate)
-                qb.create_daily_sales(txdate, journal)
+        stores = global_stores.copy()
+        if "20400" in stores and txdate < date(2024, 1, 31):
+            stores.remove("20400")
+        if "20407" in stores and txdate < date(2024, 3, 6):
+            stores.remove("20407")
+        journal = {}
+        for store in stores:
+            retry = 3
+            while retry:
+                try:
+                    journal.update(dj.getDailySales(store, txdate))
+                    retry = 0
+                except:
+                    logger.exception(f"error {txdate.isoformat()}")
+                    retry -= 1
+        qb.create_daily_sales(txdate, journal)
+        logger.info(
+            "Successfully processed daily sales",
+            extra={"txdate": txdate.isoformat(), "stores": stores},
+        )
+        subject = ""
+        message = ""
+        for store in global_stores:
+            # store not open guard
+            if (store == "20400" and txdate < date(2024, 1, 31)) or (
+                store == "20407" and txdate < date(2024, 3, 6)
+            ):
                 logger.info(
-                    "Successfully processed daily sales",
-                    extra={"txdate": txdate.isoformat(), "stores": stores},
+                    "Skipping store",
+                    extra={"store": store, "txdate": txdate.isoformat()},
                 )
-                retry = 0
-                subject = ""
-                message = ""
-                for store in global_stores:
-                    # store not open guard
-                    if (store == "20400" and txdate < date(2024, 1, 31)) or (
-                        store == "20407" and txdate < date(2024, 3, 6)
-                    ):
-                        logger.info(
-                            "Skipping store",
-                            extra={"store": store, "txdate": txdate.isoformat()},
-                        )
+                continue
+            if (
+                journal[store]["Bank Deposits"] is None
+                or journal[store]["Bank Deposits"] == ""
+            ):
+                subject += f"{store} "
+                message += f"{store} is missing a deposit for {str(txdate)}\n"
+            payins = journal[store]["Payins"].strip()
+            if payins.count("\n") > 0:
+                amount = Decimal(0)
+                for payin_line in payins.split("\n")[1:]:
+                    if payin_line.startswith("TOTAL"):
                         continue
-                    if (
-                        journal[store]["Bank Deposits"] is None
-                        or journal[store]["Bank Deposits"] == ""
-                    ):
-                        subject += f"{store} "
-                        message += f"{store} is missing a deposit for {str(txdate)}\n"
-                    payins = journal[store]["Payins"].strip()
-                    if payins.count("\n") > 0:
-                        amount = Decimal(0)
-                        for payin_line in payins.split("\n")[1:]:
-                            if payin_line.startswith("TOTAL"):
-                                continue
-                            match = pattern.search(payin_line)
-                            if match:
-                                amount = amount + Decimal(atof(match.group()))
-                        if amount.quantize(TWOPLACES) > Decimal(150):
-                            send_email(
-                                f"High pay-in detected {store}",
-                                f"<pre>{store} - ${amount.quantize(TWOPLACES)}\n{payins}</pre>",
-                            )
-                    else:
-                        amount = Decimal(0)
-                if subject != "":
-                    subject += f" missing deposit for {str(txdate)}"
+                    match = pattern.search(payin_line)
+                    if match:
+                        amount = amount + Decimal(atof(match.group()))
+                if amount.quantize(TWOPLACES) > Decimal(150):
                     send_email(
-                        subject,
-                        f"""
+                        f"High pay-in detected {store}",
+                        f"<pre>{store} - ${amount.quantize(TWOPLACES)}\n{payins}</pre>",
+                    )
+            else:
+                amount = Decimal(0)
+        if subject != "":
+            subject += f" missing deposit for {str(txdate)}"
+            send_email(
+                subject,
+                f"""
 Folks,<br/>
 I couldn't find a depsoit for the following dates for these stores:<br/>
 <pre>{message}</pre>
@@ -219,11 +225,10 @@ Please correct this and re-run.<br/><br/>
 Thanks,<br/>
 Josiah<br/>
 (aka The Robot)""",
-                    )
-
-            except:
-                logger.exception(f"error {txdate.isoformat()}")
-                retry -= 1
+            )
+        success = True
+    if not success:
+        return create_response(500, {"message": "Error processing daily sales"})
     txdate = txdates[0]
     payment_data = dj.getOnlinePayments(global_stores, txdate.year, txdate.month)
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)

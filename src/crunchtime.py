@@ -72,9 +72,11 @@ class Crunchtime:
             == driver.find_element(By.XPATH, '//input[@name="locationId"]')
         )
         driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(store)
+        sleep(1)
         driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(
             Keys.ENTER
         )
+        sleep(2)
         driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(
             Keys.ENTER
         )
