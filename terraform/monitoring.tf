@@ -1,12 +1,12 @@
 locals {
   monitored_functions = toset([
-    "daily-sales",
-    "email-tips",
-    "third-party-deposit",
-    "invoice-sync",
-    "daily_journal",
-    "transform_tips",
-    "get_mpvs"
+    "daily-sales-${terraform.workspace}",
+    "email-tips-${terraform.workspace}",
+    "third-party-deposit-${terraform.workspace}",
+    "invoice-sync-${terraform.workspace}",
+    "daily_journal-${terraform.workspace}",
+    "transform_tips-${terraform.workspace}",
+    "get_mpvs-${terraform.workspace}"
   ])
 }
 
@@ -60,7 +60,7 @@ resource "aws_sns_topic_subscription" "email" {
   endpoint  = "william@wagonermanagement.com"
 }
 
-resource "aws_cloudwatch_metric_alarm" "lambda_500_errors" {
+/*resource "aws_cloudwatch_metric_alarm" "lambda_500_errors" {
   for_each = local.monitored_functions
 
   alarm_name          = "${each.key}-500-errors"
@@ -80,3 +80,4 @@ resource "aws_cloudwatch_metric_alarm" "lambda_500_errors" {
 
   alarm_actions = [aws_sns_topic.lambda_alerts.arn]
 }
+*/
