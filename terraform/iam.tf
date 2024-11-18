@@ -114,7 +114,7 @@ resource "aws_iam_role_policy_attachment" "lambda-basic" {
 resource "aws_lambda_permission" "flexepos_daily_invoke" {
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.invoice_sync.function_name
+  function_name = aws_lambda_function.functions["invoice_sync"].function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.flexepos_daily.arn
 }
@@ -122,7 +122,7 @@ resource "aws_lambda_permission" "flexepos_daily_invoke" {
 resource "aws_lambda_permission" "flexepos_journal_invoke" {
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.daily_journal.function_name
+  function_name = aws_lambda_function.functions["daily_journal"].function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.flexepos_daily.arn
 }
@@ -130,7 +130,7 @@ resource "aws_lambda_permission" "flexepos_journal_invoke" {
 resource "aws_lambda_permission" "flexepos_sales_invoke" {
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.daily_sales.function_name
+  function_name = aws_lambda_function.functions["daily_sales"].function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.flexepos_daily.arn
 }
@@ -138,7 +138,7 @@ resource "aws_lambda_permission" "flexepos_sales_invoke" {
 resource "aws_lambda_permission" "flexepos_email_invoke" {
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.email_tips.function_name
+  function_name = aws_lambda_function.functions["email_tips"].function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.flexepos_daily_3am.arn
 }

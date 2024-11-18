@@ -2,12 +2,14 @@ locals {
   monitored_functions = toset([
     "daily-sales-${terraform.workspace}",
     "email-tips-${terraform.workspace}",
-    "third-party-deposit-${terraform.workspace}",
     "invoice-sync-${terraform.workspace}",
-    "daily_journal-${terraform.workspace}",
-    "transform_tips-${terraform.workspace}",
-    "get_mpvs-${terraform.workspace}"
+    "daily-journal-${terraform.workspace}",
+    "transform-tips-${terraform.workspace}",
+    "get-mpvs-${terraform.workspace}"
   ])
+  function_timeouts = {
+    for k, v in local.lambda_functions : "${v.name}-${terraform.workspace}" => v.timeout
+  }
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
@@ -28,6 +30,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   }
 
   alarm_actions = [aws_sns_topic.lambda_alerts.arn]
+  tags          = local.common_tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
@@ -40,7 +43,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
   namespace           = "AWS/Lambda"
   period              = "300"
   statistic           = "Maximum"
-  threshold           = "270000" # 270 seconds (90% of 5 minute timeout)
+  threshold           = local.function_timeouts[each.key] * 900 # 90% of timeout in milliseconds
   alarm_description   = "Alert when ${each.key} lambda function is approaching timeout"
 
   dimensions = {
@@ -48,6 +51,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
   }
 
   alarm_actions = [aws_sns_topic.lambda_alerts.arn]
+  tags          = local.common_tags
 }
 
 resource "aws_sns_topic" "lambda_alerts" {

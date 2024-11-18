@@ -36,7 +36,7 @@ resource "aws_api_gateway_integration" "lambda_root" {
 
   integration_http_method = "POST"
   type                    = "AWS"
-  uri                     = aws_lambda_function.daily_sales.invoke_arn
+  uri                     = aws_lambda_function.functions["daily_sales"].invoke_arn
   content_handling        = "CONVERT_TO_TEXT"
   request_parameters = {
     "integration.request.header.X-Amz-Invocation-Type" = "'Event'",
@@ -116,9 +116,9 @@ resource "aws_api_gateway_integration_response" "proxy_root_options-200" {
   resource_id = aws_api_gateway_rest_api.josiah.root_resource_id
 
   response_parameters = {
-    "method.response.header.Access-Control-Allow-Headers" = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "method.response.header.Access-Control-Allow-Methods" = "'OPTIONS,POST'"
-    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
+    "method.response.header.Access-Control-Allow-Methods" = local.cors_methods
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
   }
   status_code = "200"
 }
@@ -150,7 +150,7 @@ resource "aws_api_gateway_integration" "lambda_email_tips" {
 
   integration_http_method = "POST"
   type                    = "AWS"
-  uri                     = aws_lambda_function.email_tips.invoke_arn
+  uri                     = aws_lambda_function.functions["email_tips"].invoke_arn
   content_handling        = "CONVERT_TO_TEXT"
   request_parameters = {
     "integration.request.header.X-Amz-Invocation-Type" = "'Event'",
@@ -230,9 +230,9 @@ resource "aws_api_gateway_integration_response" "email_tips_options-200" {
   resource_id = aws_api_gateway_resource.email_tips_resource.id
 
   response_parameters = {
-    "method.response.header.Access-Control-Allow-Headers" = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "method.response.header.Access-Control-Allow-Methods" = "'OPTIONS,POST'"
-    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
+    "method.response.header.Access-Control-Allow-Methods" = local.cors_methods
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
   }
   status_code = "200"
 }
@@ -259,7 +259,7 @@ resource "aws_api_gateway_integration" "lambda_transform_tips" {
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.transform_tips.invoke_arn
+  uri                     = aws_lambda_function.functions["transform_tips"].invoke_arn
 }
 
 resource "aws_api_gateway_method_response" "transform_tips_method_response_200" {
@@ -306,9 +306,9 @@ resource "aws_api_gateway_integration_response" "transform_tips_options-200" {
   resource_id = aws_api_gateway_resource.transform_tips_resource.id
 
   response_parameters = {
-    "method.response.header.Access-Control-Allow-Headers" = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "method.response.header.Access-Control-Allow-Methods" = "'OPTIONS,POST'"
-    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
+    "method.response.header.Access-Control-Allow-Methods" = local.cors_methods
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
   }
   status_code = "200"
 }
@@ -335,7 +335,7 @@ resource "aws_api_gateway_integration" "lambda_get_mpvs" {
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.get_mpvs.invoke_arn
+  uri                     = aws_lambda_function.functions["get_mpvs"].invoke_arn
 }
 
 resource "aws_api_gateway_method_response" "get_mpvs_method_response_200" {
@@ -382,9 +382,9 @@ resource "aws_api_gateway_integration_response" "get_mpvs_options-200" {
   resource_id = aws_api_gateway_resource.get_mpvs_resource.id
 
   response_parameters = {
-    "method.response.header.Access-Control-Allow-Headers" = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "method.response.header.Access-Control-Allow-Methods" = "'OPTIONS,POST'"
-    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
+    "method.response.header.Access-Control-Allow-Methods" = local.cors_methods
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
   }
   status_code = "200"
 }
@@ -398,11 +398,22 @@ resource "aws_api_gateway_deployment" "josiah" {
     aws_lambda_function.authorizer,
   ]
 
-  rest_api_id       = aws_api_gateway_rest_api.josiah.id
-  stage_name        = "test"
-  stage_description = "Deployed at ${timestamp()}"
-  description       = "Deployed at ${timestamp()}"
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  description = "Deployed at ${timestamp()}"
   lifecycle {
     create_before_destroy = true
   }
+}
+
+resource "aws_api_gateway_stage" "test" {
+  deployment_id = aws_api_gateway_deployment.josiah.id
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  stage_name    = "test"
+  description   = "Deployed at ${timestamp()}"
+}
+
+locals {
+  cors_headers = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+  cors_methods = "'OPTIONS,POST'"
+  cors_origin  = "'*'"
 }
