@@ -15,6 +15,7 @@ resource "aws_iam_role" "flexepos_lambda_role" {
   ]
 }
 EOF
+  tags               = local.common_tags
 }
 
 resource "aws_iam_policy" "accesssecrets" {
@@ -42,6 +43,7 @@ resource "aws_iam_policy" "accesssecrets" {
     ]
 }
 EOF
+  tags   = local.common_tags
 }
 
 resource "aws_iam_policy" "accessssm" {
@@ -68,6 +70,7 @@ resource "aws_iam_policy" "accessssm" {
     ]
 }
 EOF
+  tags        = local.common_tags
 }
 
 resource "aws_iam_policy" "sendemail" {
@@ -89,6 +92,7 @@ resource "aws_iam_policy" "sendemail" {
     ]
 }
 EOF
+  tags   = local.common_tags
 }
 
 resource "aws_iam_role_policy_attachment" "accesssecrets-attach" {

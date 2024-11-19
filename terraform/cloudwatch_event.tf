@@ -10,6 +10,7 @@ resource "aws_cloudwatch_event_rule" "flexepos_daily_3am" {
   description         = "Trigger ${terraform.workspace} actions"
   schedule_expression = "cron(0 10 * * ? *)" # 3 AM PST
   depends_on          = [aws_lambda_function.functions["invoice_sync"]]
+  tags                = local.common_tags
 }
 
 resource "aws_cloudwatch_event_target" "invoke_invoice_sync" {

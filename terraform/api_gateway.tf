@@ -9,6 +9,7 @@ resource "aws_api_gateway_rest_api" "josiah" {
   description = "Josiah's Button Mashing Game"
   binary_media_types = ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "multipart/form-data"]
+  tags = local.common_tags
 }
 
 output "base_url" {
@@ -410,6 +411,7 @@ resource "aws_api_gateway_stage" "test" {
   rest_api_id   = aws_api_gateway_rest_api.josiah.id
   stage_name    = "test"
   description   = "Deployed at ${timestamp()}"
+  tags          = local.common_tags
 }
 
 locals {
