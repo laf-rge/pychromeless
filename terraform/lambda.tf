@@ -59,7 +59,7 @@ locals {
       name        = "daily-sales"
       description = "Enters daily sales for yesterday."
       handler     = "lambda_function.daily_sales_handler"
-      timeout     = 480
+      timeout     = 540
       memory      = 10240
       env_vars    = local.lambda_env_daily_sales
     }
