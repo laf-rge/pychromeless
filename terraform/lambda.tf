@@ -129,6 +129,18 @@ resource "aws_lambda_permission" "apigw" {
   source_arn = "${aws_api_gateway_rest_api.josiah.execution_arn}/*/*"
 }
 
+resource "aws_lambda_permission" "apigw-post" {
+  for_each      = aws_lambda_function.functions
+  statement_id  = "AllowAPIGatewayInvokePost"
+  action        = "lambda:InvokeFunction"
+  function_name = each.value.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # The /*/* portion grants access from any method on any resource
+  # within the API Gateway "REST API".
+  source_arn = "${aws_api_gateway_rest_api.josiah.execution_arn}/*/post/*"
+}
+
 resource "aws_lambda_permission" "apigw-auth" {
   statement_id  = "AllowAPIGatewayInvoke-auth"
   action        = "lambda:InvokeFunction"
