@@ -171,8 +171,8 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                 try:
                     journal.update(dj.getDailySales(store, txdate))
                     retry = 0
-                except:
-                    logger.exception(f"error {txdate.isoformat()}")
+                except (ConnectionError, TimeoutError, Exception) as e:
+                    logger.exception(f"error {txdate.isoformat()}: {str(e)}")
                     retry -= 1
         qb.create_daily_sales(txdate, journal)
         logger.info(
