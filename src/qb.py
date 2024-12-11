@@ -62,6 +62,7 @@ detail_map = OrderedDict(
         ("Sales Tax", ("15", 1)),
         ("Donations", ("36", 1)),
         ("Online CC Tips", ("32", 1)),
+        ("Online WLD Tips", ("32", 1)),
         ("CC Tips", ("32", 1)),
     ]
 )

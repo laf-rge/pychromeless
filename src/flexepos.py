@@ -48,10 +48,11 @@ TAG_IDS = {
     "gift_cards_sold": "j_id318_header",
     "register_audit": "j_id240_header",
     "deposits": "Deposits",
-    "cc_tips_1": "j_id86:1:j_id100:0:j_id105",
+    "cc_tips_1": "j_id87:1:j_id101:0:j_id106",
     "cc_tips_2": "j_id143_body",
-    "online_cc_tips_1": "j_id111:1:j_id125:0:j_id130",
+    "online_cc_tips_1": "j_id114:1:j_id130:0:j_id135",
     "online_cc_tips_2": "j_id143_body",
+    "online_wld_tips_1": "j_id114:1:j_id130:0:j_id137",
     "transactions": "transactions",
     "journal_scope": "parameters:journalScope",
     "royalty_list": "RoyaltyList",
@@ -365,6 +366,9 @@ class Flexepos:
             else:
                 cctips = driver.find_element(By.ID, TAG_IDS["online_cc_tips_2"]).text
             sales_data[store]["Online CC Tips"] = cctips
+            sales_data[store]["Online WLD Tips"] = driver.find_element(
+                By.ID, TAG_IDS["online_wld_tips_1"]
+            ).text
 
             # get pay ins
             driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
@@ -746,20 +750,39 @@ class Flexepos:
                 self._driver.quit()
 
     def getDailyJournalExport(self, stores, start_date, end_date):
+        """Export daily journal entries for stores between start_date and end_date.
+
+        Args:
+            stores: List of store IDs to export journals for
+            start_date: Starting date to export from
+            end_date: Ending date to export to
+
+        Raises:
+            Exception: If there is an error getting the daily journal
+        """
         qdate = end_date
+        output_dir = "/Users/wgreen/Google Drive/Shared drives/Wagoner Management Corp./Sales Tax/Journal"
+
         while qdate >= start_date:
+            date_str = qdate.strftime("%m%d%Y")
+
             try:
-                daily_journal = self.getDailyJournal(stores, qdate.strftime("%m%d%Y"))
-            except Exception:
-                logging.exception("Error getting daily journal")
+                daily_journal = self.getDailyJournal(stores, date_str)
+            except Exception as e:
+                logging.exception(
+                    f"Error getting daily journal for {date_str}: {str(e)}"
+                )
                 sleep(2)
                 continue
+
             for store in stores:
-                with open(
-                    "/Users/wgreen/Google Drive/Shared drives/Wagoner Management Corp./Sales Tax/Journal/{0}-{1}_daily_journal.txt".format(
-                        str(qdate), store
-                    ),
-                    "w",
-                ) as fileout:
-                    fileout.write(daily_journal[store])
+                output_file = f"{output_dir}/{qdate}-{store}_daily_journal.txt"
+                try:
+                    with open(output_file, "w") as fileout:
+                        fileout.write(daily_journal[store])
+                except IOError as e:
+                    logging.error(
+                        f"Error writing journal for store {store} on {date_str}: {str(e)}"
+                    )
+
             qdate = qdate - datetime.timedelta(days=1)
