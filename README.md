@@ -1,1 +1,69 @@
-IyBQeWNocm9tZWxlc3MgLSBKZXJzZXkgTWlrZSdzIERhdGEgSW50ZWdyYXRpb24gU3VpdGUKClNlcnZlcmxlc3MgYXV0b21hdGlvbiBmb3Igc3luY2luZyBKZXJzZXkgTWlrZSdzIHBvaW50LW9mLXNhbGUsIGRlbGl2ZXJ5LCBhbmQgaW52ZW50b3J5IGRhdGEgdG8gUXVpY2tCb29rcy4KCiMjIEZlYXR1cmVzCgotIEF1dG9tYXRlZCBzY3JhcGluZyBvZiBGbGV4ZVBPU3N5c3RlbSBkYXRhCi0gSW50ZWdyYXRpb24gd2l0aCB0aGlyZC1wYXJ0eSBkZWxpdmVyeSBzZXJ2aWNlcwotIENydW5jaFRpbWUgaW52ZW50b3J5IG1hbmFnZW1lbnQgc3luYwotIFF1aWNrQm9va3MgZGF0YSBzeW5jaHJvbml6YXRpb24KLSBTZXJ2ZXJsZXNzIGRlcGxveW1lbnQgdXNpbmcgQVdTIExhbWJkYQoKIyMgQXJjaGl0ZWN0dXJlCgotIEFXUyBMYW1iZGEgZnVuY3Rpb25zIHdpdGggQ2hyb21lL1NlbGVuaXVtCi0gU2NoZWR1bGVkIGRhdGEgY29sbGVjdGlvbiBhbmQgcHJvY2Vzc2luZwotIFNlY3VyZSBjcmVkZW50aWFsIG1hbmFnZW1lbnQgdmlhIEFXUyBTZWNyZXRzIE1hbmFnZXIKLSBFcnJvciBtb25pdG9yaW5nIGFuZCBub3RpZmljYXRpb24gc3lzdGVtCgojIyBTZXR1cAoKMS4gQ29uZmlndXJlIEFXUyBjcmVkZW50aWFscwoyLiBJbnN0YWxsIGRlcGVuZGVuY2llczoKYGBgYmFzaApwaXAgaW5zdGFsbCAtciByZXF1aXJlbWVudHMudHh0CmBgYAozLiBTZXQgdXAgZW52aXJvbm1lbnQgdmFyaWFibGVzOgpgYGBiYXNoCmNwIC5lbnYuZXhhbXBsZSAuZW52CiMgQWRkIHlvdXIgY3JlZGVudGlhbHMKYGBgCgojIyBEZXBsb3ltZW50CgpgYGBiYXNoCiMgRGVwbG95IExhbWJkYSBmdW5jdGlvbnMKc2VydmVybGVzcyBkZXBsb3kKCiMgQ29uZmlndXJlIHNjaGVkdWxlcwphd3MgZXZlbnRzIHB1dC1ydWxlIC4uLgpgYGAKCiMjIFNlY3VyaXR5IE5vdGVzCgotIENyZWRlbnRpYWxzIHN0b3JlZCBpbiBBV1MgU2VjcmV0cyBNYW5hZ2VyCi0gSVAgd2hpdGVsaXN0aW5nIGZvciBGbGV4ZVBPUyBhY2Nlc3MKLSBSYXRlIGxpbWl0aW5nIGZvciBBUEkgY2FsbHMKLSBTZWN1cmUgZGF0YSB0cmFuc21pc3Npb24KCiMjIEVycm9yIEhhbmRsaW5nCgotIEF1dG9tYXRlZCByZXRyaWVzIGZvciBmYWlsZWQgc2NyYXBlcwotIEVycm9yIG5vdGlmaWNhdGlvbnMgdmlhIFNOUy9TRVMKLSBEYWlseSBoZWFsdGggY2hlY2sgcmVwb3J0cwotIExvZ2dpbmcgYW5kIG1vbml0b3JpbmcgdmlhIENsb3VkV2F0Y2gKCiMjIENvbnRyaWJ1dGluZwoKMS4gRm9yayB0aGUgcmVwb3NpdG9yeQoyLiBDcmVhdGUgZmVhdHVyZSBicmFuY2gKMy4gU3VibWl0IHB1bGwgcmVxdWVzdAoKIyMgTGljZW5zZQoKTUlUIExpY2Vuc2UgLSBTZWUgTElDRU5TRSBmaWxlCgojIyBTdXBwb3J0CgpGb3IgaXNzdWVzIGFuZCBmZWF0dXJlIHJlcXVlc3RzLCBwbGVhc2UgdXNlIHRoZSBHaXRIdWIgaXNzdWUgdHJhY2tlci4=
+# Pychromeless - Jersey Mike's Data Integration Suite
+
+Serverless automation for syncing Jersey Mike's point-of-sale, delivery, and inventory data to QuickBooks.
+
+## Features
+
+- Automated scraping of FlexePOS system data
+- Integration with third-party delivery services
+- CrunchTime inventory management sync
+- QuickBooks data synchronization
+- Serverless deployment using AWS Lambda
+
+## Architecture
+
+- AWS Lambda functions with Chrome/Selenium
+- Scheduled data collection and processing
+- Secure credential management via AWS Secrets Manager
+- Error monitoring and notification system
+
+## Setup
+
+1. Configure AWS credentials
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+3. Set up environment variables:
+```bash
+cp .env.example .env
+# Add your credentials
+```
+
+## Deployment
+
+```bash
+# Deploy Lambda functions
+serverless deploy
+
+# Configure schedules
+aws events put-rule ...
+```
+
+## Security Notes
+
+- Credentials stored in AWS Secrets Manager
+- IP whitelisting for FlexePOS access
+- Rate limiting for API calls
+- Secure data transmission
+
+## Error Handling
+
+- Automated retries for failed scrapes
+- Error notifications via SNS/SES
+- Daily health check reports
+- Logging and monitoring via CloudWatch
+
+## Contributing
+
+1. Fork the repository
+2. Create feature branch
+3. Submit pull request
+
+## License
+
+MIT License - See LICENSE file
+
+## Support
+
+For issues and feature requests, please use the GitHub issue tracker.
