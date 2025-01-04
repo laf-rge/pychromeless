@@ -19,39 +19,17 @@ Serverless automation for syncing Jersey Mike's point-of-sale, delivery, and inv
 
 ## Setup
 
-1. Configure AWS credentials
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-3. Set up environment variables:
-```bash
-cp .env.example .env
-# Add your credentials
-```
-
 ## Deployment
 
-```bash
 # Deploy Lambda functions
-serverless deploy
 
 # Configure schedules
-aws events put-rule ...
-```
 
 ## Security Notes
-
-- Credentials stored in AWS Secrets Manager
-- IP whitelisting for FlexePOS access
-- Rate limiting for API calls
-- Secure data transmission
 
 ## Error Handling
 
 - Automated retries for failed scrapes
-- Error notifications via SNS/SES
-- Daily health check reports
 - Logging and monitoring via CloudWatch
 
 ## Contributing
