@@ -19,6 +19,11 @@ deploy
 terraform/.terraform
 .terraform.lock.hcl
 
+### Terraform
+terraform.tfvars
+*.tfvars
+!terraform.tfvars.template
+
 src/.vscode/
 
 .vscode/

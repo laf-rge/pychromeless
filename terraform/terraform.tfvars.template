@@ -1,0 +1,18 @@
+settings = {
+  account_number = "YOUR_AWS_ACCOUNT_NUMBER"
+  region        = "us-east-1"  # or your preferred region
+  owner         = "team@example.com"
+  accounting    = "TEAM_NAME"
+  s3_bucket     = "your-unique-bucket-name"
+}
+
+service_credentials = {
+  flexepos_cred   = "YOUR_FLEXEPOS_CREDENTIAL"
+  crunchtime_cred = "YOUR_CRUNCHTIME_CREDENTIAL"
+  doordash_cred   = "YOUR_DOORDASH_CREDENTIAL"
+  grubhub_cred    = "YOUR_GRUBHUB_CREDENTIAL"
+  ubereats_cred   = "YOUR_UBEREATS_CREDENTIAL"
+  wheniwork_cred  = "YOUR_WHENIWORK_CREDENTIAL"
+  ezcater_cred    = "YOUR_EZCATER_CREDENTIAL"
+  gdrive_cred     = "YOUR_GDRIVE_CREDENTIAL"
+}
