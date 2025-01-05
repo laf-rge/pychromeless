@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, cast
 import json
 import logging
 from ssm_parameter_store import SSMParameterStore
@@ -16,7 +16,8 @@ class StoreConfig:
     def refresh(self) -> None:
         """Refresh store configuration from SSM Parameter Store"""
         try:
-            config = self._ssm["stores"]["config"]
+            stores_param = cast(SSMParameterStore, self._ssm["stores"])
+            config = str(stores_param["config"])
             self._store_config = json.loads(config)
         except Exception as e:
             logger.error(f"Failed to load store configuration: {str(e)}")

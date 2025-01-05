@@ -23,9 +23,11 @@
 # https://medium.com/@nqbao/how-to-use-aws-ssm-parameter-store-easily-in-python-94fda04fea84
 
 import datetime
-from typing import Any, Dict, List, Optional, Union, Self
+from typing import Any, Dict, List, Optional, Union, Self, TypeVar, overload
 
 import boto3
+
+T = TypeVar("T", str, List[str], "SSMParameterStore")
 
 
 class SSMParameterStore:
@@ -53,7 +55,9 @@ class SSMParameterStore:
         self._substores: Dict[str, SSMParameterStore] = {}
         self._ttl: Optional[int] = ttl
 
-    def get(self, name: str, **kwargs: Any) -> Union[str, List[str], Self, Any]:
+    def get(
+        self, name: str, **kwargs: Any
+    ) -> Union[str, List[str], "SSMParameterStore"]:
         """
         Get a parameter or a substore.
 
@@ -61,7 +65,7 @@ class SSMParameterStore:
             name (str): The name of the parameter.
 
         Returns:
-            Union[str, List[str], SSMParameterStore, Any]: The value of the parameter or a substore.
+            Union[str, List[str], SSMParameterStore]: The value of the parameter or a substore.
         """
         assert name, "Name cannot be empty"
         if self._keys is None:
@@ -196,17 +200,40 @@ class SSMParameterStore:
         except KeyError:
             return False
 
-    def __getitem__(self, name: str) -> Union[str, List[str], Self]:
+    @overload
+    def __getitem__(self, name: str) -> Union[str, List[str], "SSMParameterStore"]: ...
+
+    @overload
+    def __getitem__(
+        self, name: slice
+    ) -> Dict[str, Union[str, List[str], "SSMParameterStore"]]: ...
+
+    def __getitem__(
+        self, name: Union[str, slice]
+    ) -> Union[
+        str,
+        List[str],
+        "SSMParameterStore",
+        Dict[str, Union[str, List[str], "SSMParameterStore"]],
+    ]:
         """
         Get a parameter using the subscript notation.
 
         Args:
-            name (str): The name of the parameter.
+            name (Union[str, slice]): The name of the parameter or slice.
 
         Returns:
-            Union[str, List[str], SSMParameterStore]: The value of the parameter or a substore.
+            Union[str, List[str], SSMParameterStore, Dict[str, Union[str, List[str], SSMParameterStore]]]:
+                The value of the parameter, a substore, or a dict of values.
         """
+        if isinstance(name, slice):
+            # Handle slice notation (not implemented)
+            raise NotImplementedError("Slice notation not supported")
         return self.get(name)
+
+    def __class_getitem__(cls, item: Any) -> Any:
+        """Support for generic type hints."""
+        return super().__class_getitem__(item)
 
     def __setitem__(self, key: str, value: Any) -> None:
         """
