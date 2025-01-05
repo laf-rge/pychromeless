@@ -38,6 +38,7 @@ Serverless automation for syncing Jersey Mike's point-of-sale, delivery, and inv
 ### 1. AWS Configuration
 
 Ensure you have AWS credentials configured locally with appropriate permissions for:
+
 - Lambda
 - Systems Manager Parameter Store
 - IAM
@@ -58,12 +59,14 @@ Ensure you have AWS credentials configured locally with appropriate permissions 
    - S3 bucket name (must be globally unique)
    - Google Drive configuration
    - Email notification settings
+   - Store configuration with opening and closing dates (optional)
 
 ### 3. Required Variables
 
 The following variable groups must be configured:
 
 #### Core Settings
+
 ```hcl
 settings = {
   account_number = "YOUR_AWS_ACCOUNT"
@@ -75,7 +78,9 @@ settings = {
 ```
 
 #### Service Credentials
+
 Configure credentials for each service:
+
 - FlexePOS (username/password)
 - CrunchTime (username/password)
 - DoorDash (username/password)
@@ -85,6 +90,7 @@ Configure credentials for each service:
 - EzCater (username/password)
 
 #### Google Cloud Platform
+
 ```hcl
 gcp_config = {
   employees_folder = "FOLDER_ID"
@@ -93,6 +99,7 @@ gcp_config = {
 ```
 
 #### Email Configuration
+
 ```hcl
 email_config = {
   receiver_emails = ["email1@example.com"]
@@ -105,11 +112,13 @@ email_config = {
 ### Initial Deployment
 
 1. Initialize Terraform:
+
    ```bash
    terraform init
    ```
 
 2. Review the planned changes:
+
    ```bash
    terraform plan
    ```
@@ -150,6 +159,7 @@ The system includes several error handling mechanisms:
 3. Submit pull request
 
 Please ensure you:
+
 - Do not commit any credentials
 - Test all changes locally
 - Update documentation as needed
@@ -158,6 +168,7 @@ Please ensure you:
 ## Troubleshooting
 
 Common issues and solutions:
+
 - Credential issues: Check SSM Parameter Store values
 - Lambda timeouts: Review Chrome instance memory usage
 - Scraping failures: Verify service endpoint changes

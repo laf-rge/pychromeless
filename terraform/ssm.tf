@@ -174,3 +174,12 @@ resource "aws_ssm_parameter" "from_email" {
   value       = var.email_config.from_email
   tags        = local.common_tags
 }
+
+# Store configuration
+resource "aws_ssm_parameter" "store_config" {
+  name        = "/${terraform.workspace}/stores/config"
+  description = "Store configuration including open/close dates"
+  type        = "String"
+  value       = jsonencode(var.store_config)
+  tags        = local.common_tags
+}

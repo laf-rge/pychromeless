@@ -2,10 +2,10 @@ variable "settings" {
   description = "Core configuration settings for the application"
   type = object({
     account_number = string
-    region        = string
-    owner         = string
-    accounting    = string
-    s3_bucket     = string
+    region         = string
+    owner          = string
+    accounting     = string
+    s3_bucket      = string
   })
 }
 
@@ -15,33 +15,33 @@ variable "service_credentials" {
     # EzCater
     ezcater_user     = string
     ezcater_password = string
-    
+
     # FlexePOS
     flexepos_user     = string
     flexepos_password = string
-    
+
     # CrunchTime
     crunchtime_user     = string
     crunchtime_password = string
-    
+
     # DoorDash
     doordash_user     = string
     doordash_password = string
-    
+
     # GrubHub
     grubhub_user     = string
     grubhub_password = string
-    
+
     # UberEats
     ubereats_user     = string
     ubereats_password = string
-    ubereats_pin      = string  # Added PIN parameter
-    
+    ubereats_pin      = string # Added PIN parameter
+
     # WhenIWork
     wheniwork_user     = string
     wheniwork_password = string
     wheniwork_key      = string
-    
+
     # Google Drive
     gdrive_json = string
   })
@@ -52,7 +52,7 @@ variable "gcp_config" {
   description = "Google Cloud Platform configuration"
   type = object({
     employees_folder = string
-    journal_folder  = string
+    journal_folder   = string
   })
 }
 
@@ -60,8 +60,17 @@ variable "email_config" {
   description = "Email notification configuration"
   type = object({
     receiver_emails = list(string)
-    from_email     = string
+    from_email      = string
   })
+}
+
+variable "store_config" {
+  description = "Store configuration with open/close dates"
+  type = map(object({
+    name       = string
+    open_date  = string
+    close_date = optional(string)
+  }))
 }
 
 # Environment configurations
@@ -73,14 +82,14 @@ locals {
   }
 
   # Service environments using the base configuration
-  invoice_sync    = { prod = local.base_env_config }
-  daily_sales     = { prod = local.base_env_config }
-  daily_journal   = { prod = local.base_env_config }
-  email_tips      = { prod = local.base_env_config }
-  transform_tips  = { prod = local.base_env_config }
-  get_mpvs        = { prod = local.base_env_config }
-  authorizer      = { prod = local.base_env_config }
-  
+  invoice_sync   = { prod = local.base_env_config }
+  daily_sales    = { prod = local.base_env_config }
+  daily_journal  = { prod = local.base_env_config }
+  email_tips     = { prod = local.base_env_config }
+  transform_tips = { prod = local.base_env_config }
+  get_mpvs       = { prod = local.base_env_config }
+  authorizer     = { prod = local.base_env_config }
+
   # Websocket configuration with additional DynamoDB settings
   websocket = {
     prod = merge(local.base_env_config, {

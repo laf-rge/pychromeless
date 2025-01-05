@@ -32,6 +32,9 @@ from ssm_parameter_store import SSMParameterStore
 from tips import Tips
 from ubereats import UberEats
 from wmcgdrive import WMCGdrive
+from store_config import StoreConfig
+
+store_config = StoreConfig()
 
 
 class CustomJsonEncoder(json.JSONEncoder):
@@ -72,8 +75,6 @@ TWOPLACES = Decimal(10) ** -2
 setlocale(LC_NUMERIC, "en_US.UTF-8")
 pattern = re.compile(r"\d+\.\d\d")
 
-global_stores = ["20358", "20395", "20400", "20407"]
-
 
 def create_response(
     status_code: int,
@@ -100,11 +101,11 @@ def third_party_deposit_handler(*args, **kwargs) -> dict:
     end_date = date.today()
 
     services = [
-        (Flexepos(), "getGiftCardACH", global_stores, start_date, end_date),
-        (Doordash(), "get_payments", global_stores, start_date, end_date),
-        (UberEats(), "get_payments", global_stores, start_date, end_date),
+        (Flexepos(), "getGiftCardACH", store_config.all_stores, start_date, end_date),
+        (Doordash(), "get_payments", store_config.all_stores, start_date, end_date),
+        (UberEats(), "get_payments", store_config.all_stores, start_date, end_date),
         (Grubhub(), "get_payments", start_date, end_date),
-        (EZCater(), "get_payments", global_stores, start_date, end_date),
+        (EZCater(), "get_payments", store_config.all_stores, start_date, end_date),
     ]
 
     for service, method, *service_args in services:
@@ -127,12 +128,16 @@ def third_party_deposit_handler(*args, **kwargs) -> dict:
 def invoice_sync_handler(*args, **kwargs) -> dict:
     yesterday = date.today() - timedelta(days=1)
     ct = crunchtime.Crunchtime()
-    ct.process_gl_report(global_stores)
+    ct.process_gl_report(store_config.all_stores)
     if yesterday.day < 6:
         last_month = date.today() - timedelta(days=7)
-        ct.process_inventory_report(global_stores, last_month.year, last_month.month)
+        ct.process_inventory_report(
+            store_config.all_stores, last_month.year, last_month.month
+        )
     else:
-        ct.process_inventory_report(global_stores, yesterday.year, yesterday.month)
+        ct.process_inventory_report(
+            store_config.all_stores, yesterday.year, yesterday.month
+        )
     return create_response(200, {"message": "Success"})
 
 
@@ -159,11 +164,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
     dj = Flexepos()
     success = False
     for txdate in txdates:
-        stores = global_stores.copy()
-        if "20400" in stores and txdate < date(2024, 1, 31):
-            stores.remove("20400")
-        if "20407" in stores and txdate < date(2024, 3, 6):
-            stores.remove("20407")
+        stores = store_config.get_active_stores(txdate)
         journal = {}
         for store in stores:
             retry = 3
@@ -181,11 +182,9 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         )
         subject = ""
         message = ""
-        for store in global_stores:
+        for store in store_config.all_stores:
             # store not open guard
-            if (store == "20400" and txdate < date(2024, 1, 31)) or (
-                store == "20407" and txdate < date(2024, 3, 6)
-            ):
+            if store_config.is_store_active(store, txdate):
                 logger.info(
                     "Skipping store",
                     extra={"store": store, "txdate": txdate.isoformat()},
@@ -230,7 +229,9 @@ Josiah<br/>
     if not success:
         return create_response(500, {"message": "Error processing daily sales"})
     txdate = txdates[0]
-    payment_data = dj.getOnlinePayments(global_stores, txdate.year, txdate.month)
+    payment_data = dj.getOnlinePayments(
+        store_config.all_stores, txdate.year, txdate.month
+    )
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
     royalty_data = dj.getRoyaltyReport(
         "wmc",
@@ -247,7 +248,9 @@ def online_cc_fee(*args, **kwargs) -> dict:
     txdate = date.today() - timedelta(days=1)
 
     dj = Flexepos()
-    payment_data = dj.getOnlinePayments(global_stores, txdate.year, txdate.month)
+    payment_data = dj.getOnlinePayments(
+        store_config.all_stores, txdate.year, txdate.month
+    )
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
     return create_response(200, {"message": "Success"})
 
@@ -302,7 +305,7 @@ def send_email(subject, message, recipients=None):
 
 def attendanceTable(start_date, end_date) -> str:
     t = Tips()
-    data = t.attendanceReport(global_stores, start_date, end_date)
+    data = t.attendanceReport(store_config.all_stores, start_date, end_date)
     table = "<table>\n<tr>"
     table += "".join(f"<th>{str(item)}</th>" for item in data[0])
     table += "</tr>\n"
@@ -323,10 +326,12 @@ def daily_journal_handler(*args, **kwargs) -> dict:
 
     dj = Flexepos()
     drawer_opens = dict()
-    drawer_opens = dj.getDailyJournal(global_stores, yesterday.strftime("%m%d%Y"))
+    drawer_opens = dj.getDailyJournal(
+        store_config.all_stores, yesterday.strftime("%m%d%Y")
+    )
 
     gdrive = WMCGdrive()
-    for store in global_stores:
+    for store in store_config.all_stores:
         gdrive.upload(
             "{0}-{1}_daily_journal.txt".format(str(yesterday), store),
             drawer_opens[store].encode("utf-8"),
@@ -354,7 +359,7 @@ def daily_journal_handler(*args, **kwargs) -> dict:
         )
     message += "</pre>\n\n<h2>Meal Period Violations:</h2>\n<pre>"
     for item in sorted(
-        t.getMealPeriodViolations(global_stores, yesterday),
+        t.getMealPeriodViolations(store_config.all_stores, yesterday),
         key=itemgetter("store", "start_time"),
     ):
         message += f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n"
@@ -391,7 +396,7 @@ def email_tips_handler(*args, **kwargs) -> dict:
         pay_period = int(event["day"])
     logger.info(f"year: {year}, month: {month}, pay_period: {pay_period}")
     t = Tips()
-    t.emailTips(global_stores, date(year, month, 5), pay_period)
+    t.emailTips(store_config.all_stores, date(year, month, 5), pay_period)
     return create_response(200, {"message": "Email Sent!"})
 
 
@@ -477,7 +482,7 @@ def transform_tips_handler(*args, **kwargs) -> dict:
             csv = csv_tips
         else:
             csv_mpvs = t.exportMealPeriodViolations(
-                global_stores, date(year, month, 5), pay_period
+                store_config.all_stores, date(year, month, 5), pay_period
             )
             merged_data = pd.merge(
                 pd.read_csv(io.StringIO(csv_tips)),
@@ -517,7 +522,7 @@ def get_mpvs_handler(*args, **kwargs):
                 return create_response(400, error_body)
         t = Tips()
         csv = t.exportMealPeriodViolations(
-            global_stores, date(year, month, 5), pay_period
+            store_config.all_stores, date(year, month, 5), pay_period
         )
     except Exception:
         error_body = {"message": "Error generating MPVs"}

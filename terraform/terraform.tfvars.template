@@ -6,6 +6,21 @@ settings = {
   s3_bucket     = "your-unique-bucket-name"
 }
 
+# Store configuration with opening and closing dates
+store_config = {
+  "STORE_ID_1" = {
+    name = "Jersey Mike's Subs - Location 1"
+    open_date = "YYYY-MM-DD"  # Date format must be YYYY-MM-DD
+    # close_date is optional, remove comment to add a closing date
+    # close_date = "YYYY-MM-DD"
+  }
+  "STORE_ID_2" = {
+    name = "Jersey Mike's Subs - Location 2"
+    open_date = "YYYY-MM-DD"
+  }
+  # Add more stores as needed
+}
+
 service_credentials = {
   # CrunchTime credentials
   crunchtime_user     = "YOUR_CRUNCHTIME_USERNAME"
