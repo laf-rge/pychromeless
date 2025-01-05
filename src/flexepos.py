@@ -503,7 +503,7 @@ class Flexepos:
                         By.ID, "j_id78_body"
                     ).text
                 else:
-                    drawer_opens[store_number] = "No Jornal Data Found"
+                    drawer_opens[store_number] = "No Journal Data Found"
             driver.find_element(By.ID, "j_id3:j_id16").click()
         finally:
             if driver:
@@ -655,7 +655,7 @@ class Flexepos:
 
     Add the instore amounts minus the gift cards redeemed. 
 
-    Should the online amount get minused from the JM online deposit?
+    Should the online amount get used from the JM online deposit?
     No, since the online gift card entry is charged minus to online credit card   
     [ store, txdate, sold, instore, online]
     """

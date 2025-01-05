@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 WHENIWORK_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
 
 # warning! this won't work if we multiply
-TWOPLACES = Decimal(10) ** -2
+TWO_PLACES = Decimal(10) ** -2
 setlocale(LC_NUMERIC, "")
 
 
@@ -391,7 +391,9 @@ class Tips:
                     cell_value = row[3].value
                     if cell_value is not None:
                         try:
-                            decimal_value = Decimal(str(cell_value)).quantize(TWOPLACES)
+                            decimal_value = Decimal(str(cell_value)).quantize(
+                                TWO_PLACES
+                            )
                             if decimal_value > 0:
                                 text_csv.append(
                                     f"{row[0].value},{row[1].value},Crew (Primary),{decimal_value}"

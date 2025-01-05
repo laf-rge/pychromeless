@@ -38,7 +38,7 @@ from quickbooks.objects import (
 logger = logging.getLogger(__name__)
 
 # warning! this won't work if we multiply
-TWOPLACES = Decimal(10) ** -2
+TWO_PLACES = Decimal(10) ** -2
 setlocale(LC_NUMERIC, "")
 AUTH_CLIENT = None
 CLIENT = None
@@ -160,7 +160,7 @@ def update_royalty(year, month, payment_data):
                         + Decimal(payment_info["Advertising"].replace(",", ""))
                         + Decimal(payment_info["Media"].replace(",", ""))
                         + Decimal(payment_info["CoOp"].replace(",", ""))
-                    ).quantize(TWOPLACES)
+                    ).quantize(TWO_PLACES)
                 ),
             ],
         ]
@@ -255,7 +255,7 @@ def create_daily_sales(txdate, daily_reports):
                 mg = pattern.search(payin_line)
                 if mg:
                     amount = amount + Decimal(atof(mg.group()))
-            line.Amount = amount.quantize(TWOPLACES)
+            line.Amount = amount.quantize(TWO_PLACES)
             amount_total += amount
         else:
             line.Amount = Decimal(0)
@@ -274,7 +274,7 @@ def create_daily_sales(txdate, daily_reports):
         if line.Description:
             line.Amount = Decimal(atof(line.Description.split()[4])) - Decimal(
                 amount_total
-            ).quantize(TWOPLACES)
+            ).quantize(TWO_PLACES)
         else:
             line.Amount = Decimal(0)
         line.SalesItemLineDetail = SalesItemLineDetail()
@@ -320,8 +320,8 @@ def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=No
             d.DepartmentRef is None
             if not department
             else store_refs[department]
-            and Decimal(d.Line[0].Amount).quantize(TWOPLACES)
-            == Decimal(atof(lines[0][2])).quantize(TWOPLACES)
+            and Decimal(d.Line[0].Amount).quantize(TWO_PLACES)
+            == Decimal(atof(lines[0][2])).quantize(TWO_PLACES)
         ):
             logger.warning(
                 "Skipping already imported deposit",
@@ -349,7 +349,7 @@ def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=No
         ].to_ref()
         line.LineNum = line_num
         line.Id = line_num
-        line.Amount = Decimal(atof(deposit_line[2])).quantize(TWOPLACES)
+        line.Amount = Decimal(atof(deposit_line[2])).quantize(TWO_PLACES)
         line.Description = deposit_line[1]
         line_num += 1
         deposit.Line.append(line)
@@ -408,7 +408,7 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
         line.AccountBasedExpenseLineDetail.AccountRef = bill_line[0]
         line.LineNum = line_num
         line.Id = line_num
-        line.Amount = Decimal(atof(bill_line[2])).quantize(TWOPLACES) * item_sign
+        line.Amount = Decimal(atof(bill_line[2])).quantize(TWO_PLACES) * item_sign
         line.Description = bill_line[1]
         line_num += 1
         bill.Line.append(line)
@@ -458,7 +458,7 @@ def sync_third_party_transactions(year, month, payment_data):
             line.JournalEntryLineDetail.PostingType = "Debit"
             line.LineNum = line_num
             line.Id = line_num
-            line.Amount = Decimal(atof(amount)).quantize(TWOPLACES)
+            line.Amount = Decimal(atof(amount)).quantize(TWO_PLACES)
             if payment_name == "Total":
                 line.JournalEntryLineDetail.PostingType = "Credit"
             line.Description = payment_name
@@ -511,7 +511,7 @@ def sync_inventory(year, month, lines, notes, total, department):
         line.JournalEntryLineDetail.PostingType = "Debit"
         line.LineNum = line_num
         line.Id = line_num
-        line.Amount = Decimal(atof(jentry_line[1])).quantize(TWOPLACES)
+        line.Amount = Decimal(atof(jentry_line[1])).quantize(TWO_PLACES)
         if line.Amount < 0:
             line.JournalEntryLineDetail.PostingType = "Credit"
             line.Amount = line.Amount * -1
@@ -528,7 +528,7 @@ def sync_inventory(year, month, lines, notes, total, department):
     line.JournalEntryLineDetail.PostingType = "Credit"
     line.LineNum = line_num
     line.Id = line_num
-    line.Amount = Decimal(atof(total)).quantize(TWOPLACES)
+    line.Amount = Decimal(atof(total)).quantize(TWO_PLACES)
     line_num += 1
     jentry.Line.append(line)
 

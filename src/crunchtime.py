@@ -176,8 +176,8 @@ class Crunchtime:
                 continue
             filename = filenames[0]
             with open(filename, newline="", encoding="utf-8-sig") as csvfile:
-                invreader = csv.reader(csvfile)
-                header = next(invreader)
+                inventory_reader = csv.reader(csvfile)
+                header = next(inventory_reader)
                 notes_header = (
                     "Information generated from CrunchTime at {0} for {1}".format(
                         header[2], header[0]
@@ -185,7 +185,7 @@ class Crunchtime:
                 )
                 items = []
                 total = 0
-                for row in invreader:
+                for row in inventory_reader:
                     if row[0] == "Total Cost of Goods Sold":
                         total = row[2]
                         logger.info(
@@ -218,20 +218,20 @@ class Crunchtime:
                 )
             filename = filenames[0]
             with open(filename, newline="", encoding="utf-8-sig") as csvfile:
-                glreader = csv.reader(csvfile)
-                header = next(glreader)
+                gl_reader = csv.reader(csvfile)
+                header = next(gl_reader)
                 notes_header = (
                     "Information generated from CrunchTime at {0} for {1}".format(
                         header[2], header[0]
                     )
                 )
-                next(glreader)  # skip header line
+                next(gl_reader)  # skip header line
                 items = []
                 vendor = None
                 invoice_num = 0
                 invoice_date = None
                 notes = ""
-                for row in glreader:
+                for row in gl_reader:
                     if len(row) != 3:
                         continue
                     if row[0].startswith("Invoice Number:"):

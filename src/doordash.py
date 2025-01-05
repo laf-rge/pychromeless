@@ -172,11 +172,11 @@ class Doordash:
                 logger.warning("No results in this time frame for Doordash")
                 return results
             with io.TextIOWrapper(z.open(directory[0]), encoding="utf-8") as f:
-                preader = csv.reader(f)
+                p_reader = csv.reader(f)
 
                 header = None
 
-                for row in preader:
+                for row in p_reader:
                     if header:
                         notes = json.dumps(dict(zip(header, row)))
                         lines = []

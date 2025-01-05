@@ -1,4 +1,4 @@
-# This code has been heavily modifed from the original version.
+# This code has been heavily modified from the original version.
 #
 # Copyright (c) 2018 Bao Nguyen <b@nqbao.com>
 #
@@ -23,7 +23,7 @@
 # https://medium.com/@nqbao/how-to-use-aws-ssm-parameter-store-easily-in-python-94fda04fea84
 
 import datetime
-from typing import Any, Dict, List, Optional, Union, Self, TypeVar, overload
+from typing import Any, Dict, List, Optional, Union, TypeVar, overload
 
 import boto3
 
@@ -89,7 +89,10 @@ class SSMParameterStore:
 
             return self._substores[abs_key]
         else:
-            return self._get_value(name, abs_key)
+            value = self._get_value(name, abs_key)
+            if value is None:
+                raise KeyError(name)
+            return value
 
     def refresh(self) -> None:
         """
@@ -233,7 +236,7 @@ class SSMParameterStore:
 
     def __class_getitem__(cls, item: Any) -> Any:
         """Support for generic type hints."""
-        return super().__class_getitem__(item)
+        return cls
 
     def __setitem__(self, key: str, value: Any) -> None:
         """

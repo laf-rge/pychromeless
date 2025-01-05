@@ -71,7 +71,7 @@ if "AWS_LAMBDA_FUNCTION_NAME" not in os.environ:
 logger = logging.getLogger(__name__)
 
 # warning! this won't work if we multiply
-TWOPLACES = Decimal(10) ** -2
+TWO_PLACES = Decimal(10) ** -2
 setlocale(LC_NUMERIC, "en_US.UTF-8")
 pattern = re.compile(r"\d+\.\d\d")
 
@@ -205,10 +205,10 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                     match = pattern.search(payin_line)
                     if match:
                         amount = amount + Decimal(atof(match.group()))
-                if amount.quantize(TWOPLACES) > Decimal(150):
+                if amount.quantize(TWO_PLACES) > Decimal(150):
                     send_email(
                         f"High pay-in detected {store}",
-                        f"<pre>{store} - ${amount.quantize(TWOPLACES)}\n{payins}</pre>",
+                        f"<pre>{store} - ${amount.quantize(TWO_PLACES)}\n{payins}</pre>",
                     )
             else:
                 amount = Decimal(0)
