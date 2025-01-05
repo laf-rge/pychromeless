@@ -7,12 +7,63 @@ settings = {
 }
 
 service_credentials = {
-  flexepos_cred   = "YOUR_FLEXEPOS_CREDENTIAL"
-  crunchtime_cred = "YOUR_CRUNCHTIME_CREDENTIAL"
-  doordash_cred   = "YOUR_DOORDASH_CREDENTIAL"
-  grubhub_cred    = "YOUR_GRUBHUB_CREDENTIAL"
-  ubereats_cred   = "YOUR_UBEREATS_CREDENTIAL"
-  wheniwork_cred  = "YOUR_WHENIWORK_CREDENTIAL"
-  ezcater_cred    = "YOUR_EZCATER_CREDENTIAL"
-  gdrive_cred     = "YOUR_GDRIVE_CREDENTIAL"
+  # CrunchTime credentials
+  crunchtime_user     = "YOUR_CRUNCHTIME_USERNAME"
+  crunchtime_password = "YOUR_CRUNCHTIME_PASSWORD"
+
+  # DoorDash credentials
+  doordash_user     = "YOUR_DOORDASH_USERNAME"
+  doordash_password = "YOUR_DOORDASH_PASSWORD"
+
+  # EzCater credentials
+  ezcater_user     = "YOUR_EZCATER_USERNAME"
+  ezcater_password = "YOUR_EZCATER_PASSWORD"
+
+  # FlexePOS credentials
+  flexepos_user     = "YOUR_FLEXEPOS_USERNAME"
+  flexepos_password = "YOUR_FLEXEPOS_PASSWORD"
+
+  # GrubHub credentials
+  grubhub_user     = "YOUR_GRUBHUB_USERNAME"
+  grubhub_password = "YOUR_GRUBHUB_PASSWORD"
+
+  # UberEats credentials
+  ubereats_user     = "YOUR_UBEREATS_USERNAME"
+  ubereats_password = "YOUR_UBEREATS_PASSWORD"
+  ubereats_pin      = "YOUR_UBEREATS_PIN"
+
+  # WhenIWork credentials
+  wheniwork_user     = "YOUR_WHENIWORK_USERNAME"
+  wheniwork_password = "YOUR_WHENIWORK_PASSWORD"
+  wheniwork_key      = "YOUR_WHENIWORK_API_KEY"
+
+  # Google Drive service account JSON
+  gdrive_json = <<-EOT
+{
+  "type": "service_account",
+  "project_id": "YOUR_PROJECT_ID",
+  "private_key_id": "YOUR_PRIVATE_KEY_ID",
+  "private_key": "YOUR_PRIVATE_KEY",
+  "client_email": "YOUR_CLIENT_EMAIL",
+  "client_id": "YOUR_CLIENT_ID",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "YOUR_CERT_URL",
+  "universe_domain": "googleapis.com"
+}
+EOT
+}
+
+gcp_config = {
+  employees_folder = "YOUR_EMPLOYEES_FOLDER_ID"
+  journal_folder  = "YOUR_JOURNAL_FOLDER_ID"
+}
+
+email_config = {
+  receiver_emails = [
+    "primary@example.com",
+    "secondary@example.com"
+  ]
+  from_email = "Bot Name <notifications@example.com>"
 }

@@ -7,22 +7,61 @@ variable "settings" {
     accounting    = string
     s3_bucket     = string
   })
-  # Remove default values - require explicit configuration
 }
 
 variable "service_credentials" {
-  description = "Credentials for various third-party services"
+  description = "Service credentials for various integrations"
   type = object({
-    flexepos_cred   = string
-    crunchtime_cred = string
-    doordash_cred   = string
-    grubhub_cred    = string
-    ubereats_cred   = string
-    wheniwork_cred  = string
-    ezcater_cred    = string
-    gdrive_cred     = string
+    # EzCater
+    ezcater_user     = string
+    ezcater_password = string
+    
+    # FlexePOS
+    flexepos_user     = string
+    flexepos_password = string
+    
+    # CrunchTime
+    crunchtime_user     = string
+    crunchtime_password = string
+    
+    # DoorDash
+    doordash_user     = string
+    doordash_password = string
+    
+    # GrubHub
+    grubhub_user     = string
+    grubhub_password = string
+    
+    # UberEats
+    ubereats_user     = string
+    ubereats_password = string
+    ubereats_pin      = string  # Added PIN parameter
+    
+    # WhenIWork
+    wheniwork_user     = string
+    wheniwork_password = string
+    wheniwork_key      = string
+    
+    # Google Drive
+    gdrive_json = string
   })
-  sensitive = true # Mark as sensitive to prevent exposure in logs
+  sensitive = true
+}
+
+variable "gcp_config" {
+  description = "Google Cloud Platform configuration"
+  type = object({
+    employees_folder = string
+    journal_folder  = string
+  })
+}
+
+variable "email_config" {
+  description = "Email notification configuration"
+  type = object({
+    receiver_emails = list(string)
+    from_email     = string
+  })
 }
 
 # Environment configurations
