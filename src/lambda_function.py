@@ -1,3 +1,16 @@
+"""
+AWS Lambda handlers for Wagoner Management Corp.'s financial operations.
+
+This module contains Lambda handlers for various financial operations including:
+- Daily sales processing
+- Invoice synchronization
+- Third-party deposit handling
+- Tips management
+- Daily journal reporting
+
+The handlers can be invoked both via AWS Lambda and locally for development.
+"""
+
 import json
 import base64
 import calendar
@@ -33,8 +46,11 @@ from tips import Tips
 from ubereats import UberEats
 from wmcgdrive import WMCGdrive
 from store_config import StoreConfig
+from email_service import EmailService
+
 
 store_config = StoreConfig()
+email_service = EmailService(store_config)
 
 
 class CustomJsonEncoder(json.JSONEncoder):
@@ -97,6 +113,17 @@ def create_response(
 
 
 def third_party_deposit_handler(*args, **kwargs) -> dict:
+    """
+    Process third-party deposits from various services.
+
+    Lambda invocation:
+        - Schedule: Daily
+        - No event parameters required
+
+    Local development:
+        >>> from lambda_function import third_party_deposit_handler
+        >>> third_party_deposit_handler()
+    """
     start_date = date.today() - timedelta(days=28)
     end_date = date.today()
 
@@ -142,6 +169,23 @@ def invoice_sync_handler(*args, **kwargs) -> dict:
 
 
 def daily_sales_handler(*args, **kwargs) -> dict:
+    """
+    Process daily sales data and create related financial entries.
+
+    Lambda invocation:
+        - Schedule: Daily at HH:MM UTC
+        - Event format:
+            {
+                "year": "YYYY",    # Optional: defaults to yesterday
+                "month": "MM",     # Optional: defaults to yesterday
+                "day": "DD"        # Optional: defaults to yesterday
+            }
+
+    Local development:
+        >>> from lambda_function import daily_sales_handler
+        >>> daily_sales_handler()  # Process yesterday's sales
+        >>> daily_sales_handler({"year": "2024", "month": "01", "day": "15"})
+    """
     event = {}
     if args is not None and len(args) > 0:
         event = args[0]
@@ -180,8 +224,6 @@ def daily_sales_handler(*args, **kwargs) -> dict:
             "Successfully processed daily sales",
             extra={"txdate": txdate.isoformat(), "stores": stores},
         )
-        subject = ""
-        message = ""
         for store in store_config.all_stores:
             # store not open guard
             if store_config.is_store_active(store, txdate):
@@ -194,8 +236,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                 journal[store]["Bank Deposits"] is None
                 or journal[store]["Bank Deposits"] == ""
             ):
-                subject += f"{store} "
-                message += f"{store} is missing a deposit for {str(txdate)}\n"
+                email_service.send_missing_deposit_alert(store, txdate)
             payins = journal[store]["Payins"].strip()
             if payins.count("\n") > 0:
                 amount = Decimal(0)
@@ -206,25 +247,9 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                     if match:
                         amount = amount + Decimal(atof(match.group()))
                 if amount.quantize(TWO_PLACES) > Decimal(150):
-                    send_email(
-                        f"High pay-in detected {store}",
-                        f"<pre>{store} - ${amount.quantize(TWO_PLACES)}\n{payins}</pre>",
-                    )
+                    email_service.send_high_payin_alert(store, amount, payins)
             else:
                 amount = Decimal(0)
-        if subject != "":
-            subject += f" missing deposit for {str(txdate)}"
-            send_email(
-                subject,
-                f"""
-Folks,<br/>
-I couldn't find a deposit for the following dates for these stores:<br/>
-<pre>{message}</pre>
-Please correct this and re-run.<br/><br/>
-Thanks,<br/>
-Josiah<br/>
-(aka The Robot)""",
-            )
         success = True
     if not success:
         return create_response(500, {"message": "Error processing daily sales"})
@@ -255,71 +280,18 @@ def online_cc_fee(*args, **kwargs) -> dict:
     return create_response(200, {"message": "Success"})
 
 
-def send_email(subject, message, recipients=None):
-    parameters = cast(SSMParameterStore, SSMParameterStore(prefix="/prod")["email"])
-    from_email = parameters["from_email"]
-    style_tag = """
-    <style>
-      table,
-      th,
-      td {
-        padding: 10px;
-        border: 1px solid black;
-        border-collapse: collapse;
-      }
-    </style>
-"""
-    # overwrite the recipients if provided
-    if recipients is not None:
-        receiver_emails = recipients
-    else:
-        receiver_emails = str(parameters["receiver_email"]).split(", ")
-    charset = "UTF-8"
-    client = boto3.client("ses")
-    return client.send_email(
-        Destination={
-            "ToAddresses": receiver_emails,
-        },
-        Message={
-            "Body": {
-                "Html": {
-                    "Charset": charset,
-                    "Data": f"<html><head><title>{subject}</title>{style_tag}</head><body>{message}</body></html>",
-                },
-                #'Text': {
-                #'Charset': charset,
-                #'Data': message,
-                # },
-            },
-            "Subject": {
-                "Charset": charset,
-                "Data": subject,
-            },
-        },
-        Source=from_email,
-        # # If you are not using a configuration set, comment or delete the
-        # # following line
-        # ConfigurationSetName=CONFIGURATION_SET,
-    )
-
-
-def attendanceTable(start_date, end_date) -> str:
-    t = Tips()
-    data = t.attendanceReport(store_config.all_stores, start_date, end_date)
-    table = "<table>\n<tr>"
-    table += "".join(f"<th>{str(item)}</th>" for item in data[0])
-    table += "</tr>\n"
-
-    for row in sorted(data[1:]):
-        table += "<tr>"
-        table += "".join(f"<td>{str(item)}</td>" for item in row)
-        table += "</tr>\n"
-
-    table += "</table>\n"
-    return table
-
-
 def daily_journal_handler(*args, **kwargs) -> dict:
+    """
+    Generate and email daily journal reports.
+
+    Lambda invocation:
+        - Schedule: Daily
+        - No event parameters required
+
+    Local development:
+        >>> from lambda_function import daily_journal_handler
+        >>> daily_journal_handler()
+    """
     yesterday = date.today() - timedelta(days=1)
 
     subject = "Daily Journal Report {}".format(yesterday.strftime("%m/%d/%Y"))
@@ -365,13 +337,13 @@ def daily_journal_handler(*args, **kwargs) -> dict:
         message += f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n"
 
     message += "</pre><h2>Attendance Report:</h2><div>"
-    message += attendanceTable(yesterday, date.today())
+    message += email_service.create_attendance_table(yesterday, date.today())
 
     message += "</div>\n\n<div><pre>Thanks!\nJosiah (aka The Robot)</pre></div>"
 
     response = None
     try:
-        response = send_email(subject, message)
+        response = email_service.send_email(subject, message)
     except ClientError as e:
         error_message = e.response.get("Error", {}).get(
             "Message", "Unknown error occurred"
