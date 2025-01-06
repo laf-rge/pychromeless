@@ -218,7 +218,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                 subject,
                 f"""
 Folks,<br/>
-I couldn't find a depsoit for the following dates for these stores:<br/>
+I couldn't find a deposit for the following dates for these stores:<br/>
 <pre>{message}</pre>
 Please correct this and re-run.<br/><br/>
 Thanks,<br/>
@@ -409,7 +409,7 @@ def decode_upload(event: dict[str, Any]) -> dict[str, bytes]:
         content_type = event["headers"]["Content-Type"]
     except KeyError:
         content_type = event["headers"]["content-type"]
-    # concate Content-Type: with content_type from event
+    # concat Content-Type: with content_type from event
     ct = "Content-Type: " + content_type + "\n"
 
     # parsing message from bytes
