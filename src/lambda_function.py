@@ -30,9 +30,8 @@ from email.message import Message
 from functools import partial  # noqa # pylint: disable=unused-import
 from locale import LC_NUMERIC, atof, setlocale
 from operator import itemgetter
-from typing import Any, cast
+from typing import Any
 
-import boto3
 import crunchtime
 import pandas as pd
 import qb
@@ -41,7 +40,6 @@ from doordash import Doordash
 from ezcater import EZCater
 from flexepos import Flexepos
 from grubhub import Grubhub
-from ssm_parameter_store import SSMParameterStore
 from tips import Tips
 from ubereats import UberEats
 from wmcgdrive import WMCGdrive
