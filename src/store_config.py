@@ -62,6 +62,14 @@ class StoreConfig:
         """Get the name of a store."""
         return self._store_config.get(store_id, {}).get("name")
 
+    def get_store_open_date(self, store_id: str) -> date:
+        """Get the open date of a store."""
+        return date.fromisoformat(self._store_config.get(store_id, {}).get("open_date"))
+
+    def get_store_ubereats_uuid(self, store_id: str) -> Optional[str]:
+        """Get the Uber Eats UUID of a store."""
+        return self._store_config.get(store_id, {}).get("ubereats_uuid")
+
     @property
     def all_stores(self) -> List[str]:
         """Get list of all store IDs."""

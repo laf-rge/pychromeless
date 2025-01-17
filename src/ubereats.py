@@ -9,22 +9,16 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from ssm_parameter_store import SSMParameterStore
 from webdriver import initialise_driver
+from store_config import StoreConfig
 
 logger = logging.getLogger(__name__)
-
-store_map = {
-    "20025": "8d6b329b-4976-4ef7-8411-3a416614a726",
-    "20358": "ee0492bb-edd6-507a-83eb-1d1427e3ff7d",
-    "20395": "8fdc747c-dd18-491f-8c3a-317b1b4cab3c",
-    "20400": "6f845016-13f6-41fd-8cd0-08b83157b0d8",
-    "20407": "b8399c5e-1bbc-4e6c-a897-63121cf7d37c",
-}
 
 
 class UberEats:
     """"""
 
-    def __init__(self):
+    def __init__(self, store_config: StoreConfig):
+        self._store_config = store_config
         self._parameters = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["ubereats"]
         )
@@ -180,9 +174,7 @@ class UberEats:
             try:
                 while qdate < end_date:
                     logger.info("Week of {}".format(qdate))
-                    if (store == "20400" and qdate < datetime.date(2024, 1, 31)) or (
-                        store == "20407" and qdate < datetime.date(2024, 3, 18)
-                    ):
+                    if not self._store_config.is_store_active(store, qdate):
                         logger.warn(f"skipping {store} {qdate} - not in date range")
                     else:
                         results.extend([self.get_payment(store, qdate)])
@@ -224,7 +216,7 @@ class UberEats:
         if "Customer Refunds" in invoice:
             lines.append(["4830", "Customer Refunds", invoice["Customer Refunds"]])
         if "Marketing" in invoice:
-            lines.append(["6101", "Uber Marketing", invoice["Marketing"]])
+            lines.append(["1362", "Uber Marketing", invoice["Marketing"]])
         # if 'Marketplace Facilitator (MF) Tax' in invoice:
         #    lines.append(["2310", 'Marketplace Facilitator Tax', invoice['Marketplace Facilitator (MF) Tax']])
         # if 'Total Taxes' in invoice:
@@ -259,26 +251,23 @@ class UberEats:
             )
         else:
             qdate = qdate - datetime.timedelta(days=(qdate.weekday()))
-        if store == "20400" and qdate < datetime.date(2024, 1, 31):
-            qdate = datetime.date(2024, 1, 31)
-        elif store == "20407" and qdate < datetime.date(2024, 3, 18):
-            qdate = datetime.date(2024, 3, 18)
+        if not self._store_config.is_store_active(store, qdate):
+            qdate = self._store_config.get_store_open_date(store)
         if not self._driver:
             self._login()
         if not self._driver:
             raise
         driver = self._driver
         driver.get(
-            "https://restaurant.uber.com/v2/payments?restaurantUUID=" + store_map[store]
+            "https://restaurant.uber.com/v2/payments?restaurantUUID={}".format(
+                self._store_config.get_store_ubereats_uuid(store)
+            )
         )
         logger.info("Getting payments for {}".format(qdate))
 
         qdate2 = qdate - datetime.timedelta(days=(qdate.weekday() + 7))
-        if store == "20400" and qdate2 < datetime.date(2024, 1, 31):
-            qdate2 = datetime.date(2024, 1, 31)
-        elif store == "20407" and qdate2 < datetime.date(2024, 3, 7):
-            qdate2 = datetime.date(2024, 3, 7)
-
+        if not self._store_config.is_store_active(store, qdate2):
+            qdate2 = self._store_config.get_store_open_date(store)
         sleep(3)
         self._click_date(qdate2)
         sleep(3)

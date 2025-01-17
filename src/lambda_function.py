@@ -311,9 +311,7 @@ def daily_journal_handler(*args, **kwargs) -> dict:
     message = "<h1>Wagoner Management Corp.</h1>\n\n<h2>Cash Drawer Opens:</h2>\n<pre>"
 
     for store, journal in drawer_opens.items():
-        message = "{}{}: {}\n" "".format(
-            message, store, journal.count("Cash Drawer Open")
-        )
+        message = "{}{}: {}\n".format(message, store, journal.count("Cash Drawer Open"))
 
     message += "</pre>\n\n<h2>Missing Punches:</h2>\n<pre>"
 

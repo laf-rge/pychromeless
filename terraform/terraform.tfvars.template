@@ -13,10 +13,13 @@ store_config = {
     open_date = "YYYY-MM-DD"  # Date format must be YYYY-MM-DD
     # close_date is optional, remove comment to add a closing date
     # close_date = "YYYY-MM-DD"
+    # ubereats uses a group uuid
+    ubereats_uuid = "YOUR_UBEREATS_UUID"
   }
   "STORE_ID_2" = {
     name = "Jersey Mike's Subs - Location 2"
     open_date = "YYYY-MM-DD"
+    ubereats_uuid = "YOUR_UBEREATS_UUID"
   }
   # Add more stores as needed
 }

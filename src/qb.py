@@ -625,7 +625,7 @@ def refresh_session():
     CLIENT = QuickBooks(
         auth_client=AUTH_CLIENT,
         company_id="1401432085",
-        minorversion=70,
+        minorversion=73,
         use_decimal=True,
     )
     return CLIENT
@@ -769,3 +769,31 @@ def fix_deposit():
         for bill in modify_queue:
             bill.DepartmentRef = store_refs["20358"]
             # bill.save(qb=CLIENT)
+
+
+def find_unmatched_deposits():
+    refresh_session()
+    where_clause = "TxnDate >= '2024-12-01' AND TxnDate < '2024-12-31'"
+    qb_data_type = SalesReceipt
+    query_count = qb_data_type.count(where_clause=where_clause, qb=CLIENT)
+    r_count = 1
+    logger.info(f"query_count: {query_count}")
+    while r_count < query_count:
+        sales_receipts = qb_data_type.where(
+            where_clause=where_clause,
+            order_by="TxnDate",
+            start_position=r_count,
+            max_results=1000,
+            qb=CLIENT,
+        )
+        for sales_receipt in sales_receipts:
+            if sales_receipt.TotalAmt > 0 and len(sales_receipt.LinkedTxn) == 0:
+                logger.info(
+                    "Found unmatched sales receipt",
+                    extra={
+                        "store": sales_receipt.DepartmentRef.name,
+                        "TxnDate": sales_receipt.TxnDate,
+                        "Amount": sales_receipt.TotalAmt,
+                    },
+                )
+            r_count += 1
