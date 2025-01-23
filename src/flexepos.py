@@ -429,7 +429,9 @@ class Flexepos:
             self.setDateRange(driver, tx_date_str)
             driver.find_element(By.ID, TAG_IDS["submit"]).click()
             sleep(10)
-            payouts_element = wait_for_element(driver, (By.ID, TAG_IDS["transactions"]))
+            payouts_element = wait_for_element(
+                driver, (By.ID, TAG_IDS["transactions"]), 7
+            )
             if payouts_element is not None:
                 payouts = payouts_element.text
             else:
