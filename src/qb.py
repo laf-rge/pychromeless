@@ -63,6 +63,8 @@ detail_map = OrderedDict(
         ("Donations", ("36", 1)),
         ("Online CC Tips", ("32", 1)),
         ("Online WLD Tips", ("32", 1)),
+        ("Gift Card Tips", ("32", 1)),
+        ("Online WLD Gift Card Tips", ("32", 1)),
         ("CC Tips", ("32", 1)),
     ]
 )
@@ -176,7 +178,7 @@ def update_royalty(year, month, payment_data):
     return
 
 
-def create_daily_sales(txdate, daily_reports):
+def create_daily_sales(txdate, daily_reports, overwrite=False):
     refresh_session()
 
     pattern = re.compile(r"\d+\.\d\d")
@@ -190,8 +192,16 @@ def create_daily_sales(txdate, daily_reports):
     new_receipts = {}
 
     for store, sref in store_refs.items():
-        if store in existing_receipts:
-            if len(existing_receipts[store].LinkedTxn) > 0:
+        if store in existing_receipts and store in daily_reports:
+            if len(existing_receipts[store].LinkedTxn) > 0 and overwrite:
+                logger.warning(
+                    "overwriting existing linked transaction",
+                    extra={
+                        "store": store,
+                        "receipt": existing_receipts[store].to_json(),
+                    },
+                )
+            elif len(existing_receipts[store].LinkedTxn) > 0 and not overwrite:
                 logger.warning(
                     "skipping already linked transaction",
                     extra={
@@ -203,7 +213,7 @@ def create_daily_sales(txdate, daily_reports):
             new_receipts[store] = existing_receipts[store]
             # clear old lines
             new_receipts[store].Line.clear()
-        else:
+        elif store in daily_reports:
             new_receipts[store] = SalesReceipt()
 
     for store, new_receipt in new_receipts.items():
@@ -282,6 +292,7 @@ def create_daily_sales(txdate, daily_reports):
         line.SalesItemLineDetail.ItemRef = item.to_ref()
         line.SalesItemLineDetail.ServiceDate = None
         new_receipt.Line.append(line)
+        daily_report["updatedAt"] = datetime.date.today().isoformat()
 
         new_receipt.PrivateNote = json.dumps(daily_report, indent=1)
 
@@ -625,7 +636,7 @@ def refresh_session():
     CLIENT = QuickBooks(
         auth_client=AUTH_CLIENT,
         company_id="1401432085",
-        minorversion=73,
+        minorversion=75,
         use_decimal=True,
     )
     return CLIENT

@@ -48,11 +48,14 @@ TAG_IDS = {
     "gift_cards_sold": "j_id318_header",
     "register_audit": "j_id240_header",
     "deposits": "Deposits",
+    "cc_online": "j_id114:1:j_id130:0:j_id139",
     "cc_tips_1": "j_id87:1:j_id101:0:j_id106",
     "cc_tips_2": "j_id143_body",
     "online_cc_tips_1": "j_id114:1:j_id130:0:j_id135",
     "online_cc_tips_2": "j_id143_body",
     "online_wld_tips_1": "j_id114:1:j_id130:0:j_id137",
+    "gc_tips": "j_id145:1:j_id161:0:j_id166",
+    "online_gc_tips": "j_id145:1:j_id161:0:j_id168",
     "transactions": "transactions",
     "journal_scope": "parameters:journalScope",
     "royalty_list": "RoyaltyList",
@@ -308,6 +311,7 @@ class Flexepos:
                 sales_data[store]["Cash"] = row[1]
                 sales_data[store]["Check"] = row[2]
                 sales_data[store]["InStore Credit Card"] = row[3]
+                # this does not yet have WLD tips will be overwritten later
                 sales_data[store]["Online Credit Card"] = row[4]
                 sales_data[store]["Gift Card"] = row[5]
                 sales_data[store]["Online Gift Card"] = row[6]
@@ -358,6 +362,9 @@ class Flexepos:
             cctips_element = wait_for_element(driver, (By.ID, TAG_IDS["cc_tips_1"]))
             if cctips_element is not None:
                 cctips = driver.find_element(By.ID, TAG_IDS["cc_tips_1"]).text
+                sales_data[store]["Online Credit Card"] = driver.find_element(
+                    By.ID, TAG_IDS["cc_online"]
+                ).text
             else:
                 cctips = driver.find_element(By.ID, TAG_IDS["cc_tips_2"]).text
             sales_data[store]["CC Tips"] = cctips
@@ -368,6 +375,12 @@ class Flexepos:
             sales_data[store]["Online CC Tips"] = cctips
             sales_data[store]["Online WLD Tips"] = driver.find_element(
                 By.ID, TAG_IDS["online_wld_tips_1"]
+            ).text
+            sales_data[store]["Gift Card Tips"] = driver.find_element(
+                By.ID, TAG_IDS["gc_tips"]
+            ).text
+            sales_data[store]["Online WLD Gift Card Tips"] = driver.find_element(
+                By.ID, TAG_IDS["online_gc_tips"]
             ).text
 
             # get pay ins

@@ -4,7 +4,7 @@ ARG TARGETARCH
 # install chrome dependencies
 RUN dnf install -y atk cups-libs gtk3 libXcomposite alsa-lib \
     libXcursor libXdamage libXext libXi libXrandr libXScrnSaver \
-    libXtst pango at-spi2-atk libXt glibc-all-langpacks \
+    libXtst pango at-spi2-atk libXt glibc-all-langpacks git \
     xorg-x11-xauth dbus-glib dbus-glib-devel nss mesa-libgbm jq unzip
 
 #RUN dnf install -y jq unzip glibc-all-langpacks nss \
