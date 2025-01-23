@@ -56,6 +56,7 @@ TAG_IDS = {
     "online_wld_tips_1": "j_id114:1:j_id130:0:j_id137",
     "gc_tips": "j_id145:1:j_id161:0:j_id166",
     "online_gc_tips": "j_id145:1:j_id161:0:j_id168",
+    "gc_online": "j_id145:0:j_id161:1:j_id170",
     "transactions": "transactions",
     "journal_scope": "parameters:journalScope",
     "royalty_list": "RoyaltyList",
@@ -314,6 +315,7 @@ class Flexepos:
                 # this does not yet have WLD tips will be overwritten later
                 sales_data[store]["Online Credit Card"] = row[4]
                 sales_data[store]["Gift Card"] = row[5]
+                # this does not yet have WLD gift card tips will be overwritten later
                 sales_data[store]["Online Gift Card"] = row[6]
                 sales_data[store]["House Account"] = row[7]
                 sales_data[store]["Remote Payment"] = row[8]
@@ -381,6 +383,9 @@ class Flexepos:
             ).text
             sales_data[store]["Online WLD Gift Card Tips"] = driver.find_element(
                 By.ID, TAG_IDS["online_gc_tips"]
+            ).text
+            sales_data[store]["Online Gift Card"] = driver.find_element(
+                By.ID, TAG_IDS["gc_online"]
             ).text
 
             # get pay ins
