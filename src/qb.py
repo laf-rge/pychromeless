@@ -178,7 +178,7 @@ def update_royalty(year, month, payment_data):
     return
 
 
-def create_daily_sales(txdate, daily_reports, overwrite=False):
+def create_daily_sales(txdate, daily_reports, overwrite=True):
     refresh_session()
 
     pattern = re.compile(r"\d+\.\d\d")
@@ -198,7 +198,7 @@ def create_daily_sales(txdate, daily_reports, overwrite=False):
                     "overwriting existing linked transaction",
                     extra={
                         "store": store,
-                        "receipt": existing_receipts[store].to_json(),
+                        "receipt": json.loads(existing_receipts[store].to_json()),
                     },
                 )
             elif len(existing_receipts[store].LinkedTxn) > 0 and not overwrite:
@@ -287,6 +287,14 @@ def create_daily_sales(txdate, daily_reports, overwrite=False):
             ).quantize(TWO_PLACES)
         else:
             line.Amount = Decimal(0)
+        logger.info(
+            "Sales Overage Calculated",
+            extra={
+                "amount": str(line.Amount),
+                "store": store,
+                "txdate": txdate,
+            },
+        )
         line.SalesItemLineDetail = SalesItemLineDetail()
         item = Item.query("select * from Item where id = '{}'".format(31), qb=CLIENT)[0]
         line.SalesItemLineDetail.ItemRef = item.to_ref()
@@ -296,7 +304,13 @@ def create_daily_sales(txdate, daily_reports, overwrite=False):
 
         new_receipt.PrivateNote = json.dumps(daily_report, indent=1)
 
-        new_receipt.save(qb=CLIENT)
+        try:
+            new_receipt.save(qb=CLIENT)
+        except Exception as e:
+            logger.exception(
+                "Failed to save receipt",
+                extra={"receipt": json.loads(new_receipt.to_json())},
+            )
 
     return
 
