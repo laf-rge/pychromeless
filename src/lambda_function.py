@@ -198,7 +198,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
     else:
         txdates = [date.today() - timedelta(days=1)]
     # txdates = [date(2024, 10, 29), date(2024, 10, 31)]
-    # txdates = list(map(partial(date, 2024, 8), range(1, 8)))
+    # txdates = list(map(partial(date, 2024, 12), range(1, 32)))
     logger.info(
         "Started daily sales",
         extra={"txdates": [txdate.isoformat() for txdate in txdates]},
@@ -224,7 +224,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         )
         for store in store_config.all_stores:
             # store not open guard
-            if store_config.is_store_active(store, txdate):
+            if not store_config.is_store_active(store, txdate):
                 logger.info(
                     "Skipping store",
                     extra={"store": store, "txdate": txdate.isoformat()},
