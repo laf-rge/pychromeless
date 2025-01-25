@@ -287,6 +287,7 @@ class Flexepos:
                 sales_data[store]["Pre-Discount Sales"] = None
                 sales_data[store]["Discounts"] = None
                 sales_data[store]["Donations"] = None
+                return sales_data
             else:
                 row = [ele.text.strip() for ele in rows[4].find_all("td")]
                 sales_data[store]["Pre-Discount Sales"] = row[3]

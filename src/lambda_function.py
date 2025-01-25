@@ -198,7 +198,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
     else:
         txdates = [date.today() - timedelta(days=1)]
     # txdates = [date(2024, 10, 29), date(2024, 10, 31)]
-    # txdates = list(map(partial(date, 2024, 12), range(1, 32)))
+    # txdates = list(map(partial(date, 2025, 1), range(13, 22)))
     logger.info(
         "Started daily sales",
         extra={"txdates": [txdate.isoformat() for txdate in txdates]},
@@ -217,16 +217,26 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                 except (ConnectionError, TimeoutError, Exception) as e:
                     logger.exception(f"error {txdate.isoformat()}: {str(e)}")
                     retry -= 1
+            if store not in journal or "Payins" not in journal[store]:
+                logger.info(
+                    "Skipping store: no sales",
+                    extra={"store": store, "txdate": txdate.isoformat()},
+                )
+                journal.pop(store)
         qb.create_daily_sales(txdate, journal)
         logger.info(
             "Successfully processed daily sales",
             extra={"txdate": txdate.isoformat(), "stores": stores},
         )
-        for store in store_config.all_stores:
+        for store in stores:
             # store not open guard
-            if not store_config.is_store_active(store, txdate):
+            if (
+                not store_config.is_store_active(store, txdate)
+                or store not in journal
+                or "Payins" not in journal[store]
+            ):
                 logger.info(
-                    "Skipping store",
+                    "Skipping store no data or no payins were captured",
                     extra={"store": store, "txdate": txdate.isoformat()},
                 )
                 continue
