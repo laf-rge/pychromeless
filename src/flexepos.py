@@ -48,7 +48,7 @@ TAG_IDS = {
     "gift_cards_sold": "j_id318_header",
     "register_audit": "j_id240_header",
     "deposits": "Deposits",
-    "cc_online": "j_id114:1:j_id130:0:j_id139",
+    # "cc_online": "j_id114:1:j_id130:0:j_id139",
     "cc_tips_1": "j_id87:1:j_id101:0:j_id106",
     "cc_tips_2": "j_id143_body",
     "online_cc_tips_1": "j_id114:1:j_id130:0:j_id135",
@@ -313,7 +313,7 @@ class Flexepos:
                 sales_data[store]["Cash"] = row[1]
                 sales_data[store]["Check"] = row[2]
                 sales_data[store]["InStore Credit Card"] = row[3]
-                # this does not yet have WLD tips will be overwritten later
+                # this does not  include WLD tips
                 sales_data[store]["Online Credit Card"] = row[4]
                 sales_data[store]["Gift Card"] = row[5]
                 # this does not yet have WLD gift card tips will be overwritten later
@@ -365,9 +365,10 @@ class Flexepos:
             cctips_element = wait_for_element(driver, (By.ID, TAG_IDS["cc_tips_1"]))
             if cctips_element is not None:
                 cctips = driver.find_element(By.ID, TAG_IDS["cc_tips_1"]).text
-                sales_data[store]["Online Credit Card"] = driver.find_element(
-                    By.ID, TAG_IDS["cc_online"]
-                ).text
+                # don't do this I don't know where the WLD online tips go
+                # sales_data[store]["Online Credit Card"] = driver.find_element(
+                #     By.ID, TAG_IDS["cc_online"]
+                # ).text
             else:
                 cctips = driver.find_element(By.ID, TAG_IDS["cc_tips_2"]).text
             sales_data[store]["CC Tips"] = cctips
@@ -385,7 +386,7 @@ class Flexepos:
             sales_data[store]["Online WLD Gift Card Tips"] = driver.find_element(
                 By.ID, TAG_IDS["online_gc_tips"]
             ).text
-            sales_data[store]["Online Gift Card"] = driver.find_element(
+            sales_data[store]["Online Gift Card + WLD Tip"] = driver.find_element(
                 By.ID, TAG_IDS["gc_online"]
             ).text
 

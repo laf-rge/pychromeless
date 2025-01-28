@@ -128,7 +128,13 @@ def third_party_deposit_handler(*args, **kwargs) -> dict:
     services = [
         (Flexepos(), "getGiftCardACH", store_config.all_stores, start_date, end_date),
         (Doordash(), "get_payments", store_config.all_stores, start_date, end_date),
-        (UberEats(), "get_payments", store_config.all_stores, start_date, end_date),
+        (
+            UberEats(store_config),
+            "get_payments",
+            store_config.all_stores,
+            start_date,
+            end_date,
+        ),
         (Grubhub(), "get_payments", start_date, end_date),
         (EZCater(), "get_payments", store_config.all_stores, start_date, end_date),
     ]

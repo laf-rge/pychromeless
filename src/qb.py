@@ -62,9 +62,9 @@ detail_map = OrderedDict(
         ("Sales Tax", ("15", 1)),
         ("Donations", ("36", 1)),
         ("Online CC Tips", ("32", 1)),
-        ("Online WLD Tips", ("32", 1)),
+        # ("Online WLD Tips", ("32", 1)),
         ("Gift Card Tips", ("32", 1)),
-        ("Online WLD Gift Card Tips", ("32", 1)),
+        # ("Online WLD Gift Card Tips", ("32", 1)),
         ("CC Tips", ("32", 1)),
     ]
 )
@@ -289,11 +289,7 @@ def create_daily_sales(txdate, daily_reports, overwrite=True):
             line.Amount = Decimal(0)
         logger.info(
             "Sales Overage Calculated",
-            extra={
-                "amount": str(line.Amount),
-                "store": store,
-                "txdate": txdate,
-            },
+            extra={"amount": str(line.Amount), "store": store, "txdate": str(txdate)},
         )
         line.SalesItemLineDetail = SalesItemLineDetail()
         item = Item.query("select * from Item where id = '{}'".format(31), qb=CLIENT)[0]
@@ -822,3 +818,76 @@ def find_unmatched_deposits():
                     },
                 )
             r_count += 1
+
+
+def fix_wld_online_tips():
+    refresh_session()
+    where_clause = "TxnDate >= '2024-01-04'"
+    qb_data_type = SalesReceipt
+    query_count = qb_data_type.count(where_clause=where_clause, qb=CLIENT)
+    r_count = 1
+    logger.info(f"query_count: {query_count}")
+    while r_count < query_count:
+        sales_receipts = qb_data_type.where(
+            where_clause=where_clause,
+            order_by="TxnDate",
+            start_position=r_count,
+            max_results=1000,
+            qb=CLIENT,
+        )
+        for sales_receipt in sales_receipts:
+            r_count += 1
+            online_wld_tips = Decimal(0)
+            online_wld_gift_card_tips = Decimal(0)
+            online_wld_tips_line = None
+            online_credit_card_line = None
+            online_wld_gift_card_tips_line = None
+            online_gift_card_line = None
+            for line in sales_receipt.Line:
+                if line.Description is None:
+                    continue
+                if line.Description.startswith("Online WLD Tips"):
+                    online_wld_tips = line.Amount
+                    if online_wld_tips == Decimal(0):
+                        continue
+                    online_wld_tips_line = line
+                if line.Description.startswith("Online Credit Card"):
+                    online_credit_card_line = line
+                if line.Description.startswith("Online WLD Gift Card Tips"):
+                    online_wld_gift_card_tips = line.Amount
+                    online_wld_gift_card_tips_line = line
+                if line.Description.startswith("Online Gift Card"):
+                    online_gift_card_line = line
+            for tip_line, total_line, tip_amount in [
+                (online_wld_tips_line, online_credit_card_line, online_wld_tips),
+                (
+                    online_wld_gift_card_tips_line,
+                    online_gift_card_line,
+                    online_wld_gift_card_tips,
+                ),
+            ]:
+                if tip_line is not None and total_line is not None:
+                    sales_receipt.Line.remove(tip_line)
+                    total_line.Amount = total_line.Amount + tip_amount
+                    total_line.SalesItemLineDetail["Qty"] = 0
+                    total_line.SalesItemLineDetail["UnitPrice"] = 0
+                    try:
+                        sales_receipt.save(qb=CLIENT)
+                        logger.info(
+                            "Fixed WLD online tips",
+                            extra={
+                                "sales_receipt": sales_receipt.DocNumber,
+                                "store": sales_receipt.DepartmentRef.name,
+                                "date": sales_receipt.TxnDate,
+                            },
+                        )
+                    except Exception:
+                        logger.exception(
+                            "Failed to save sales receipt",
+                            extra={
+                                "sales_receipt": sales_receipt.DocNumber,
+                                "store": sales_receipt.DepartmentRef.name,
+                                "date": sales_receipt.TxnDate,
+                                "online_wld_tips": online_wld_tips_line.to_json(),
+                            },
+                        )
