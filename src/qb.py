@@ -609,7 +609,6 @@ def vendor_lookup(gl_vendor_name):
         refresh_session()
         vendor = {
             "WNEPLS": Vendor.where("DisplayName like 'The Paper%'", qb=CLIENT)[0],
-            "PR-D&D": Vendor.where("DisplayName like 'D&D%'", qb=CLIENT)[0],
             "PEPSI": Vendor.where("DisplayName like 'Pepsi%'", qb=CLIENT)[0],
             "GenPro": Vendor.where("DisplayName like 'General Produce'", qb=CLIENT)[0],
             "SYSFRA": Vendor.where("DisplayName like 'Sysco San%'", qb=CLIENT)[0],
