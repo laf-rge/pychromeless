@@ -9,6 +9,9 @@ resource "aws_api_gateway_rest_api" "josiah" {
   description = "Josiah's Button Mashing Game"
   binary_media_types = ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "multipart/form-data"]
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
   tags = local.common_tags
 }
 
@@ -114,7 +117,7 @@ resource "aws_api_gateway_method" "proxy_root_options" {
 }
 
 resource "aws_api_gateway_integration_response" "proxy_root_options-200" {
-  http_method = aws_api_gateway_method.proxy_root_options.http_method
+  http_method = aws_api_gateway_integration.integration-OPTIONS.http_method
   rest_api_id = aws_api_gateway_rest_api.josiah.id
   resource_id = aws_api_gateway_rest_api.josiah.root_resource_id
 
@@ -228,7 +231,7 @@ resource "aws_api_gateway_method_response" "email_tips_method_response_options" 
 }
 
 resource "aws_api_gateway_integration_response" "email_tips_options-200" {
-  http_method = aws_api_gateway_method.method_email_tips_options.http_method
+  http_method = aws_api_gateway_integration.integration_email_tips_OPTIONS.http_method
   rest_api_id = aws_api_gateway_rest_api.josiah.id
   resource_id = aws_api_gateway_resource.email_tips_resource.id
 
@@ -392,12 +395,128 @@ resource "aws_api_gateway_integration_response" "get_mpvs_options-200" {
   status_code = "200"
 }
 
+resource "aws_api_gateway_resource" "invoice_sync_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_rest_api.josiah.root_resource_id
+  path_part   = "invoice_sync"
+}
+
+resource "aws_api_gateway_method" "proxy_invoice_sync" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.invoice_sync_resource.id
+  http_method   = "POST"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+  request_parameters = {
+    "method.request.querystring.month" = true,
+    "method.request.querystring.year"  = true
+  }
+  request_validator_id = "unx39u"
+}
+
+resource "aws_api_gateway_integration" "lambda_invoice_sync" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_method.proxy_invoice_sync.resource_id
+  http_method = aws_api_gateway_method.proxy_invoice_sync.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS"
+  uri                     = aws_lambda_function.functions["invoice_sync"].invoke_arn
+  content_handling        = "CONVERT_TO_TEXT"
+  request_parameters = {
+    "integration.request.header.X-Amz-Invocation-Type" = "'Event'",
+    "integration.request.querystring.month"            = "method.request.querystring.month",
+    "integration.request.querystring.year"             = "method.request.querystring.year"
+  }
+  request_templates = {
+    "multipart/form-data" = <<-EOT
+                #set($inputRoot = $input.path('$'))
+                {
+                "year": "$input.params('year')",
+                "month": "$input.params('month')"
+                }
+            EOT
+  }
+}
+
+resource "aws_api_gateway_method_response" "invoice_sync_method_response_200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.invoice_sync_resource.id
+  http_method = aws_api_gateway_method.proxy_invoice_sync.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "lambda_invoice_sync_response" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.invoice_sync_resource.id
+  http_method = aws_api_gateway_integration.lambda_invoice_sync.http_method
+  status_code = aws_api_gateway_method_response.invoice_sync_method_response_200.status_code
+  response_templates = {
+    "application/json" = jsonencode({
+      body    = "Josiah is on it!",
+      headers = { "Access-Control-Allow-Origin" : "*" },
+    })
+  }
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+  }
+}
+
+resource "aws_api_gateway_method" "method_invoice_sync_options" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.invoice_sync_resource.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+}
+
+resource "aws_api_gateway_integration" "integration_invoice_sync_OPTIONS" {
+  http_method = aws_api_gateway_method.method_invoice_sync_options.http_method
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.invoice_sync_resource.id
+  type        = "MOCK"
+}
+
+resource "aws_api_gateway_method_response" "invoice_sync_method_response_options" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.invoice_sync_resource.id
+  http_method = aws_api_gateway_method.method_invoice_sync_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "invoice_sync_options-200" {
+  http_method = aws_api_gateway_integration.integration_invoice_sync_OPTIONS.http_method
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.invoice_sync_resource.id
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
+    "method.response.header.Access-Control-Allow-Methods" = local.cors_methods
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
+  }
+  status_code = "200"
+}
+
 resource "aws_api_gateway_deployment" "josiah" {
   depends_on = [
     aws_api_gateway_integration.lambda_root,
     aws_api_gateway_integration.lambda_email_tips,
     aws_api_gateway_integration.lambda_transform_tips,
     aws_api_gateway_integration.lambda_get_mpvs,
+    aws_api_gateway_integration.lambda_invoice_sync,
     aws_lambda_function.authorizer,
   ]
 
