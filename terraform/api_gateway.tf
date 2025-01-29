@@ -63,7 +63,9 @@ resource "aws_api_gateway_method_response" "root_method_response_200" {
   http_method = aws_api_gateway_method.proxy_root.http_method
   status_code = "200"
   response_parameters = {
-    "method.response.header.Access-Control-Allow-Origin" = false,
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
   }
 }
 

@@ -157,18 +157,106 @@ def third_party_deposit_handler(*args, **kwargs) -> dict:
 
 
 def invoice_sync_handler(*args, **kwargs) -> dict:
-    yesterday = date.today() - timedelta(days=1)
+    """
+    Process invoice and inventory data from Crunchtime into Quickbooks.
+
+    Lambda invocation:
+        - Schedule: Daily at 3 AM PST
+        - Event format (for API Gateway):
+            {
+                "year": "YYYY",     # Optional: defaults to current year
+                "month": "MM"       # Optional: defaults to current month
+            }
+
+    Local development:
+        >>> from lambda_function import invoice_sync_handler
+        >>> invoice_sync_handler()  # Process current month
+        >>> invoice_sync_handler({"year": "2024", "month": "03"})  # Process specific month
+    """
+    event = {}
+    if args is not None and len(args) > 0:
+        event = args[0]
+
+    today = date.today()
+    target_year = int(event.get("year", today.year))
+    target_month = int(event.get("month", today.month))
+    target_date = date(target_year, target_month, 1)
+
     ct = crunchtime.Crunchtime()
+    # Always process GL report
     ct.process_gl_report(store_config.all_stores)
-    if yesterday.day < 6:
-        last_month = date.today() - timedelta(days=7)
-        ct.process_inventory_report(
-            store_config.all_stores, last_month.year, last_month.month
+
+    # Determine if we should process inventory report
+    should_process_inventory = False
+
+    if target_date.year == today.year and target_date.month == today.month:
+        # Find first Monday of the month
+        first_monday = target_date
+        while first_monday.weekday() != 0:  # 0 is Monday
+            first_monday += timedelta(days=1)
+
+        # We need the day after the first Monday (Tuesday) to ensure Monday's data is available
+        first_tuesday = first_monday + timedelta(days=1)
+
+        # Find the last day of the month
+        if target_month == 12:
+            next_month = date(target_year + 1, 1, 1)
+        else:
+            next_month = date(target_year, target_month + 1, 1)
+        last_day = next_month - timedelta(days=1)
+
+        # If we're processing the current month and we're in the first few days of the next month,
+        # we need to wait until Tuesday to ensure all end-of-month data is available
+        if today.month != target_month:
+            # We're in the next month, make sure it's at least Tuesday
+            should_process_inventory = today.weekday() >= 1  # Tuesday = 1
+        else:
+            # We're in the target month, make sure we're past the first Tuesday
+            should_process_inventory = today >= first_tuesday
+    else:
+        # For past months, always process as long as we're at least on the 2nd of next month
+        next_month = (
+            date(target_year, target_month + 1, 1)
+            if target_month < 12
+            else date(target_year + 1, 1, 1)
+        )
+        second_of_next_month = next_month + timedelta(days=1)
+        should_process_inventory = (
+            today >= second_of_next_month
+        )  # Must be at least the 2nd
+
+    if should_process_inventory:
+        ct.process_inventory_report(store_config.all_stores, target_year, target_month)
+        logger.info(
+            "Processed inventory report",
+            extra={
+                "year": target_year,
+                "month": target_month,
+                "stores": store_config.all_stores,
+            },
         )
     else:
-        ct.process_inventory_report(
-            store_config.all_stores, yesterday.year, yesterday.month
+        wait_reason = (
+            "waiting for first Tuesday"
+            if today.month == target_month
+            else "waiting for complete end-of-month data (2nd of next month)"
         )
+        logger.info(
+            f"Skipping inventory report - {wait_reason}",
+            extra={
+                "year": target_year,
+                "month": target_month,
+                "first_monday": first_monday.isoformat()
+                if "first_monday" in locals()
+                else None,
+                "first_tuesday": first_tuesday.isoformat()
+                if "first_tuesday" in locals()
+                else None,
+                "today": today.isoformat(),
+                "target_date": target_date.isoformat(),
+            },
+        )
+
     return create_response(200, {"message": "Success"})
 
 

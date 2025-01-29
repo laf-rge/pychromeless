@@ -115,12 +115,12 @@ resource "aws_iam_role_policy_attachment" "lambda-basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_lambda_permission" "flexepos_daily_invoke" {
+resource "aws_lambda_permission" "flexepos_invoice_sync_invoke" {
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.functions["invoice_sync"].function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.flexepos_daily.arn
+  source_arn    = aws_cloudwatch_event_rule.flexepos_daily_3am.arn
 }
 
 resource "aws_lambda_permission" "flexepos_journal_invoke" {
