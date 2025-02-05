@@ -330,49 +330,61 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         for store in stores:
             # store not open guard
             if (
-                not store_config.is_store_active(store, txdate)
-                or store not in journal
-                or "Payins" not in journal[store]
+                store_config.is_store_active(store, txdate)
+                and store in journal
+                and "Payins" in journal[store]
             ):
+                if (
+                    journal[store]["Bank Deposits"] is None
+                    or journal[store]["Bank Deposits"] == ""
+                ):
+                    email_service.send_missing_deposit_alert(store, txdate)
+                payins = journal[store]["Payins"].strip()
+                if payins.count("\n") > 0:
+                    amount = Decimal(0)
+                    for payin_line in payins.split("\n")[1:]:
+                        if payin_line.startswith("TOTAL"):
+                            continue
+                        match = pattern.search(payin_line)
+                        if match:
+                            amount = amount + Decimal(atof(match.group()))
+                    if amount.quantize(TWO_PLACES) > Decimal(150):
+                        email_service.send_high_payin_alert(store, amount, payins)
+                else:
+                    logger.info(
+                        "No payin or missing deposits issues detected",
+                        extra={"store": store, "txdate": txdate.isoformat()},
+                    )
+            else:
                 logger.info(
-                    "Skipping store no data or no payins were captured",
+                    "Skipping store deposit emails: no sales data",
                     extra={"store": store, "txdate": txdate.isoformat()},
                 )
-                continue
-            if (
-                journal[store]["Bank Deposits"] is None
-                or journal[store]["Bank Deposits"] == ""
-            ):
-                email_service.send_missing_deposit_alert(store, txdate)
-            payins = journal[store]["Payins"].strip()
-            if payins.count("\n") > 0:
-                amount = Decimal(0)
-                for payin_line in payins.split("\n")[1:]:
-                    if payin_line.startswith("TOTAL"):
-                        continue
-                    match = pattern.search(payin_line)
-                    if match:
-                        amount = amount + Decimal(atof(match.group()))
-                if amount.quantize(TWO_PLACES) > Decimal(150):
-                    email_service.send_high_payin_alert(store, amount, payins)
-            else:
-                amount = Decimal(0)
         success = True
     if not success:
         return create_response(500, {"message": "Error processing daily sales"})
     txdate = txdates[0]
-    payment_data = dj.getOnlinePayments(
-        store_config.all_stores, txdate.year, txdate.month
-    )
-    qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
-    royalty_data = dj.getRoyaltyReport(
-        "wmc",
-        date(txdate.year, txdate.month, 1),
-        date(
-            txdate.year, txdate.month, calendar.monthrange(txdate.year, txdate.month)[1]
-        ),
-    )
-    qb.update_royalty(txdate.year, txdate.month, royalty_data)
+    try:
+        payment_data = dj.getOnlinePayments(
+            store_config.all_stores, txdate.year, txdate.month
+        )
+        qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
+        royalty_data = dj.getRoyaltyReport(
+            "wmc",
+            date(txdate.year, txdate.month, 1),
+            date(
+                txdate.year,
+                txdate.month,
+                calendar.monthrange(txdate.year, txdate.month)[1],
+            ),
+        )
+        qb.update_royalty(txdate.year, txdate.month, royalty_data)
+    except Exception as e:
+        logger.exception(
+            "Error processing online payments or royalty report",
+            extra={"error": str(e), "txdate": txdate.isoformat()},
+        )
+        return create_response(500, {"message": "Error processing daily sales"})
     return create_response(200, {"message": "Success"})
 
 

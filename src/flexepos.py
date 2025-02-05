@@ -62,6 +62,17 @@ TAG_IDS = {
     "royalty_list": "RoyaltyList",
     "gift_card_sales": "j_id125",
     "gift_card_redeemed": "j_id176",
+    "search_type": "search:searchType:1",
+    "parameters_continue": "parameters:continue",
+    "search_body": "j_id37_body",
+    "search_header": "j_id37_header",
+    "group_by_list": "parameters:GroupByList",
+    "home_logout": "j_id3:j_id16",
+    "no_journal_body": "j_id78_body",
+    "payins": "j_id84",
+    "tips_table": "j_id78",
+    "meal_deal_toggle": "{}:availability:0:{}",
+    "meal_deal_plu": "//input[@value='1594']",
 }
 
 
@@ -411,7 +422,7 @@ class Flexepos:
             if payins_element is not None:
                 payins = driver.find_element(By.ID, TAG_IDS["transactions"]).text
             else:
-                payins = wait_for_element(driver, (By.ID, "j_id84"))
+                payins = wait_for_element(driver, (By.ID, TAG_IDS["payins"]))
                 if payins:
                     payins = payins.text
                 else:
@@ -520,13 +531,13 @@ class Flexepos:
                 ).select_by_visible_text("Store")
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 WebDriverWait(driver, 15)
-                if len(driver.find_elements(By.ID, "j_id78_body")) > 0:
+                if len(driver.find_elements(By.ID, TAG_IDS["no_journal_body"])) > 0:
                     drawer_opens[store_number] = driver.find_element(
-                        By.ID, "j_id78_body"
+                        By.ID, TAG_IDS["no_journal_body"]
                     ).text
                 else:
                     drawer_opens[store_number] = "No Journal Data Found"
-            driver.find_element(By.ID, "j_id3:j_id16").click()
+            driver.find_element(By.ID, TAG_IDS["home_logout"]).click()
         finally:
             if driver:
                 try:
@@ -557,7 +568,7 @@ class Flexepos:
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 sleep(8)
                 soup = BeautifulSoup(driver.page_source, features="html.parser")
-                tips_table = soup.find("table", attrs={"id": "j_id78"})
+                tips_table = soup.find("table", attrs={"id": TAG_IDS["tips_table"]})
                 if tips_table and isinstance(tips_table, Tag):
                     rows = tips_table.find_all("tr")
                     rv[store] = [
@@ -588,7 +599,7 @@ class Flexepos:
             driver.find_element(By.ID, TAG_IDS["menu_header_root"].format(2)).click()
             sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(2, 0)).click()
-            driver.find_element(By.ID, "search:searchType:1").click()
+            driver.find_element(By.ID, TAG_IDS["search_type"]).click()
             driver.find_element(By.ID, TAG_IDS["parameters_group"]).clear()
             driver.find_element(By.ID, TAG_IDS["parameters_group"]).send_keys(group)
             sleep(2)
@@ -635,21 +646,22 @@ class Flexepos:
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 sleep(7)
-                deal_row = driver.find_element(By.XPATH, "//input[@value='1594']")
+                deal_row = driver.find_element(By.XPATH, TAG_IDS["meal_deal_plu"])
                 deal_row_name = deal_row.get_attribute("name")
                 if not deal_row_name:
                     raise
                 deal_text = deal_row_name.rstrip(":pluId")
                 for toggle_type in ["pickup", "delivery"]:
                     driver.find_element(
-                        By.ID, f"{deal_text}:availability:0:{toggle_type}"
+                        By.ID,
+                        TAG_IDS["meal_deal_toggle"].format(deal_text, toggle_type),
                     ).click()
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
                 sleep(15)
-                driver.find_element(By.ID, "parameters:continue").click()
+                driver.find_element(By.ID, TAG_IDS["parameters_continue"]).click()
                 sleep(7)
                 rv[store] = driver.find_element(
-                    By.ID, f"{deal_text}:availability:0:pickup"
+                    By.ID, TAG_IDS["meal_deal_toggle"].format(deal_text, "pickup")
                 ).is_selected()
         finally:
             if driver:
@@ -666,10 +678,10 @@ class Flexepos:
     debits/credits each Friday with the GC report on Flexepos should help you reconcile.
 
     You are including the online gift cards. Online payments are paid by Anne Sheehan in the 
-    corporate accounting department (copied). Tickets with “99” are online/app orders.
+    corporate accounting department (copied). Tickets with "99" are online/app orders.
 
     Online credit card and gift card payments are an ACH transaction made by the corporate 
-    office. So, yes, any tickets with a “00” in the middle are online tickets.
+    office. So, yes, any tickets with a "00" in the middle are online tickets.
     
     The $12.50 are monthly fees.
 
@@ -703,9 +715,9 @@ class Flexepos:
                 for store in stores:
                     notes = str(datetime.date.today())
                     lines = []
-                    search_ele = driver.find_element(By.ID, "j_id37_body")
+                    search_ele = driver.find_element(By.ID, TAG_IDS["search_body"])
                     if not search_ele.is_displayed():
-                        driver.find_element(By.ID, "j_id37_header").click()
+                        driver.find_element(By.ID, TAG_IDS["search_header"]).click()
 
                     driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
                     driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(
@@ -717,7 +729,7 @@ class Flexepos:
                         period_end.strftime("%m%d%Y"),
                     )
                     Select(
-                        driver.find_element(By.ID, "parameters:GroupByList")
+                        driver.find_element(By.ID, TAG_IDS["group_by_list"])
                     ).select_by_index(1)
                     driver.find_element(By.ID, TAG_IDS["submit"]).click()
                     sleep(8)
