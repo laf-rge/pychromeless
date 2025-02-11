@@ -528,12 +528,15 @@ resource "aws_api_gateway_deployment" "josiah" {
   rest_api_id = aws_api_gateway_rest_api.josiah.id
 
   triggers = {
-    # Hash of the API configuration to force redeployment on changes
     redeployment = sha1(jsonencode({
-      get_food_handler_links_integration = aws_api_gateway_integration.lambda_get_food_handler_links.id
-      get_food_handler_links_method      = aws_api_gateway_method.proxy_get_food_handler_links.id
-      get_food_handler_links_response    = aws_api_gateway_method_response.get_food_handler_links_method_response_200.id
-      get_food_handler_links_options     = aws_api_gateway_integration.integration_get_food_handler_links_OPTIONS.id
+      get_food_handler_links_integration   = aws_api_gateway_integration.lambda_get_food_handler_links.id
+      get_food_handler_links_method        = aws_api_gateway_method.proxy_get_food_handler_links.id
+      get_food_handler_links_response      = aws_api_gateway_method_response.get_food_handler_links_method_response_200.id
+      get_food_handler_links_options       = aws_api_gateway_integration.integration_get_food_handler_links_OPTIONS.id
+      update_food_handler_pdfs_integration = aws_api_gateway_integration.lambda_update_food_handler_pdfs.id
+      update_food_handler_pdfs_method      = aws_api_gateway_method.proxy_update_food_handler_pdfs.id
+      update_food_handler_pdfs_response    = aws_api_gateway_method_response.update_food_handler_pdfs_method_response_200.id
+      update_food_handler_pdfs_options     = aws_api_gateway_integration.integration_update_food_handler_pdfs_OPTIONS.id
     }))
   }
 
@@ -589,7 +592,7 @@ resource "aws_api_gateway_request_validator" "parameters" {
 
 locals {
   cors_headers = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-  cors_methods = "'OPTIONS,POST'"
+  cors_methods = "'GET,POST,OPTIONS'"
   cors_origin  = "'*'"
 }
 
@@ -629,6 +632,7 @@ resource "aws_api_gateway_integration" "lambda_get_food_handler_links" {
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = aws_lambda_function.functions["get_food_handler_links"].invoke_arn
+  timeout_milliseconds    = 29000 # API Gateway maximum (29 seconds)
 }
 
 resource "aws_api_gateway_method_response" "get_food_handler_links_method_response_200" {
@@ -693,5 +697,92 @@ resource "aws_api_gateway_integration_response" "get_food_handler_links_options-
   depends_on = [
     aws_api_gateway_integration.integration_get_food_handler_links_OPTIONS,
     aws_api_gateway_method_response.get_food_handler_links_method_response_options
+  ]
+}
+
+resource "aws_api_gateway_resource" "update_food_handler_pdfs_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_rest_api.josiah.root_resource_id
+  path_part   = "update_food_handler_pdfs"
+}
+
+resource "aws_api_gateway_method" "proxy_update_food_handler_pdfs" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.update_food_handler_pdfs_resource.id
+  http_method   = "POST"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+}
+
+resource "aws_api_gateway_integration" "lambda_update_food_handler_pdfs" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_method.proxy_update_food_handler_pdfs.resource_id
+  http_method = aws_api_gateway_method.proxy_update_food_handler_pdfs.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.functions["update_food_handler_pdfs"].invoke_arn
+}
+
+# Add OPTIONS method for CORS
+resource "aws_api_gateway_method" "method_update_food_handler_pdfs_options" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.update_food_handler_pdfs_resource.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "integration_update_food_handler_pdfs_OPTIONS" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.update_food_handler_pdfs_resource.id
+  http_method = aws_api_gateway_method.method_update_food_handler_pdfs_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_method_response" "update_food_handler_pdfs_method_response_200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.update_food_handler_pdfs_resource.id
+  http_method = aws_api_gateway_method.proxy_update_food_handler_pdfs.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+# Add method response for OPTIONS
+resource "aws_api_gateway_method_response" "update_food_handler_pdfs_method_response_options" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.update_food_handler_pdfs_resource.id
+  http_method = aws_api_gateway_method.method_update_food_handler_pdfs_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+# Update integration response to depend on method response
+resource "aws_api_gateway_integration_response" "update_food_handler_pdfs_options-200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.update_food_handler_pdfs_resource.id
+  http_method = aws_api_gateway_method.method_update_food_handler_pdfs_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.integration_update_food_handler_pdfs_OPTIONS,
+    aws_api_gateway_method_response.update_food_handler_pdfs_method_response_options
   ]
 }

@@ -158,6 +158,13 @@ resource "aws_ssm_parameter" "gcp_journal_folder" {
   tags        = local.common_tags
 }
 
+resource "aws_ssm_parameter" "gcp_public_folder" {
+  name  = "/prod/gcp/public_folder"
+  type  = "String"
+  value = var.gcp_config.public_folder
+  tags  = local.common_tags
+}
+
 # Email configuration
 resource "aws_ssm_parameter" "receiver_email" {
   name        = "/${terraform.workspace}/email/receiver_email"

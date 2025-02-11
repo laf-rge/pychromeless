@@ -91,9 +91,17 @@ locals {
       name        = "get-food-handler-links"
       description = "Returns public links to combined food handler PDFs for each store"
       handler     = "lambda_function.get_food_handler_links_handler"
-      timeout     = 480
+      timeout     = 120
       memory      = 10240
       env_vars    = local.lambda_env_get_food_handler_links
+    },
+    update_food_handler_pdfs = {
+      name        = "update-food-handler-pdfs"
+      description = "Asynchronously updates the combined food handler PDFs for each store"
+      handler     = "lambda_function.update_food_handler_pdfs_handler"
+      timeout     = 480 # 8 minutes since this runs async
+      memory      = 10240
+      env_vars    = local.lambda_env_update_food_handler_pdfs
     }
   }
 }

@@ -33,6 +33,7 @@ class WMCGdrive:
         )
         self._journal_folder_id = cast(str, self._parameters["journal_folder"])
         self._employees_folder_id = cast(str, self._parameters["employees_folder"])
+        self._public_folder_id = cast(str, self._parameters["public_folder"])
         self._service = build("drive", "v3", credentials=self._credentials)
 
     def upload(self, filename, content, mime_type):
@@ -210,23 +211,32 @@ class WMCGdrive:
 
         return results
 
-    def combine_food_handler_cards_by_store(self):
-        public_folder_id = "1aYlK99pUJB7EwZraJZth6PXInH8RyJa5"
-        food_handler_cards = self.get_employee_food_handler_cards()
+    def combine_food_handler_cards_by_store(self) -> dict[str, str]:
+        """Combines food handler cards into a single PDF for each store."""
+        store_files = self.get_employee_food_handler_cards()
         store_pdf_ids = {}
 
-        for store_number, cards in food_handler_cards.items():
-            merger = PdfMerger()
+        for store_number, cards in store_files.items():
+            if not cards:
+                logger.info(f"No food handler cards found for store {store_number}")
+                continue
 
+            merger = PdfMerger()
             for card in cards:
-                request = self._service.files().get_media(fileId=card["file_id"])
-                file = io.BytesIO()
-                downloader = MediaIoBaseDownload(file, request)
-                done = False
-                while done is False:
-                    status, done = downloader.next_chunk()
-                file.seek(0)
-                merger.append(file)
+                try:
+                    request = self._service.files().get_media(fileId=card["file_id"])
+                    file_content = io.BytesIO()
+                    downloader = MediaIoBaseDownload(file_content, request)
+                    done = False
+                    while not done:
+                        _, done = downloader.next_chunk()
+                    file_content.seek(0)
+                    merger.append(file_content)
+                except HttpError as error:
+                    logger.error(
+                        f"Error downloading file {card['file_name']} for store {store_number}: {error}"
+                    )
+                    continue
 
             output = io.BytesIO()
             merger.write(output)
@@ -236,14 +246,16 @@ class WMCGdrive:
             filename = f"Combined_Food_Handler_Cards_Store_{store_number}.pdf"
             file_metadata = {
                 "name": filename,
-                "parents": [public_folder_id],
+                "parents": [self._public_folder_id],  # Use class variable
                 "mimeType": "application/pdf",
             }
             media = MediaIoBaseUpload(
                 output, mimetype="application/pdf", resumable=True
             )
 
-            results, existing = self.retrieve_all_files(filename, public_folder_id)
+            results, existing = self.retrieve_all_files(
+                filename, self._public_folder_id
+            )  # Pass public folder ID
             if existing is not None:
                 file = (
                     self._service.files()
@@ -300,7 +312,39 @@ class WMCGdrive:
 
         return share_links
 
-    def get_food_handler_pdf_links(self):
-        food_handler_cards = self.combine_food_handler_cards_by_store()
-        share_links = self.get_public_share_links(food_handler_cards)
-        return share_links
+    def get_food_handler_pdf_links(self) -> dict[str, str]:
+        """
+        Get links to the combined food handler PDFs for each store.
+        Returns a dictionary mapping store numbers to their PDF download links.
+        """
+        try:
+            # Search for all combined PDF files in the public folder
+            results = self._paginated_file_list(
+                {
+                    "q": f"'{self._public_folder_id}' in parents and name contains 'Combined_Food_Handler_Cards_Store_' and mimeType='application/pdf'",
+                    "supportsAllDrives": True,
+                    "includeItemsFromAllDrives": True,
+                    "fields": "files(id, name, webContentLink)",
+                }
+            )
+
+            store_links = {}
+            for file in results:
+                # Extract store number from filename (e.g., "Combined_Food_Handler_Cards_Store_123.pdf")
+                match = re.search(r"Store_(\d+)\.pdf$", file.get("name", ""))
+                if match and file.get("webContentLink"):
+                    store_number = match.group(1)
+                    # Remove the "export=download" parameter to open in browser
+                    download_link = file["webContentLink"].replace(
+                        "&export=download", ""
+                    )
+                    store_links[store_number] = download_link
+
+            logger.info(f"Found {len(store_links)} food handler PDF links")
+            return store_links
+
+        except HttpError as error:
+            logger.error(
+                f"An error occurred while getting food handler PDF links: {error}"
+            )
+            raise

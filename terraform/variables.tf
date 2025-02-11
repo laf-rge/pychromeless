@@ -53,6 +53,7 @@ variable "gcp_config" {
   type = object({
     employees_folder = string
     journal_folder   = string
+    public_folder    = string
   })
 }
 
@@ -124,4 +125,7 @@ locals {
   get_food_handler_links = { prod = local.base_env_config }
 
   lambda_env_get_food_handler_links = local.get_food_handler_links[terraform.workspace]
+
+  update_food_handler_pdfs            = { prod = local.base_env_config }
+  lambda_env_update_food_handler_pdfs = local.update_food_handler_pdfs[terraform.workspace]
 }

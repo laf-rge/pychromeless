@@ -620,9 +620,30 @@ def get_mpvs_handler(*args, **kwargs):
     return create_response(200, csv, content_type="text/csv", filename="gusto_mpvs.csv")
 
 
+def update_food_handler_pdfs_handler(*args, **kwargs) -> dict:
+    """
+    Asynchronously update the combined food handler PDFs for each store.
+
+    Lambda invocation:
+        - HTTP Method: POST
+        - No parameters required
+
+    Returns:
+        Success message while the update runs in the background
+    """
+    try:
+        gdrive = WMCGdrive()
+        # This will run and update the PDFs
+        gdrive.combine_food_handler_cards_by_store()
+        return create_response(200, {"message": "PDF update completed"})
+    except Exception:
+        logger.exception("Error updating food handler PDFs")
+        return create_response(500, {"message": "Error starting PDF update"})
+
+
 def get_food_handler_links_handler(*args, **kwargs) -> dict:
     """
-    Get public links to combined food handler PDFs for each store.
+    Get current public links to combined food handler PDFs for each store.
 
     Lambda invocation:
         - HTTP Method: GET
