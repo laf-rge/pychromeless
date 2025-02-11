@@ -54,7 +54,7 @@ locals {
       timeout     = 480
       memory      = 10240
       env_vars    = local.lambda_env_daily_journal
-    }
+    },
     daily_sales = {
       name        = "daily-sales"
       description = "Enters daily sales for yesterday."
@@ -62,7 +62,7 @@ locals {
       timeout     = 540
       memory      = 10240
       env_vars    = local.lambda_env_daily_sales
-    }
+    },
     email_tips = {
       name        = "email-tips"
       description = "Emails tips spreadsheet."
@@ -70,7 +70,7 @@ locals {
       timeout     = 480
       memory      = 10240
       env_vars    = local.lambda_env_email_tips
-    }
+    },
     transform_tips = {
       name        = "transform-tips"
       description = "Takes the excel tip spreadsheet and returns the Gusto CSV for import."
@@ -78,7 +78,7 @@ locals {
       timeout     = 480
       memory      = 10240
       env_vars    = local.lambda_env_transform_tips
-    }
+    },
     get_mpvs = {
       name        = "get-mpvs"
       description = "Returns MPVs for a specific pay period or the whole month."
@@ -86,6 +86,14 @@ locals {
       timeout     = 480
       memory      = 10240
       env_vars    = local.lambda_env_get_mpvs
+    },
+    get_food_handler_links = {
+      name        = "get-food-handler-links"
+      description = "Returns public links to combined food handler PDFs for each store"
+      handler     = "lambda_function.get_food_handler_links_handler"
+      timeout     = 480
+      memory      = 10240
+      env_vars    = local.lambda_env_get_food_handler_links
     }
   }
 }

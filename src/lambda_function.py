@@ -618,3 +618,23 @@ def get_mpvs_handler(*args, **kwargs):
         logger.exception(error_body["message"])
         return create_response(400, error_body)
     return create_response(200, csv, content_type="text/csv", filename="gusto_mpvs.csv")
+
+
+def get_food_handler_links_handler(*args, **kwargs) -> dict:
+    """
+    Get public links to combined food handler PDFs for each store.
+
+    Lambda invocation:
+        - HTTP Method: GET
+        - No parameters required
+
+    Returns:
+        Dictionary mapping store numbers to PDF download links
+    """
+    try:
+        gdrive = WMCGdrive()
+        links = gdrive.get_food_handler_pdf_links()
+        return create_response(200, links)
+    except Exception:
+        logger.exception("Error getting food handler PDF links")
+        return create_response(500, {"message": "Error getting food handler PDF links"})

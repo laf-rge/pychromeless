@@ -146,3 +146,63 @@ resource "aws_lambda_permission" "flexepos_email_invoke" {
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.flexepos_daily_3am.arn
 }
+
+# Create IAM role for API Gateway CloudWatch logging
+resource "aws_iam_role" "api_gateway_cloudwatch_role" {
+  name = "api_gateway_cloudwatch_role_${terraform.workspace}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+# Create policy for API Gateway CloudWatch logging
+resource "aws_iam_role_policy" "api_gateway_cloudwatch_policy" {
+  name = "api_gateway_cloudwatch_policy_${terraform.workspace}"
+  role = aws_iam_role.api_gateway_cloudwatch_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          "logs:PutLogEvents",
+          "logs:GetLogEvents",
+          "logs:FilterLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*" # Broader permission to create and manage log groups
+      }
+    ]
+  })
+}
+
+# Attach the AWS managed policy for API Gateway pushing logs to CloudWatch
+resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
+  role       = aws_iam_role.api_gateway_cloudwatch_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+# Enable CloudWatch logging for API Gateway account
+resource "aws_api_gateway_account" "main" {
+  depends_on = [
+    aws_iam_role_policy.api_gateway_cloudwatch_policy,
+    aws_iam_role_policy_attachment.api_gateway_cloudwatch
+  ]
+  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch_role.arn
+}

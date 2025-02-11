@@ -120,4 +120,8 @@ locals {
     log_format            = "JSON"
     application_log_level = "INFO"
   }
+
+  get_food_handler_links = { prod = local.base_env_config }
+
+  lambda_env_get_food_handler_links = local.get_food_handler_links[terraform.workspace]
 }

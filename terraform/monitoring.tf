@@ -5,7 +5,8 @@ locals {
     "invoice-sync-${terraform.workspace}",
     "daily-journal-${terraform.workspace}",
     "transform-tips-${terraform.workspace}",
-    "get-mpvs-${terraform.workspace}"
+    "get-mpvs-${terraform.workspace}",
+    "get-food-handler-links-${terraform.workspace}",
   ])
   function_timeouts = {
     for k, v in local.lambda_functions : "${v.name}-${terraform.workspace}" => v.timeout

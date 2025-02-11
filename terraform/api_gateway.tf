@@ -30,7 +30,7 @@ resource "aws_api_gateway_method" "proxy_root" {
     "method.request.querystring.month" = true,
     "method.request.querystring.year"  = true
   }
-  request_validator_id = "unx39u"
+  request_validator_id = aws_api_gateway_request_validator.parameters.id
 }
 
 resource "aws_api_gateway_integration" "lambda_root" {
@@ -113,7 +113,6 @@ resource "aws_api_gateway_method" "proxy_root_options" {
   resource_id   = aws_api_gateway_rest_api.josiah.root_resource_id
   http_method   = aws_api_gateway_integration.integration-OPTIONS.http_method
   authorization = "NONE"
-  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
 }
 
 resource "aws_api_gateway_integration_response" "proxy_root_options-200" {
@@ -146,7 +145,7 @@ resource "aws_api_gateway_method" "proxy_email_tips" {
     "method.request.querystring.month" = true,
     "method.request.querystring.year"  = true
   }
-  request_validator_id = "unx39u"
+  request_validator_id = aws_api_gateway_request_validator.parameters.id
 }
 
 resource "aws_api_gateway_integration" "lambda_email_tips" {
@@ -411,7 +410,7 @@ resource "aws_api_gateway_method" "proxy_invoice_sync" {
     "method.request.querystring.month" = true,
     "method.request.querystring.year"  = true
   }
-  request_validator_id = "unx39u"
+  request_validator_id = aws_api_gateway_request_validator.parameters.id
 }
 
 resource "aws_api_gateway_integration" "lambda_invoice_sync" {
@@ -517,26 +516,201 @@ resource "aws_api_gateway_deployment" "josiah" {
     aws_api_gateway_integration.lambda_transform_tips,
     aws_api_gateway_integration.lambda_get_mpvs,
     aws_api_gateway_integration.lambda_invoice_sync,
-    aws_lambda_function.authorizer,
+    aws_api_gateway_integration.lambda_get_food_handler_links,
+    aws_api_gateway_integration.integration-OPTIONS,
+    aws_api_gateway_integration.integration_email_tips_OPTIONS,
+    aws_api_gateway_integration.integration_transform_tips_OPTIONS,
+    aws_api_gateway_integration.integration_get_mpvs_OPTIONS,
+    aws_api_gateway_integration.integration_invoice_sync_OPTIONS,
+    aws_api_gateway_integration.integration_get_food_handler_links_OPTIONS,
+    aws_api_gateway_integration_response.get_food_handler_links_options-200,
+    aws_lambda_function.authorizer
   ]
 
   rest_api_id = aws_api_gateway_rest_api.josiah.id
-  description = "Deployed at ${timestamp()}"
+
+  # Add triggers to force redeployment when integrations change
+  triggers = {
+    redeployment = sha1(jsonencode([
+      aws_api_gateway_integration.lambda_root,
+      aws_api_gateway_integration.lambda_email_tips,
+      aws_api_gateway_integration.lambda_transform_tips,
+      aws_api_gateway_integration.lambda_get_mpvs,
+      aws_api_gateway_integration.lambda_invoice_sync,
+      aws_api_gateway_integration.lambda_get_food_handler_links,
+      aws_api_gateway_integration.integration-OPTIONS,
+      aws_api_gateway_integration.integration_email_tips_OPTIONS,
+      aws_api_gateway_integration.integration_transform_tips_OPTIONS,
+      aws_api_gateway_integration.integration_get_mpvs_OPTIONS,
+      aws_api_gateway_integration.integration_invoice_sync_OPTIONS,
+      aws_api_gateway_integration.integration_get_food_handler_links_OPTIONS,
+      aws_api_gateway_integration_response.get_food_handler_links_options-200,
+    ]))
+  }
+
   lifecycle {
     create_before_destroy = true
   }
 }
 
 resource "aws_api_gateway_stage" "test" {
+  depends_on = [
+    aws_api_gateway_account.main,
+    aws_api_gateway_integration_response.get_food_handler_links_options-200,
+    aws_api_gateway_integration_response.lambda_root_response,
+    aws_api_gateway_integration_response.lambda_email_tips_response,
+    aws_api_gateway_integration_response.lambda_invoice_sync_response,
+    aws_api_gateway_integration_response.proxy_root_options-200,
+    aws_api_gateway_integration_response.email_tips_options-200,
+    aws_api_gateway_integration_response.invoice_sync_options-200
+  ]
   deployment_id = aws_api_gateway_deployment.josiah.id
   rest_api_id   = aws_api_gateway_rest_api.josiah.id
   stage_name    = "test"
-  description   = "Deployed at ${timestamp()}"
-  tags          = local.common_tags
+
+  # Remove timestamp from description as it forces redeployment on every apply
+  description = "Test stage for Josiah API"
+
+  # Add access logging
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gateway_logs.arn
+    format          = "$context.identity.sourceIp $context.identity.caller $context.identity.user [$context.requestTime] \"$context.httpMethod $context.resourcePath $context.protocol\" $context.status $context.responseLength $context.requestId"
+  }
+
+  xray_tracing_enabled = true
+
+  variables = {
+    "environment" = terraform.workspace
+  }
+
+  lifecycle {
+    ignore_changes = [
+      deployment_id // Prevent unwanted updates
+    ]
+  }
+
+  tags = local.common_tags
+}
+
+# Add CloudWatch log group for API Gateway access logs
+resource "aws_cloudwatch_log_group" "api_gateway_logs" {
+  name              = "/aws/apigateway/${aws_api_gateway_rest_api.josiah.name}"
+  retention_in_days = 30
+  tags              = local.common_tags
+}
+
+resource "aws_api_gateway_request_validator" "parameters" {
+  name                        = "validate-parameters"
+  rest_api_id                 = aws_api_gateway_rest_api.josiah.id
+  validate_request_body       = false
+  validate_request_parameters = true
 }
 
 locals {
   cors_headers = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
   cors_methods = "'OPTIONS,POST'"
   cors_origin  = "'*'"
+}
+
+resource "aws_api_gateway_method_settings" "all" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  stage_name  = aws_api_gateway_stage.test.stage_name
+  method_path = "*/*"
+
+  settings {
+    metrics_enabled        = true
+    logging_level          = "INFO"
+    data_trace_enabled     = true
+    throttling_burst_limit = 5000
+    throttling_rate_limit  = 10000
+  }
+}
+
+resource "aws_api_gateway_resource" "get_food_handler_links_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_rest_api.josiah.root_resource_id
+  path_part   = "get_food_handler_links"
+}
+
+resource "aws_api_gateway_method" "proxy_get_food_handler_links" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.get_food_handler_links_resource.id
+  http_method   = "GET"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+}
+
+resource "aws_api_gateway_integration" "lambda_get_food_handler_links" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_method.proxy_get_food_handler_links.resource_id
+  http_method = aws_api_gateway_method.proxy_get_food_handler_links.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.functions["get_food_handler_links"].invoke_arn
+}
+
+resource "aws_api_gateway_method_response" "get_food_handler_links_method_response_200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.get_food_handler_links_resource.id
+  http_method = aws_api_gateway_method.proxy_get_food_handler_links.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+# Add OPTIONS method for CORS
+resource "aws_api_gateway_method" "method_get_food_handler_links_options" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.get_food_handler_links_resource.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "integration_get_food_handler_links_OPTIONS" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.get_food_handler_links_resource.id
+  http_method = aws_api_gateway_method.method_get_food_handler_links_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+
+  depends_on = [
+    aws_api_gateway_method.method_get_food_handler_links_options
+  ]
+}
+
+resource "aws_api_gateway_method_response" "get_food_handler_links_method_response_options" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.get_food_handler_links_resource.id
+  http_method = aws_api_gateway_method.method_get_food_handler_links_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "get_food_handler_links_options-200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.get_food_handler_links_resource.id
+  http_method = aws_api_gateway_method.method_get_food_handler_links_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.integration_get_food_handler_links_OPTIONS,
+    aws_api_gateway_method_response.get_food_handler_links_method_response_options
+  ]
 }
