@@ -522,30 +522,19 @@ resource "aws_api_gateway_deployment" "josiah" {
     aws_api_gateway_integration.integration_transform_tips_OPTIONS,
     aws_api_gateway_integration.integration_get_mpvs_OPTIONS,
     aws_api_gateway_integration.integration_invoice_sync_OPTIONS,
-    aws_api_gateway_integration.integration_get_food_handler_links_OPTIONS,
-    aws_api_gateway_integration_response.get_food_handler_links_options-200,
-    aws_lambda_function.authorizer
+    aws_api_gateway_integration.integration_get_food_handler_links_OPTIONS
   ]
 
   rest_api_id = aws_api_gateway_rest_api.josiah.id
 
-  # Add triggers to force redeployment when integrations change
   triggers = {
-    redeployment = sha1(jsonencode([
-      aws_api_gateway_integration.lambda_root,
-      aws_api_gateway_integration.lambda_email_tips,
-      aws_api_gateway_integration.lambda_transform_tips,
-      aws_api_gateway_integration.lambda_get_mpvs,
-      aws_api_gateway_integration.lambda_invoice_sync,
-      aws_api_gateway_integration.lambda_get_food_handler_links,
-      aws_api_gateway_integration.integration-OPTIONS,
-      aws_api_gateway_integration.integration_email_tips_OPTIONS,
-      aws_api_gateway_integration.integration_transform_tips_OPTIONS,
-      aws_api_gateway_integration.integration_get_mpvs_OPTIONS,
-      aws_api_gateway_integration.integration_invoice_sync_OPTIONS,
-      aws_api_gateway_integration.integration_get_food_handler_links_OPTIONS,
-      aws_api_gateway_integration_response.get_food_handler_links_options-200,
-    ]))
+    # Hash of the API configuration to force redeployment on changes
+    redeployment = sha1(jsonencode({
+      get_food_handler_links_integration = aws_api_gateway_integration.lambda_get_food_handler_links.id
+      get_food_handler_links_method      = aws_api_gateway_method.proxy_get_food_handler_links.id
+      get_food_handler_links_response    = aws_api_gateway_method_response.get_food_handler_links_method_response_200.id
+      get_food_handler_links_options     = aws_api_gateway_integration.integration_get_food_handler_links_OPTIONS.id
+    }))
   }
 
   lifecycle {
@@ -555,23 +544,14 @@ resource "aws_api_gateway_deployment" "josiah" {
 
 resource "aws_api_gateway_stage" "test" {
   depends_on = [
-    aws_api_gateway_account.main,
-    aws_api_gateway_integration_response.get_food_handler_links_options-200,
-    aws_api_gateway_integration_response.lambda_root_response,
-    aws_api_gateway_integration_response.lambda_email_tips_response,
-    aws_api_gateway_integration_response.lambda_invoice_sync_response,
-    aws_api_gateway_integration_response.proxy_root_options-200,
-    aws_api_gateway_integration_response.email_tips_options-200,
-    aws_api_gateway_integration_response.invoice_sync_options-200
+    aws_api_gateway_account.main
   ]
   deployment_id = aws_api_gateway_deployment.josiah.id
   rest_api_id   = aws_api_gateway_rest_api.josiah.id
   stage_name    = "test"
 
-  # Remove timestamp from description as it forces redeployment on every apply
   description = "Test stage for Josiah API"
 
-  # Add access logging
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gateway_logs.arn
     format          = "$context.identity.sourceIp $context.identity.caller $context.identity.user [$context.requestTime] \"$context.httpMethod $context.resourcePath $context.protocol\" $context.status $context.responseLength $context.requestId"
@@ -585,7 +565,8 @@ resource "aws_api_gateway_stage" "test" {
 
   lifecycle {
     ignore_changes = [
-      deployment_id // Prevent unwanted updates
+      deployment_id, // Prevent unwanted updates
+      description    // Prevent description changes from forcing updates
     ]
   }
 
