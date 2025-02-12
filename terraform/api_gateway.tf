@@ -517,12 +517,16 @@ resource "aws_api_gateway_deployment" "josiah" {
     aws_api_gateway_integration.lambda_get_mpvs,
     aws_api_gateway_integration.lambda_invoice_sync,
     aws_api_gateway_integration.lambda_get_food_handler_links,
+    aws_api_gateway_integration.lambda_update_food_handler_pdfs,
     aws_api_gateway_integration.integration-OPTIONS,
     aws_api_gateway_integration.integration_email_tips_OPTIONS,
     aws_api_gateway_integration.integration_transform_tips_OPTIONS,
     aws_api_gateway_integration.integration_get_mpvs_OPTIONS,
     aws_api_gateway_integration.integration_invoice_sync_OPTIONS,
-    aws_api_gateway_integration.integration_get_food_handler_links_OPTIONS
+    aws_api_gateway_integration.integration_get_food_handler_links_OPTIONS,
+    aws_api_gateway_integration.integration_update_food_handler_pdfs_OPTIONS,
+    aws_api_gateway_integration_response.update_food_handler_pdfs_response,
+    aws_api_gateway_method_response.update_food_handler_pdfs_method_response_202
   ]
 
   rest_api_id = aws_api_gateway_rest_api.josiah.id
@@ -535,7 +539,7 @@ resource "aws_api_gateway_deployment" "josiah" {
       get_food_handler_links_options       = aws_api_gateway_integration.integration_get_food_handler_links_OPTIONS.id
       update_food_handler_pdfs_integration = aws_api_gateway_integration.lambda_update_food_handler_pdfs.id
       update_food_handler_pdfs_method      = aws_api_gateway_method.proxy_update_food_handler_pdfs.id
-      update_food_handler_pdfs_response    = aws_api_gateway_method_response.update_food_handler_pdfs_method_response_200.id
+      update_food_handler_pdfs_response    = aws_api_gateway_integration_response.update_food_handler_pdfs_response.id
       update_food_handler_pdfs_options     = aws_api_gateway_integration.integration_update_food_handler_pdfs_OPTIONS.id
     }))
   }
@@ -720,8 +724,61 @@ resource "aws_api_gateway_integration" "lambda_update_food_handler_pdfs" {
   http_method = aws_api_gateway_method.proxy_update_food_handler_pdfs.http_method
 
   integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.functions["update_food_handler_pdfs"].invoke_arn
+  type                    = "AWS"
+  uri                     = "arn:aws:apigateway:${var.settings.region}:lambda:path/2015-03-31/functions/${aws_lambda_function.functions["update_food_handler_pdfs"].arn}/invocations"
+
+  request_parameters = {
+    "integration.request.header.X-Amz-Invocation-Type" = "'Event'"
+  }
+
+  request_templates = {
+    "application/json" = <<EOF
+{
+  "body": $input.json('$')
+}
+EOF
+  }
+}
+
+# Update integration response for async to include CORS headers
+resource "aws_api_gateway_integration_response" "update_food_handler_pdfs_response" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.update_food_handler_pdfs_resource.id
+  http_method = aws_api_gateway_method.proxy_update_food_handler_pdfs.http_method
+  status_code = "202"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+  }
+
+  response_templates = {
+    "application/json" = <<EOF
+{
+  "message": "PDF update started"
+}
+EOF
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.lambda_update_food_handler_pdfs,
+    aws_api_gateway_method_response.update_food_handler_pdfs_method_response_202
+  ]
+}
+
+# Add 202 method response
+resource "aws_api_gateway_method_response" "update_food_handler_pdfs_method_response_202" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.update_food_handler_pdfs_resource.id
+  http_method = aws_api_gateway_method.proxy_update_food_handler_pdfs.http_method
+  status_code = "202"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
 }
 
 # Add OPTIONS method for CORS
