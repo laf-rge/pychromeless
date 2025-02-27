@@ -11,6 +11,11 @@ resource "aws_dynamodb_table" "websocket_connections" {
     type = "S"
   }
 
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
+
   tags = local.common_tags
 }
 

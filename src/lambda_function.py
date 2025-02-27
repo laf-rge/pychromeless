@@ -20,6 +20,7 @@ import re
 import logging
 import sys
 import os
+import time
 from datetime import date, datetime, timedelta
 from pythonjsonlogger.json import JsonFormatter
 from pygments import highlight
@@ -30,7 +31,7 @@ from email.message import Message
 from functools import partial  # noqa # pylint: disable=unused-import
 from locale import LC_NUMERIC, atof, setlocale
 from operator import itemgetter
-from typing import Any
+from typing import Any, Dict
 
 import crunchtime
 import pandas as pd
@@ -45,10 +46,14 @@ from ubereats import UberEats
 from wmcgdrive import WMCGdrive
 from store_config import StoreConfig
 from email_service import EmailService
+import boto3
 
 
 store_config = StoreConfig()
 email_service = EmailService(store_config)
+
+dynamodb = boto3.resource("dynamodb")
+table = dynamodb.Table(os.environ["CONNECTIONS_TABLE"])
 
 
 class CustomJsonEncoder(json.JSONEncoder):
@@ -654,3 +659,169 @@ def get_food_handler_links_handler(*args, **kwargs) -> dict:
     except Exception:
         logger.exception("Error getting food handler PDF links")
         return create_response(500, {"message": "Error getting food handler PDF links"})
+
+
+def connect_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """Handle WebSocket connect events"""
+    connection_id = event["requestContext"]["connectionId"]
+
+    # Calculate TTL (24 hours from now)
+    ttl_timestamp = int(time.time() + (24 * 60 * 60))
+
+    try:
+        # Store connection info with TTL
+        table.put_item(
+            Item={
+                "connection_id": connection_id,
+                "ttl": ttl_timestamp,
+                "connected_at": datetime.utcnow().isoformat(),
+                "client_info": {
+                    # Extract client info from request if available
+                    "source_ip": event["requestContext"]
+                    .get("identity", {})
+                    .get("sourceIp", "unknown"),
+                    "user_agent": event["requestContext"]
+                    .get("identity", {})
+                    .get("userAgent", "unknown"),
+                },
+            }
+        )
+
+        return {"statusCode": 200, "body": json.dumps({"message": "Connected"})}
+    except Exception as e:
+        print(f"Error connecting: {str(e)}")
+        return {"statusCode": 500, "body": json.dumps({"message": "Failed to connect"})}
+
+
+def disconnect_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """Handle WebSocket disconnect events"""
+    connection_id = event["requestContext"]["connectionId"]
+
+    try:
+        # Remove the connection record
+        table.delete_item(Key={"connection_id": connection_id})
+
+        return {"statusCode": 200, "body": json.dumps({"message": "Disconnected"})}
+    except Exception as e:
+        print(f"Error disconnecting: {str(e)}")
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"message": "Failed to disconnect"}),
+        }
+
+
+def default_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """Handle default WebSocket messages and update connection TTL"""
+    connection_id = event["requestContext"]["connectionId"]
+
+    try:
+        # Update TTL for the connection (extend by 24 hours)
+        new_ttl = int(time.time() + (24 * 60 * 60))
+
+        table.update_item(
+            Key={"connection_id": connection_id},
+            UpdateExpression="SET #ttl = :ttl",
+            ExpressionAttributeNames={"#ttl": "ttl"},
+            ExpressionAttributeValues={":ttl": new_ttl},
+            ConditionExpression="attribute_exists(connection_id)",
+        )
+
+        # Process the actual message
+        body = json.loads(event.get("body", "{}"))
+        message_type = body.get("type", "unknown")
+
+        # Handle different message types here
+        if message_type == "ping":
+            return {"statusCode": 200, "body": json.dumps({"type": "pong"})}
+
+        # Default response
+        return {
+            "statusCode": 200,
+            "body": json.dumps({"message": "Message received", "type": message_type}),
+        }
+
+    except Exception as e:
+        logger.exception(f"Error in default handler: {str(e)}")
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"message": "Internal server error"}),
+        }
+
+
+def cleanup_connections_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """Cleanup stale WebSocket connections"""
+    try:
+        # Get current timestamp for comparison
+        current_time = int(time.time())
+
+        # Scan for expired connections
+        response = table.scan(
+            FilterExpression="attribute_not_exists(ttl) OR ttl <= :current_time",
+            ExpressionAttributeValues={":current_time": current_time},
+        )
+
+        deleted_count = 0
+        errors = []
+
+        # Process each expired connection
+        for item in response.get("Items", []):
+            try:
+                connection_id = item["connection_id"]
+
+                # Delete the connection record
+                table.delete_item(Key={"connection_id": connection_id})
+                deleted_count += 1
+
+                logger.info(
+                    "Deleted expired connection",
+                    extra={
+                        "connection_id": connection_id,
+                        "ttl": item.get("ttl", "no_ttl"),
+                        "connected_at": item.get("connected_at", "unknown"),
+                    },
+                )
+            except Exception as e:
+                errors.append(str(e))
+                logger.exception(
+                    "Error deleting connection",
+                    extra={"connection_id": item.get("connection_id", "unknown")},
+                )
+
+        # Handle pagination if necessary
+        while "LastEvaluatedKey" in response:
+            response = table.scan(
+                FilterExpression="attribute_not_exists(ttl) OR ttl <= :current_time",
+                ExpressionAttributeValues={":current_time": current_time},
+                ExclusiveStartKey=response["LastEvaluatedKey"],
+            )
+
+            for item in response.get("Items", []):
+                try:
+                    connection_id = item["connection_id"]
+                    table.delete_item(Key={"connection_id": connection_id})
+                    deleted_count += 1
+                except Exception as e:
+                    errors.append(str(e))
+
+        return {
+            "statusCode": 200,
+            "body": json.dumps(
+                {
+                    "message": "Cleanup completed",
+                    "deleted_count": deleted_count,
+                    "errors": errors,
+                }
+            ),
+        }
+
+    except Exception as e:
+        logger.exception("Error in cleanup handler")
+        return {
+            "statusCode": 500,
+            "body": json.dumps(
+                {
+                    "message": "Cleanup failed",
+                    "error": str(e),
+                }
+            ),
+        }
