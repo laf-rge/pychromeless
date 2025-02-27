@@ -21,7 +21,7 @@ import logging
 import sys
 import os
 from datetime import date, datetime, timedelta
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger.json import JsonFormatter
 from pygments import highlight
 from pygments.lexers import JsonLexer
 from pygments.formatters import TerminalFormatter
@@ -58,11 +58,11 @@ class CustomJsonEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-class ColorizedJsonFormatter(jsonlogger.JsonFormatter):
+class ColorizedJsonFormatter(JsonFormatter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs, json_default=CustomJsonEncoder().default)
 
-    def format(self, record):
+    def format(self, record: Any) -> str:
         json_str = super().format(record)
         return highlight(json_str, JsonLexer(), TerminalFormatter())
 
@@ -189,43 +189,38 @@ def invoice_sync_handler(*args, **kwargs) -> dict:
 
         # Determine if we should process inventory report
         should_process_inventory = False
-
         first_monday = None
+        first_tuesday = None
+
+        # Find first Monday and Tuesday of the target month
         if target_date.year == today.year and target_date.month == today.month:
-            # Find first Monday of the month
             first_monday = target_date
             while first_monday.weekday() != 0:  # 0 is Monday
                 first_monday += timedelta(days=1)
-
-            # We need the day after the first Monday (Tuesday) to ensure Monday's data is available
             first_tuesday = first_monday + timedelta(days=1)
 
-            # Find the last day of the month
-            if target_month == 12:
-                next_month = date(target_year + 1, 1, 1)
-            else:
-                next_month = date(target_year, target_month + 1, 1)
-            last_day = next_month - timedelta(days=1)
-
-            # If we're processing the current month and we're in the first few days of the next month,
-            # we need to wait until Tuesday to ensure all end-of-month data is available
-            if today.month != target_month:
-                # We're in the next month, make sure it's at least Tuesday
-                should_process_inventory = today.weekday() >= 1  # Tuesday = 1
-            else:
-                # We're in the target month, make sure we're past the first Tuesday
-                should_process_inventory = today >= first_tuesday
+        # Find the last day of the month
+        if target_month == 12:
+            next_month = date(target_year + 1, 1, 1)
         else:
-            # For past months, always process as long as we're at least on the 2nd of next month
-            next_month = (
-                date(target_year, target_month + 1, 1)
-                if target_month < 12
-                else date(target_year + 1, 1, 1)
-            )
+            next_month = date(target_year, target_month + 1, 1)
+        last_day = next_month - timedelta(days=1)
+
+        # Logic for determining if we should process inventory
+        if target_date.year == today.year and target_date.month == today.month:
+            # For current month:
+            # - If we're still in the month, wait until after first Tuesday
+            # - If we're in the next month, wait until at least Tuesday
+            if today.month == target_month:
+                should_process_inventory = (
+                    first_tuesday is not None and today >= first_tuesday
+                )
+            else:
+                should_process_inventory = today.weekday() >= 1  # Tuesday or later
+        else:
+            # For past months, wait until at least the 2nd of the following month
             second_of_next_month = next_month + timedelta(days=1)
-            should_process_inventory = (
-                today >= second_of_next_month
-            )  # Must be at least the 2nd
+            should_process_inventory = today >= second_of_next_month
 
         if should_process_inventory:
             ct.process_inventory_report(
@@ -252,7 +247,7 @@ def invoice_sync_handler(*args, **kwargs) -> dict:
                     "month": target_month,
                     "first_monday": first_monday.isoformat() if first_monday else None,
                     "first_tuesday": first_tuesday.isoformat()
-                    if "first_tuesday" in locals()
+                    if first_tuesday
                     else None,
                     "today": today.isoformat(),
                     "target_date": target_date.isoformat(),
