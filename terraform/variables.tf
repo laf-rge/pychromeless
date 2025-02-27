@@ -68,9 +68,10 @@ variable "email_config" {
 variable "store_config" {
   description = "Store configuration with open/close dates"
   type = map(object({
-    name       = string
-    open_date  = string
-    close_date = optional(string)
+    name          = string
+    open_date     = string
+    ubereats_uuid = string
+    close_date    = optional(string)
   }))
 }
 

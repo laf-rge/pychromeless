@@ -217,13 +217,14 @@ class UberEats:
             lines.append(["4830", "Customer Refunds", invoice["Customer Refunds"]])
         if "Marketing" in invoice:
             lines.append(["1362", "Uber Marketing", invoice["Marketing"]])
+        if "Other payments" in invoice:
+            lines.append(["6310", "Other payments", invoice["Other payments"]])
         # if 'Marketplace Facilitator (MF) Tax' in invoice:
         #    lines.append(["2310", 'Marketplace Facilitator Tax', invoice['Marketplace Facilitator (MF) Tax']])
         # if 'Total Taxes' in invoice:
         #    lines.append(["1361", 'Total Taxes', invoice['Total Taxes']])
         lines.append(["6310", "Uber fees", invoice["Uber fees"]])
         notes += str(txt)
-        # print(lines)
 
         # pay day is always Monday
         result = [
