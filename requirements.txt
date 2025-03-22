@@ -16,3 +16,4 @@ cryptography
 pandas
 pypdf2
 python-json-logger
+dotenv

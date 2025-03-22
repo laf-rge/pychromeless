@@ -32,6 +32,8 @@ from functools import partial  # noqa # pylint: disable=unused-import
 from locale import LC_NUMERIC, atof, setlocale
 from operator import itemgetter
 from typing import Any, Dict
+import uuid
+from websocket_manager import WebSocketManager
 
 import crunchtime
 import pandas as pd
@@ -47,7 +49,9 @@ from wmcgdrive import WMCGdrive
 from store_config import StoreConfig
 from email_service import EmailService
 import boto3
+from dotenv import load_dotenv
 
+load_dotenv()
 
 store_config = StoreConfig()
 email_service = EmailService(store_config)
@@ -100,14 +104,20 @@ def create_response(
     body: object,
     content_type: str = "application/json",
     filename: str | None = None,
+    request_id: str | None = None,
 ) -> dict:
+    """Create a standardized API response with request ID tracking"""
     headers = {
         "Content-type": content_type,
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+        "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Request-ID",
     }
+
     if filename is not None:
         headers["Content-Disposition"] = f"attachment; filename={filename}"
+    if request_id is not None:
+        headers["X-Request-ID"] = request_id
+
     return {
         "statusCode": status_code,
         "body": json.dumps(body) if content_type == "application/json" else body,
@@ -127,7 +137,7 @@ def third_party_deposit_handler(*args, **kwargs) -> dict:
         >>> from lambda_function import third_party_deposit_handler
         >>> third_party_deposit_handler()
     """
-    start_date = date.today() - timedelta(days=28)
+    start_date = date.today() - timedelta(days=14)
     end_date = date.today()
 
     services = [
@@ -283,109 +293,181 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         >>> daily_sales_handler()  # Process yesterday's sales
         >>> daily_sales_handler({"year": "2024", "month": "01", "day": "15"})
     """
-    event = {}
-    if args is not None and len(args) > 0:
-        event = args[0]
-    if "year" in event:
-        txdates = [
-            date(
-                year=int(event["year"]),
-                month=int(event["month"]),
-                day=int(event["day"]),
-            )
-        ]
-    else:
-        txdates = [date.today() - timedelta(days=1)]
-    # txdates = [date(2024, 10, 29), date(2024, 10, 31)]
-    # txdates = list(map(partial(date, 2025, 1), range(13, 22)))
-    logger.info(
-        "Started daily sales",
-        extra={"txdates": [txdate.isoformat() for txdate in txdates]},
+    event = args[0] if args and len(args) > 0 else {}
+    task_id = (
+        event.get("requestContext", {}).get("requestId") or f"local-{str(uuid.uuid4())}"
     )
-    dj = Flexepos()
-    success = False
-    for txdate in txdates:
-        stores = store_config.get_active_stores(txdate)
-        journal = {}
-        for store in stores:
-            retry = 3
-            while retry:
-                try:
-                    journal.update(dj.getDailySales(store, txdate))
-                    retry = 0
-                except (ConnectionError, TimeoutError, Exception) as e:
-                    logger.exception(f"error {txdate.isoformat()}: {str(e)}")
-                    retry -= 1
-            if store not in journal or "Payins" not in journal[store]:
-                logger.info(
-                    "Skipping store: no sales",
-                    extra={"store": store, "txdate": txdate.isoformat()},
+    ws_manager = WebSocketManager()
+    txdates = []
+    txdate = date.today()
+
+    try:
+        if "year" in event:
+            txdates = [
+                date(
+                    year=int(event["year"]),
+                    month=int(event["month"]),
+                    day=int(event["day"]),
                 )
-                journal.pop(store)
-        qb.create_daily_sales(txdate, journal)
+            ]
+        else:
+            txdates = [date.today() - timedelta(days=1)]
+        # txdates = [date(2024, 10, 29), date(2024, 10, 31)]
+        # txdates = list(map(partial(date, 2025, 1), range(13, 22)))
         logger.info(
-            "Successfully processed daily sales",
-            extra={"txdate": txdate.isoformat(), "stores": stores},
+            "Started daily sales",
+            extra={
+                "task_id": task_id,
+                "txdates": [txdate.isoformat() for txdate in txdates],
+            },
         )
-        for store in stores:
-            # store not open guard
-            if (
-                store_config.is_store_active(store, txdate)
-                and store in journal
-                and "Payins" in journal[store]
-            ):
-                if (
-                    journal[store]["Bank Deposits"] is None
-                    or journal[store]["Bank Deposits"] == ""
-                ):
-                    email_service.send_missing_deposit_alert(store, txdate)
-                payins = journal[store]["Payins"].strip()
-                if payins.count("\n") > 0:
-                    amount = Decimal(0)
-                    for payin_line in payins.split("\n")[1:]:
-                        if payin_line.startswith("TOTAL"):
-                            continue
-                        match = pattern.search(payin_line)
-                        if match:
-                            amount = amount + Decimal(atof(match.group()))
-                    if amount.quantize(TWO_PLACES) > Decimal(150):
-                        email_service.send_high_payin_alert(store, amount, payins)
-                else:
+
+        # Notify start
+        ws_manager.broadcast_status(
+            task_id=task_id, operation="daily_sales", status="started"
+        )
+
+        dj = Flexepos()
+        success = False
+        total_stores = len(store_config.all_stores)
+        processed_stores = 0
+        stores = []
+
+        for txdate in txdates:
+            stores = store_config.get_active_stores(txdate)
+            journal = {}
+
+            for store in stores:
+                processed_stores += 1
+                # Update progress
+                ws_manager.broadcast_status(
+                    task_id=task_id,
+                    operation="daily_sales",
+                    status="processing",
+                    progress={
+                        "current": processed_stores,
+                        "total": total_stores,
+                        "message": f"Processing store {store} for {txdate.isoformat()}",
+                    },
+                )
+
+                retry = 3
+                while retry:
+                    try:
+                        journal.update(dj.getDailySales(store, txdate))
+                        retry = 0
+                    except (ConnectionError, TimeoutError, Exception) as e:
+                        logger.exception(f"error {txdate.isoformat()}: {str(e)}")
+                        retry -= 1
+                if store not in journal or "Payins" not in journal[store]:
                     logger.info(
-                        "No payin or missing deposits issues detected",
+                        "Skipping store: no sales",
                         extra={"store": store, "txdate": txdate.isoformat()},
                     )
-            else:
-                logger.info(
-                    "Skipping store deposit emails: no sales data",
-                    extra={"store": store, "txdate": txdate.isoformat()},
-                )
-        success = True
-    if not success:
-        return create_response(500, {"message": "Error processing daily sales"})
-    txdate = txdates[0]
-    try:
-        payment_data = dj.getOnlinePayments(
-            store_config.all_stores, txdate.year, txdate.month
-        )
-        qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
-        royalty_data = dj.getRoyaltyReport(
-            "wmc",
-            date(txdate.year, txdate.month, 1),
-            date(
-                txdate.year,
-                txdate.month,
-                calendar.monthrange(txdate.year, txdate.month)[1],
-            ),
-        )
-        qb.update_royalty(txdate.year, txdate.month, royalty_data)
+                    journal.pop(store)
+            qb.create_daily_sales(txdate, journal)
+            logger.info(
+                "Successfully processed daily sales",
+                extra={"txdate": txdate.isoformat(), "stores": stores},
+            )
+            for store in stores:
+                # store not open guard
+                if (
+                    store_config.is_store_active(store, txdate)
+                    and store in journal
+                    and "Payins" in journal[store]
+                ):
+                    if (
+                        journal[store]["Bank Deposits"] is None
+                        or journal[store]["Bank Deposits"] == ""
+                    ):
+                        email_service.send_missing_deposit_alert(store, txdate)
+                    payins = journal[store]["Payins"].strip()
+                    if payins.count("\n") > 0:
+                        amount = Decimal(0)
+                        for payin_line in payins.split("\n")[1:]:
+                            if payin_line.startswith("TOTAL"):
+                                continue
+                            match = pattern.search(payin_line)
+                            if match:
+                                amount = amount + Decimal(atof(match.group()))
+                        if amount.quantize(TWO_PLACES) > Decimal(150):
+                            email_service.send_high_payin_alert(store, amount, payins)
+                    else:
+                        logger.info(
+                            "No payin or missing deposits issues detected",
+                            extra={"store": store, "txdate": txdate.isoformat()},
+                        )
+                else:
+                    logger.info(
+                        "Skipping store deposit emails: no sales data",
+                        extra={"store": store, "txdate": txdate.isoformat()},
+                    )
+            success = True
+
+        if not success:
+            ws_manager.broadcast_status(
+                task_id=task_id,
+                operation="daily_sales",
+                status="failed",
+                error="Failed to process daily sales",
+            )
+            return create_response(
+                500, {"message": "Error processing daily sales"}, request_id=task_id
+            )
+
+        # Process online payments and royalty
+        try:
+            txdate = txdates[0]
+            payment_data = dj.getOnlinePayments(
+                store_config.all_stores, txdate.year, txdate.month
+            )
+            qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
+            royalty_data = dj.getRoyaltyReport(
+                "wmc",
+                date(txdate.year, txdate.month, 1),
+                date(
+                    txdate.year,
+                    txdate.month,
+                    calendar.monthrange(txdate.year, txdate.month)[1],
+                ),
+            )
+            qb.update_royalty(txdate.year, txdate.month, royalty_data)
+
+            ws_manager.broadcast_status(
+                task_id=task_id,
+                operation="daily_sales",
+                status="completed",
+                result={
+                    "processed_dates": [d.isoformat() for d in txdates],
+                    "processed_stores": list(stores),
+                },
+            )
+
+            return create_response(
+                200, {"message": "Success", "task_id": task_id}, request_id=task_id
+            )
+
+        except Exception as e:
+            error_msg = "Error processing online payments or royalty report"
+            logger.exception(
+                error_msg, extra={"error": str(e), "txdate": txdate.isoformat()}
+            )
+
+            ws_manager.broadcast_status(
+                task_id=task_id,
+                operation="daily_sales",
+                status="failed",
+                error=error_msg,
+            )
+
+            return create_response(500, {"message": error_msg}, request_id=task_id)
+
     except Exception as e:
-        logger.exception(
-            "Error processing online payments or royalty report",
-            extra={"error": str(e), "txdate": txdate.isoformat()},
+        ws_manager.broadcast_status(
+            task_id=task_id, operation="daily_sales", status="failed", error=str(e)
         )
-        return create_response(500, {"message": "Error processing daily sales"})
-    return create_response(200, {"message": "Success"})
+        return create_response(500, {"message": str(e)}, request_id=task_id)
 
 
 def online_cc_fee(*args, **kwargs) -> dict:

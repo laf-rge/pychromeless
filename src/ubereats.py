@@ -153,6 +153,7 @@ class UberEats:
                 By.XPATH, '//div[contains(@aria-label, "{}")]'.format(date_text)
             ).click()
             sleep(2)
+            logger.info('//div[contains(@aria-label, "{}")]'.format(date_text))
             driver.find_element(
                 By.XPATH, '//div[contains(@aria-label, "{}")]'.format(date_text)
             ).click()

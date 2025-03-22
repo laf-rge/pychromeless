@@ -31,3 +31,5 @@ src/.vscode/
 *.xlsx
 
 *.csv
+
+.env

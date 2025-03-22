@@ -68,7 +68,8 @@ resource "aws_api_gateway_method_response" "root_method_response_200" {
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin"  = true,
     "method.response.header.Access-Control-Allow-Headers" = true,
-    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.X-Request-ID"                 = true
   }
 }
 
@@ -77,14 +78,20 @@ resource "aws_api_gateway_integration_response" "lambda_root_response" {
   resource_id = aws_api_gateway_rest_api.josiah.root_resource_id
   http_method = aws_api_gateway_integration.lambda_root.http_method
   status_code = aws_api_gateway_method_response.root_method_response_200.status_code
+
   response_templates = {
-    "application/json" = jsonencode({
-      body    = "Josiah is on it!",
-      headers = { "Access-Control-Allow-Origin" : "*" },
-    })
+    "application/json" = <<EOF
+    #set($context.responseOverride.header.X-Request-ID = $context.requestId)
+    {
+      "message": "Josiah is on it!",
+      "request_id": "$context.requestId"
+    }
+    EOF
   }
+
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin" = "'*'",
+    "method.response.header.X-Request-ID"                = "context.requestId"
   }
 }
 
@@ -272,9 +279,12 @@ resource "aws_api_gateway_method_response" "transform_tips_method_response_200" 
   resource_id = aws_api_gateway_resource.transform_tips_resource.id
   http_method = aws_api_gateway_method.proxy_transform_tips.http_method
   status_code = "200"
-  response_parameters = { "method.response.header.Access-Control-Allow-Origin" = true,
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
     "method.response.header.Access-Control-Allow-Headers" = true,
-  "method.response.header.Access-Control-Allow-Methods" = true }
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.X-Request-ID"                 = true
+  }
 }
 
 resource "aws_api_gateway_method" "method_transform_tips_options" {
@@ -595,7 +605,7 @@ resource "aws_api_gateway_request_validator" "parameters" {
 }
 
 locals {
-  cors_headers = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+  cors_headers = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Request-ID'"
   cors_methods = "'GET,POST,OPTIONS'"
   cors_origin  = "'*'"
 }

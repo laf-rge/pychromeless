@@ -1,4 +1,4 @@
-FROM  --platform=linux/amd64 amazon/aws-lambda-python:3.12
+FROM  --platform=linux/amd64 amazon/aws-lambda-python:3.13
 LABEL MAINTAINER=william@wagonermanagement.com
 ARG TARGETARCH
 # install chrome dependencies

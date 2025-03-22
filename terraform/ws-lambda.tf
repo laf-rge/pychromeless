@@ -125,7 +125,7 @@ resource "aws_lambda_permission" "disconnect_ws" {
 }
 
 resource "aws_lambda_permission" "default_ws" {
-  statement_id  = "AllowExecutionFromAPIGatewayDefalutWS"
+  statement_id  = "AllowExecutionFromAPIGatewayDefaultWS"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.default.function_name
   principal     = "apigateway.amazonaws.com"
