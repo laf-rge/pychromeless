@@ -54,7 +54,10 @@ resource "aws_api_gateway_integration" "lambda_root" {
                 {
                 "year": "$input.params('year')",
                 "month": "$input.params('month')",
-                "day": "$input.params('day')"
+                "day": "$input.params('day')",
+                "requestContext": {
+                    "requestId": "$context.requestId"
+                }
                 }
             EOT
   }
@@ -83,8 +86,8 @@ resource "aws_api_gateway_integration_response" "lambda_root_response" {
     "application/json" = <<EOF
     #set($context.responseOverride.header.X-Request-ID = $context.requestId)
     {
-      "message": "Josiah is on it!",
-      "request_id": "$context.requestId"
+      "message": $input.json('$.message'),
+      "task_id": "$context.requestId"
     }
     EOF
   }
@@ -176,7 +179,10 @@ resource "aws_api_gateway_integration" "lambda_email_tips" {
                 {
                 "year": "$input.params('year')",
                 "month": "$input.params('month')",
-                "day": "$input.params('day')"
+                "day": "$input.params('day')",
+                "requestContext": {
+                    "requestId": "$context.requestId"
+                }
                 }
             EOT
   }
@@ -187,9 +193,12 @@ resource "aws_api_gateway_method_response" "email_tips_method_response_200" {
   resource_id = aws_api_gateway_resource.email_tips_resource.id
   http_method = aws_api_gateway_method.proxy_email_tips.http_method
   status_code = "200"
-  response_parameters = { "method.response.header.Access-Control-Allow-Origin" = true,
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
     "method.response.header.Access-Control-Allow-Headers" = true,
-  "method.response.header.Access-Control-Allow-Methods" = true }
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.X-Request-ID"                 = true
+  }
 }
 
 resource "aws_api_gateway_integration_response" "lambda_email_tips_response" {
@@ -198,13 +207,17 @@ resource "aws_api_gateway_integration_response" "lambda_email_tips_response" {
   http_method = aws_api_gateway_integration.lambda_email_tips.http_method
   status_code = aws_api_gateway_method_response.email_tips_method_response_200.status_code
   response_templates = {
-    "application/json" = jsonencode({
-      body    = "Josiah is on it!",
-      headers = { "Access-Control-Allow-Origin" : "*" },
-    })
+    "application/json" = <<EOF
+    #set($context.responseOverride.header.X-Request-ID = $context.requestId)
+    {
+      "message": "Josiah is on it!",
+      "task_id": "$context.requestId"
+    }
+    EOF
   }
   response_parameters = {
-    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+    "method.response.header.Access-Control-Allow-Origin" = "'*'",
+    "method.response.header.X-Request-ID"                = "context.requestId"
   }
 }
 
@@ -442,7 +455,10 @@ resource "aws_api_gateway_integration" "lambda_invoice_sync" {
                 #set($inputRoot = $input.path('$'))
                 {
                 "year": "$input.params('year')",
-                "month": "$input.params('month')"
+                "month": "$input.params('month')",
+                "requestContext": {
+                    "requestId": "$context.requestId"
+                }
                 }
             EOT
   }
@@ -456,7 +472,8 @@ resource "aws_api_gateway_method_response" "invoice_sync_method_response_200" {
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin"  = true,
     "method.response.header.Access-Control-Allow-Headers" = true,
-    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.X-Request-ID"                 = true
   }
 }
 
@@ -466,13 +483,17 @@ resource "aws_api_gateway_integration_response" "lambda_invoice_sync_response" {
   http_method = aws_api_gateway_integration.lambda_invoice_sync.http_method
   status_code = aws_api_gateway_method_response.invoice_sync_method_response_200.status_code
   response_templates = {
-    "application/json" = jsonencode({
-      body    = "Josiah is on it!",
-      headers = { "Access-Control-Allow-Origin" : "*" },
-    })
+    "application/json" = <<EOF
+    #set($context.responseOverride.header.X-Request-ID = $context.requestId)
+    {
+      "message": "Josiah is on it!",
+      "task_id": "$context.requestId"
+    }
+    EOF
   }
   response_parameters = {
-    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+    "method.response.header.Access-Control-Allow-Origin" = "'*'",
+    "method.response.header.X-Request-ID"                = "context.requestId"
   }
 }
 
@@ -744,7 +765,10 @@ resource "aws_api_gateway_integration" "lambda_update_food_handler_pdfs" {
   request_templates = {
     "application/json" = <<EOF
 {
-  "body": $input.json('$')
+  "body": $input.json('$'),
+  "requestContext": {
+    "requestId": "$context.requestId"
+  }
 }
 EOF
   }
@@ -761,12 +785,14 @@ resource "aws_api_gateway_integration_response" "update_food_handler_pdfs_respon
     "method.response.header.Access-Control-Allow-Origin"  = "'*'"
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
     "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.X-Request-ID"                 = "context.requestId"
   }
 
   response_templates = {
     "application/json" = <<EOF
 {
-  "message": "PDF update started"
+  "message": "PDF update started",
+  "task_id": "$context.requestId"
 }
 EOF
   }
@@ -787,7 +813,8 @@ resource "aws_api_gateway_method_response" "update_food_handler_pdfs_method_resp
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin"  = true,
     "method.response.header.Access-Control-Allow-Headers" = true,
-    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.X-Request-ID"                 = true
   }
 }
 
