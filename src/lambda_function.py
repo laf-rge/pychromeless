@@ -110,13 +110,11 @@ def create_response(
     headers = {
         "Content-type": content_type,
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Request-ID",
+        "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amzn-RequestId",
     }
 
     if filename is not None:
         headers["Content-Disposition"] = f"attachment; filename={filename}"
-    if request_id is not None:
-        headers["X-Request-ID"] = request_id
 
     return {
         "statusCode": status_code,

@@ -605,7 +605,7 @@ resource "aws_api_gateway_request_validator" "parameters" {
 }
 
 locals {
-  cors_headers = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Request-ID'"
+  cors_headers = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amzn-RequestId'"
   cors_methods = "'GET,POST,OPTIONS'"
   cors_origin  = "'*'"
 }
