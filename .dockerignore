@@ -1,4 +1,25 @@
-env/
-.git/
-__pycache__
+# Environment files
+.env
+.env.local
+**/.env
+**/.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Development
+.vscode/
+.idea/
+*.swp
+
+# Build artifacts
+build/
+deploy/
+*.zip
+
+# Other
 .DS_Store
+*.xlsx
+*.csv

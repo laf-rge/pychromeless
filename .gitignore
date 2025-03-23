@@ -33,3 +33,6 @@ src/.vscode/
 *.csv
 
 .env
+
+# Local environment variables
+.env.local

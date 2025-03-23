@@ -79,8 +79,10 @@ variable "store_config" {
 locals {
   # Base environment configuration template
   base_env_config = {
-    PATH       = "/opt/bin"
-    PYTHONPATH = "/var/task/src:/opt/lib"
+    PATH               = "/opt/bin"
+    PYTHONPATH         = "/var/task/src:/opt/lib"
+    CONNECTIONS_TABLE  = aws_dynamodb_table.websocket_connections.name
+    WEBSOCKET_ENDPOINT = "${aws_apigatewayv2_stage.websocket.invoke_url}"
   }
 
   # Service environments using the base configuration
@@ -94,9 +96,7 @@ locals {
 
   # Websocket configuration with additional DynamoDB settings
   websocket = {
-    prod = merge(local.base_env_config, {
-      DYNAMODB_TABLE = aws_dynamodb_table.websocket_connections.name
-    })
+    prod = local.base_env_config
   }
 
   # Lambda environment mappings
