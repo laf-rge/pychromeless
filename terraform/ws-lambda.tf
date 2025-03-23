@@ -3,7 +3,7 @@ locals {
     connect = {
       name        = "connect"
       description = "Handles WebSocket connect events"
-      handler     = "lambda_function.connect_handler"
+      handler     = "ws_lambda_function.lambda_handler"
       timeout     = 30
       memory      = 128
       env_vars = merge(local.lambda_env_websocket, {
@@ -13,7 +13,7 @@ locals {
     disconnect = {
       name        = "disconnect"
       description = "Handles WebSocket disconnect events"
-      handler     = "lambda_function.disconnect_handler"
+      handler     = "ws_lambda_function.lambda_handler"
       timeout     = 30
       memory      = 128
       env_vars = merge(local.lambda_env_websocket, {
@@ -23,7 +23,7 @@ locals {
     default = {
       name        = "default"
       description = "Handles default WebSocket events"
-      handler     = "lambda_function.default_handler"
+      handler     = "ws_lambda_function.lambda_handler"
       timeout     = 30
       memory      = 128
       env_vars = merge(local.lambda_env_websocket, {
@@ -33,7 +33,7 @@ locals {
     cleanup_connections = {
       name        = "cleanup-connections"
       description = "Cleanup stale WebSocket connections"
-      handler     = "lambda_function.cleanup_connections_handler"
+      handler     = "ws_lambda_function.lambda_handler"
       timeout     = 60
       memory      = 128
       env_vars = merge(local.lambda_env_websocket, {

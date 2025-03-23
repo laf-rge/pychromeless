@@ -206,3 +206,30 @@ resource "aws_api_gateway_account" "main" {
   ]
   cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch_role.arn
 }
+
+# Create policy for managing WebSocket connections
+resource "aws_iam_policy" "manage_websocket_connections" {
+  name        = "manage_websocket_connections_${terraform.workspace}"
+  description = "Allow managing WebSocket connections"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "execute-api:ManageConnections"
+        ]
+        Resource = "${aws_apigatewayv2_api.websocket.execution_arn}/*/@connections/*"
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+# Attach WebSocket management policy to Lambda role
+resource "aws_iam_role_policy_attachment" "manage_websocket_connections_attach" {
+  role       = aws_iam_role.flexepos_lambda_role.name
+  policy_arn = aws_iam_policy.manage_websocket_connections.arn
+}

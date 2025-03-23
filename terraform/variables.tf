@@ -82,7 +82,7 @@ locals {
     PATH               = "/opt/bin"
     PYTHONPATH         = "/var/task/src:/opt/lib"
     CONNECTIONS_TABLE  = aws_dynamodb_table.websocket_connections.name
-    WEBSOCKET_ENDPOINT = "${aws_apigatewayv2_stage.websocket.invoke_url}"
+    WEBSOCKET_ENDPOINT = replace(aws_apigatewayv2_stage.websocket.invoke_url, "wss://", "https://")
   }
 
   # Service environments using the base configuration
@@ -107,7 +107,10 @@ locals {
   lambda_env_transform_tips = local.transform_tips[terraform.workspace]
   lambda_env_get_mpvs       = local.get_mpvs[terraform.workspace]
   lambda_env_authorizer     = local.authorizer[terraform.workspace]
-  lambda_env_websocket      = local.websocket[terraform.workspace]
+  lambda_env_websocket = {
+    CONNECTIONS_TABLE  = aws_dynamodb_table.websocket_connections.name
+    WEBSOCKET_ENDPOINT = replace(aws_apigatewayv2_stage.websocket.invoke_url, "wss://", "https://")
+  }
 
   # Common resource tags
   common_tags = {

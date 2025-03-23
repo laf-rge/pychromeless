@@ -292,8 +292,11 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         >>> daily_sales_handler({"year": "2024", "month": "01", "day": "15"})
     """
     event = args[0] if args and len(args) > 0 else {}
-    task_id = (
-        event.get("requestContext", {}).get("requestId") or f"local-{str(uuid.uuid4())}"
+    context = args[1] if args and len(args) > 1 else None
+    request_id = (
+        event.get("requestContext", {}).get("requestId")
+        or (context.aws_request_id if context else None)
+        or f"local-{str(uuid.uuid4())}"
     )
     ws_manager = WebSocketManager()
     txdates = []
@@ -315,14 +318,14 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         logger.info(
             "Started daily sales",
             extra={
-                "task_id": task_id,
+                "requestId": request_id,
                 "txdates": [txdate.isoformat() for txdate in txdates],
             },
         )
 
         # Notify start
         ws_manager.broadcast_status(
-            task_id=task_id, operation="daily_sales", status="started"
+            task_id=request_id, operation="daily_sales", status="started"
         )
 
         dj = Flexepos()
@@ -339,7 +342,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                 processed_stores += 1
                 # Update progress
                 ws_manager.broadcast_status(
-                    task_id=task_id,
+                    task_id=request_id,
                     operation="daily_sales",
                     status="processing",
                     progress={
@@ -405,13 +408,13 @@ def daily_sales_handler(*args, **kwargs) -> dict:
 
         if not success:
             ws_manager.broadcast_status(
-                task_id=task_id,
+                task_id=request_id,
                 operation="daily_sales",
                 status="failed",
                 error="Failed to process daily sales",
             )
             return create_response(
-                500, {"message": "Error processing daily sales"}, request_id=task_id
+                500, {"message": "Error processing daily sales"}, request_id=request_id
             )
 
         # Process online payments and royalty
@@ -433,7 +436,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
             qb.update_royalty(txdate.year, txdate.month, royalty_data)
 
             ws_manager.broadcast_status(
-                task_id=task_id,
+                task_id=request_id,
                 operation="daily_sales",
                 status="completed",
                 result={
@@ -443,7 +446,9 @@ def daily_sales_handler(*args, **kwargs) -> dict:
             )
 
             return create_response(
-                200, {"message": "Success", "task_id": task_id}, request_id=task_id
+                200,
+                {"message": "Success", "task_id": request_id},
+                request_id=request_id,
             )
 
         except Exception as e:
@@ -453,19 +458,19 @@ def daily_sales_handler(*args, **kwargs) -> dict:
             )
 
             ws_manager.broadcast_status(
-                task_id=task_id,
+                task_id=request_id,
                 operation="daily_sales",
                 status="failed",
                 error=error_msg,
             )
 
-            return create_response(500, {"message": error_msg}, request_id=task_id)
+            return create_response(500, {"message": error_msg}, request_id=request_id)
 
     except Exception as e:
         ws_manager.broadcast_status(
-            task_id=task_id, operation="daily_sales", status="failed", error=str(e)
+            task_id=request_id, operation="daily_sales", status="failed", error=str(e)
         )
-        return create_response(500, {"message": str(e)}, request_id=task_id)
+        return create_response(500, {"message": str(e)}, request_id=request_id)
 
 
 def online_cc_fee(*args, **kwargs) -> dict:
