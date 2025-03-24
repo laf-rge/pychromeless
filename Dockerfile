@@ -18,7 +18,12 @@ RUN rm ./chrome-installer.sh
 
 # Copy and install requirements first (for better caching)
 COPY requirements.txt ${LAMBDA_TASK_ROOT}
-RUN pip3 install -r requirements.txt
+
+# Install build dependencies
+RUN pip3 install --no-cache-dir "setuptools==68.0.0" wheel
+
+# Now install the rest of the requirements without build isolation
+RUN pip3 install --no-build-isolation -r requirements.txt
 
 # Copy source code (excluding .env files via .dockerignore)
 COPY src ${LAMBDA_TASK_ROOT}
