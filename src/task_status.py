@@ -8,7 +8,7 @@ using DynamoDB to store and query task states.
 import json
 import os
 import logging
-from typing import Any, Dict, cast
+from typing import Any, Dict, cast, Optional
 import boto3
 from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
 from logging_utils import setup_json_logger
@@ -54,41 +54,14 @@ def get_task_status_handler(event: Dict[str, Any], context: Any) -> Dict[str, An
                     )
                     items.extend(response.get("Items", []))
 
-                return {
-                    "statusCode": 200,
-                    "headers": {
-                        "Access-Control-Allow-Origin": "*",
-                        "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-                        "Access-Control-Allow-Methods": "GET,OPTIONS",
-                        "X-Request-ID": request_id,
-                    },
-                    "body": json.dumps(items),
-                }
+                return create_response(200, items, request_id)
 
             # Get task by ID
             response = table.get_item(Key={"task_id": task_id})
             if "Item" not in response:
-                return {
-                    "statusCode": 404,
-                    "headers": {
-                        "Access-Control-Allow-Origin": "*",
-                        "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-                        "Access-Control-Allow-Methods": "GET,OPTIONS",
-                        "X-Request-ID": request_id,
-                    },
-                    "body": json.dumps({"message": "Task not found"}),
-                }
+                return create_response(404, {"message": "Task not found"}, request_id)
 
-            return {
-                "statusCode": 200,
-                "headers": {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-                    "Access-Control-Allow-Methods": "GET,OPTIONS",
-                    "X-Request-ID": request_id,
-                },
-                "body": json.dumps(response["Item"]),
-            }
+            return create_response(200, response["Item"], request_id)
 
         # Check if we're getting tasks by operation type
         if "queryStringParameters" in event and event["queryStringParameters"]:
@@ -105,16 +78,7 @@ def get_task_status_handler(event: Dict[str, Any], context: Any) -> Dict[str, An
                     )
                     items.extend(response.get("Items", []))
 
-                return {
-                    "statusCode": 200,
-                    "headers": {
-                        "Access-Control-Allow-Origin": "*",
-                        "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-                        "Access-Control-Allow-Methods": "GET,OPTIONS",
-                        "X-Request-ID": request_id,
-                    },
-                    "body": json.dumps(items),
-                }
+                return create_response(200, items, request_id)
 
             # Query tasks by operation type
             response = table.query(
@@ -123,16 +87,7 @@ def get_task_status_handler(event: Dict[str, Any], context: Any) -> Dict[str, An
                 ExpressionAttributeValues={":operation": operation},
             )
 
-            return {
-                "statusCode": 200,
-                "headers": {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-                    "Access-Control-Allow-Methods": "GET,OPTIONS",
-                    "X-Request-ID": request_id,
-                },
-                "body": json.dumps(response.get("Items", [])),
-            }
+            return create_response(200, response.get("Items", []), request_id)
 
         # If no parameters provided, return all tasks
         response = table.scan()
@@ -143,26 +98,40 @@ def get_task_status_handler(event: Dict[str, Any], context: Any) -> Dict[str, An
             response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
             items.extend(response.get("Items", []))
 
-        return {
-            "statusCode": 200,
-            "headers": {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-                "Access-Control-Allow-Methods": "GET,OPTIONS",
-                "X-Request-ID": request_id,
-            },
-            "body": json.dumps(items),
-        }
+        return create_response(200, items, request_id)
 
     except Exception as e:
         logger.exception("Error processing task status request")
-        return {
-            "statusCode": 500,
-            "headers": {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-                "Access-Control-Allow-Methods": "GET,OPTIONS",
-                "X-Request-ID": request_id,
-            },
-            "body": json.dumps({"message": "Internal server error"}),
-        }
+        return create_response(500, {"message": "Internal server error"}, request_id)
+
+
+def create_response(
+    status_code: int,
+    body: Dict[str, Any],
+    request_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Create a standardized API response
+
+    Args:
+        status_code: HTTP status code
+        body: Response body
+        request_id: Optional request ID for tracking
+
+    Returns:
+        Dict containing the response
+    """
+    response = {
+        "statusCode": status_code,
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+            "Access-Control-Allow-Methods": "OPTIONS,GET,POST,PUT,DELETE",
+        },
+        "body": json.dumps(body),
+    }
+
+    if request_id:
+        response["headers"]["X-Request-ID"] = request_id
+
+    return response

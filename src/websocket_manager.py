@@ -74,24 +74,22 @@ class WebSocketManager:
             result: Optional result data
             error: Optional error message
         """
-        # Construct the message
+        current_time = int(time.time())
+
+        # Construct the message to match API format
         message = {
             "type": "task_status",
             "payload": {
                 "task_id": task_id,
                 "operation": operation,
                 "status": status,
-                "timestamp": datetime.utcnow().isoformat(),
+                "progress": progress,
+                "result": result,
+                "error": error,
+                "created_at": current_time,
+                "updated_at": current_time,
             },
         }
-
-        # Add optional fields if present
-        if progress:
-            message["payload"]["progress"] = progress
-        if result:
-            message["payload"]["result"] = result
-        if error:
-            message["payload"]["error"] = error
 
         # Get all active connections
         response = self.table.scan()
