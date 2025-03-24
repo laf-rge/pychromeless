@@ -22,18 +22,15 @@ import sys
 import os
 import time
 from datetime import date, datetime, timedelta
-from pythonjsonlogger.json import JsonFormatter
-from pygments import highlight
-from pygments.lexers import JsonLexer
-from pygments.formatters import TerminalFormatter
 from decimal import Decimal
 from email.message import Message
 from functools import partial  # noqa # pylint: disable=unused-import
 from locale import LC_NUMERIC, atof, setlocale
 from operator import itemgetter
-from typing import Any, Dict
+from typing import Any, Dict, cast
 import uuid
 from websocket_manager import WebSocketManager
+from logging_utils import setup_json_logger
 
 import crunchtime
 import pandas as pd
@@ -51,53 +48,24 @@ from email_service import EmailService
 import boto3
 from dotenv import load_dotenv
 from operation_types import OperationType
+from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
 
 load_dotenv()
 
 store_config = StoreConfig()
 email_service = EmailService(store_config)
 
-dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table(os.environ["CONNECTIONS_TABLE"])
-
-
-class CustomJsonEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, (datetime, date)):
-            return o.isoformat()
-        return super().default(o)
-
-
-class ColorizedJsonFormatter(JsonFormatter):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs, json_default=CustomJsonEncoder().default)
-
-    def format(self, record: Any) -> str:
-        json_str = super().format(record)
-        return highlight(json_str, JsonLexer(), TerminalFormatter())
-
-
-def setup_json_logger():
-    json_handler = logging.StreamHandler(sys.stdout)
-    json_formatter = ColorizedJsonFormatter(
-        fmt="%(asctime)s %(levelname)s %(name)s %(message)s"
-    )
-    json_handler.setFormatter(json_formatter)
-
-    root_logger = logging.getLogger()
-    root_logger.handlers = []
-    root_logger.addHandler(json_handler)
-    root_logger.setLevel(logging.INFO)
-
-
-if "AWS_LAMBDA_FUNCTION_NAME" not in os.environ:
-    setup_json_logger()
-logger = logging.getLogger(__name__)
+dynamodb = cast(DynamoDBServiceResource, boto3.resource("dynamodb"))
+table = cast(Any, dynamodb.Table(os.environ["CONNECTIONS_TABLE"]))
 
 # warning! this won't work if we multiply
 TWO_PLACES = Decimal(10) ** -2
 setlocale(LC_NUMERIC, "en_US.UTF-8")
 pattern = re.compile(r"\d+\.\d\d")
+
+if "AWS_LAMBDA_FUNCTION_NAME" not in os.environ:
+    setup_json_logger()
+logger = logging.getLogger(__name__)
 
 
 def create_response(
@@ -838,67 +806,45 @@ def default_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 
 def cleanup_connections_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
-    """Cleanup stale WebSocket connections"""
+    """Handler for cleaning up stale WebSocket connections."""
     try:
-        # Get current timestamp for comparison
-        current_time = int(time.time())
+        # Extract request ID from context
+        request_id = context.aws_request_id
+        logger.info(f"Processing cleanup request {request_id}")
 
-        # Scan for expired connections
-        response = table.scan(
-            FilterExpression="attribute_not_exists(ttl) OR ttl <= :current_time",
-            ExpressionAttributeValues={":current_time": current_time},
-        )
+        # Get the connections table
+        table = cast(Any, dynamodb.Table(os.environ["CONNECTIONS_TABLE"]))
 
-        deleted_count = 0
-        errors = []
+        # Scan for all connections
+        response = table.scan()
+        items = response.get("Items", [])
 
-        # Process each expired connection
-        for item in response.get("Items", []):
-            try:
-                connection_id = item["connection_id"]
-
-                # Delete the connection record
-                table.delete_item(Key={"connection_id": connection_id})
-                deleted_count += 1
-
-                logger.info(
-                    "Deleted expired connection",
-                    extra={
-                        "connection_id": connection_id,
-                        "ttl": item.get("ttl", "no_ttl"),
-                        "connected_at": item.get("connected_at", "unknown"),
-                    },
-                )
-            except Exception as e:
-                errors.append(str(e))
-                logger.exception(
-                    "Error deleting connection",
-                    extra={"connection_id": item.get("connection_id", "unknown")},
-                )
-
-        # Handle pagination if necessary
+        # Continue scanning if we have more items
         while "LastEvaluatedKey" in response:
-            response = table.scan(
-                FilterExpression="attribute_not_exists(ttl) OR ttl <= :current_time",
-                ExpressionAttributeValues={":current_time": current_time},
-                ExclusiveStartKey=response["LastEvaluatedKey"],
-            )
+            response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
+            items.extend(response.get("Items", []))
 
-            for item in response.get("Items", []):
-                try:
-                    connection_id = item["connection_id"]
-                    table.delete_item(Key={"connection_id": connection_id})
-                    deleted_count += 1
-                except Exception as e:
-                    errors.append(str(e))
+        # Delete each connection
+        for item in items:
+            connection_id = item["connection_id"]
+            table.delete_item(
+                Key={"connection_id": connection_id},
+                ConditionExpression="connection_id = :cid",
+                ExpressionAttributeValues={":cid": connection_id},
+            )
+            logger.info(f"Deleted connection {connection_id}")
 
         return {
             "statusCode": 200,
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                "Access-Control-Allow-Methods": "POST,OPTIONS",
+                "X-Request-ID": request_id,
+            },
             "body": json.dumps(
                 {
-                    "message": "Cleanup completed",
-                    "deleted_count": deleted_count,
-                    "errors": errors,
+                    "message": f"Successfully cleaned up {len(items)} connections",
                 }
             ),
         }

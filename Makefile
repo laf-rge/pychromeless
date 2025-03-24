@@ -1,4 +1,4 @@
-all: websocket validate_token
+all: websocket validate_token task_status
 	@if [ $$? -eq 0 ]; then \
 		aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 262877227567.dkr.ecr.us-east-2.amazonaws.com && \
 		DOCKER_BUILDKIT=1 docker build --platform linux/amd64 -t wmc . --no-cache && \
@@ -7,7 +7,7 @@ all: websocket validate_token
 		cd terraform && \
 			terraform apply; \
 	else \
-		echo "websocket or validate_token failed, stopping execution"; \
+		echo "websocket, validate_token, or task_status failed, stopping execution"; \
 		exit 1; \
 	fi
 
@@ -26,6 +26,13 @@ validate_token: install_deps
 		cp ../src/validate_token.py . && \
 		cp ../src/auth_utils.py . && \
 		zip -r ../deploy/validate_token.zip .
+
+task_status: install_deps
+	mkdir -p deploy && cd build && \
+		cp ../src/task_status.py . && \
+		cp ../src/logging_utils.py . && \
+		zip -r ../deploy/task_status.zip * && \
+		rm task_status.py logging_utils.py
 
 install_deps:
 	mkdir -p build && cd build && \
