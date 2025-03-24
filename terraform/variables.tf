@@ -42,6 +42,9 @@ variable "service_credentials" {
     wheniwork_password = string
     wheniwork_key      = string
 
+    # Zenput
+    zenput_token = string
+
     # Google Drive
     gdrive_json = string
   })

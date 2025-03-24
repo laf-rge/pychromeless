@@ -50,6 +50,7 @@ from store_config import StoreConfig
 from email_service import EmailService
 import boto3
 from dotenv import load_dotenv
+from operation_types import OperationType
 
 load_dotenv()
 
@@ -325,7 +326,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
 
         # Notify start
         ws_manager.broadcast_status(
-            task_id=request_id, operation="daily_sales", status="started"
+            task_id=request_id, operation=OperationType.DAILY_SALES, status="started"
         )
 
         dj = Flexepos()
@@ -343,7 +344,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                 # Update progress
                 ws_manager.broadcast_status(
                     task_id=request_id,
-                    operation="daily_sales",
+                    operation=OperationType.DAILY_SALES,
                     status="processing",
                     progress={
                         "current": processed_stores,
@@ -409,7 +410,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         if not success:
             ws_manager.broadcast_status(
                 task_id=request_id,
-                operation="daily_sales",
+                operation=OperationType.DAILY_SALES,
                 status="failed",
                 error="Failed to process daily sales",
             )
@@ -437,7 +438,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
 
             ws_manager.broadcast_status(
                 task_id=request_id,
-                operation="daily_sales",
+                operation=OperationType.DAILY_SALES,
                 status="completed",
                 result={
                     "processed_dates": [d.isoformat() for d in txdates],
@@ -459,7 +460,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
 
             ws_manager.broadcast_status(
                 task_id=request_id,
-                operation="daily_sales",
+                operation=OperationType.DAILY_SALES,
                 status="failed",
                 error=error_msg,
             )
@@ -468,7 +469,10 @@ def daily_sales_handler(*args, **kwargs) -> dict:
 
     except Exception as e:
         ws_manager.broadcast_status(
-            task_id=request_id, operation="daily_sales", status="failed", error=str(e)
+            task_id=request_id,
+            operation=OperationType.DAILY_SALES,
+            status="failed",
+            error=str(e),
         )
         return create_response(500, {"message": str(e)}, request_id=request_id)
 

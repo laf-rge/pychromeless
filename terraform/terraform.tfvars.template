@@ -55,6 +55,9 @@ service_credentials = {
   wheniwork_password = "YOUR_WHENIWORK_PASSWORD"
   wheniwork_key      = "YOUR_WHENIWORK_API_KEY"
 
+  # Zenput credentials
+  zenput_token = "YOUR_ZENPUT_API_TOKEN"
+
   # Google Drive service account JSON
   gdrive_json = <<-EOT
 {
