@@ -48,6 +48,7 @@ import boto3
 from dotenv import load_dotenv
 from operation_types import OperationType
 from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
+from quickbooks.objects import Bill
 
 load_dotenv()
 
@@ -715,6 +716,115 @@ def get_food_handler_links_handler(*args, **kwargs) -> dict:
     except Exception:
         logger.exception("Error getting food handler PDF links")
         return create_response(500, {"message": "Error getting food handler PDF links"})
+
+
+def split_bill_handler(*args, **kwargs) -> dict:
+    """
+    Split a QuickBooks bill between multiple locations.
+
+    Lambda invocation:
+        - HTTP Method: POST
+        - Request format:
+            {
+                "doc_number": "string",
+                "locations": ["string"],
+                "split_ratios": {                    # Optional
+                    "location": number
+                }
+            }
+
+    Returns:
+        On success:
+            {
+                "message": "Bill split successfully",
+                "split_doc_numbers": ["string"]
+            }
+        On error:
+            {
+                "message": "Error message"
+            }
+    """
+    try:
+        event = args[0] if args and len(args) > 0 else {}
+
+        # Parse and validate input parameters
+        try:
+            body = json.loads(event.get("body", "{}"))
+            doc_number = body.get("doc_number")
+            locations = body.get("locations", [])
+            split_ratios = body.get("split_ratios")
+
+            if not doc_number:
+                return create_response(400, {"message": "doc_number is required"})
+            if not locations or not isinstance(locations, list):
+                return create_response(
+                    400, {"message": "locations must be a non-empty list"}
+                )
+
+            # Validate split_ratios if provided
+            if split_ratios:
+                if not isinstance(split_ratios, dict):
+                    return create_response(
+                        400, {"message": "split_ratios must be a dictionary"}
+                    )
+                if not all(isinstance(v, (int, float)) for v in split_ratios.values()):
+                    return create_response(
+                        400, {"message": "split_ratios values must be numbers"}
+                    )
+                if not all(loc in locations for loc in split_ratios.keys()):
+                    return create_response(
+                        400, {"message": "split_ratios keys must match locations"}
+                    )
+
+                # Convert split_ratios values to float for calculation
+                split_ratios = {k: float(v) for k, v in split_ratios.items()}
+
+        except json.JSONDecodeError:
+            return create_response(400, {"message": "Invalid JSON in request body"})
+        except Exception as e:
+            logger.exception("Error parsing request parameters")
+            return create_response(
+                400, {"message": f"Invalid request parameters: {str(e)}"}
+            )
+
+        # Find the bill to split
+        qb.refresh_session()
+        bills = Bill.filter(DocNumber=doc_number, qb=qb.CLIENT)
+        if not bills:
+            return create_response(404, {"message": f"Bill not found: {doc_number}"})
+
+        original_bill = bills[0]
+
+        # Call the split_bill function
+        try:
+            new_bills = qb.split_bill(original_bill, locations, split_ratios)
+            split_doc_numbers = [bill.DocNumber for bill in new_bills]
+
+            return create_response(
+                200,
+                {
+                    "message": "Bill split successfully",
+                    "split_doc_numbers": split_doc_numbers,
+                },
+            )
+
+        except ValueError as ve:
+            logger.warning("Invalid split parameters", extra={"error": str(ve)})
+            return create_response(400, {"message": str(ve)})
+        except Exception as e:
+            logger.exception(
+                "Error splitting bill",
+                extra={
+                    "doc_number": doc_number,
+                    "locations": locations,
+                    "error": str(e),
+                },
+            )
+            return create_response(500, {"message": "Error splitting bill"})
+
+    except Exception as e:
+        logger.exception("Unexpected error in split_bill_handler")
+        return create_response(500, {"message": f"Internal server error: {str(e)}"})
 
 
 def connect_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:

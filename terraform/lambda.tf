@@ -87,6 +87,14 @@ locals {
       memory      = 10240
       env_vars    = local.lambda_env_get_mpvs
     },
+    split_bill = {
+      name        = "split-bill"
+      description = "Splits a QuickBooks bill between multiple locations"
+      handler     = "lambda_function.split_bill_handler"
+      timeout     = 300
+      memory      = 10240
+      env_vars    = local.lambda_env_split_bill
+    },
     get_food_handler_links = {
       name        = "get-food-handler-links"
       description = "Returns public links to combined food handler PDFs for each store"

@@ -89,13 +89,16 @@ locals {
   }
 
   # Service environments using the base configuration
-  invoice_sync   = { prod = local.base_env_config }
-  daily_sales    = { prod = local.base_env_config }
-  daily_journal  = { prod = local.base_env_config }
-  email_tips     = { prod = local.base_env_config }
-  transform_tips = { prod = local.base_env_config }
-  get_mpvs       = { prod = local.base_env_config }
-  authorizer     = { prod = local.base_env_config }
+  invoice_sync             = { prod = local.base_env_config }
+  daily_sales              = { prod = local.base_env_config }
+  daily_journal            = { prod = local.base_env_config }
+  email_tips               = { prod = local.base_env_config }
+  transform_tips           = { prod = local.base_env_config }
+  get_mpvs                 = { prod = local.base_env_config }
+  split_bill               = { prod = local.base_env_config }
+  get_food_handler_links   = { prod = local.base_env_config }
+  update_food_handler_pdfs = { prod = local.base_env_config }
+  authorizer               = { prod = local.base_env_config }
 
   # Websocket configuration with additional DynamoDB settings
   websocket = {
@@ -103,13 +106,16 @@ locals {
   }
 
   # Lambda environment mappings
-  lambda_env_invoice_sync   = local.invoice_sync[terraform.workspace]
-  lambda_env_daily_journal  = local.daily_journal[terraform.workspace]
-  lambda_env_daily_sales    = local.daily_sales[terraform.workspace]
-  lambda_env_email_tips     = local.email_tips[terraform.workspace]
-  lambda_env_transform_tips = local.transform_tips[terraform.workspace]
-  lambda_env_get_mpvs       = local.get_mpvs[terraform.workspace]
-  lambda_env_authorizer     = local.authorizer[terraform.workspace]
+  lambda_env_invoice_sync             = local.invoice_sync[terraform.workspace]
+  lambda_env_daily_journal            = local.daily_journal[terraform.workspace]
+  lambda_env_daily_sales              = local.daily_sales[terraform.workspace]
+  lambda_env_email_tips               = local.email_tips[terraform.workspace]
+  lambda_env_transform_tips           = local.transform_tips[terraform.workspace]
+  lambda_env_get_mpvs                 = local.get_mpvs[terraform.workspace]
+  lambda_env_authorizer               = local.authorizer[terraform.workspace]
+  lambda_env_split_bill               = local.split_bill[terraform.workspace]
+  lambda_env_get_food_handler_links   = local.get_food_handler_links[terraform.workspace]
+  lambda_env_update_food_handler_pdfs = local.update_food_handler_pdfs[terraform.workspace]
   lambda_env_websocket = {
     CONNECTIONS_TABLE  = aws_dynamodb_table.websocket_connections.name
     WEBSOCKET_ENDPOINT = replace(aws_apigatewayv2_stage.websocket.invoke_url, "wss://", "https://")
@@ -128,11 +134,4 @@ locals {
     log_format            = "JSON"
     application_log_level = "INFO"
   }
-
-  get_food_handler_links = { prod = local.base_env_config }
-
-  lambda_env_get_food_handler_links = local.get_food_handler_links[terraform.workspace]
-
-  update_food_handler_pdfs            = { prod = local.base_env_config }
-  lambda_env_update_food_handler_pdfs = local.update_food_handler_pdfs[terraform.workspace]
 }

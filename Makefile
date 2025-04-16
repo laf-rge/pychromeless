@@ -11,30 +11,36 @@ all: websocket validate_token task_status
 		exit 1; \
 	fi
 
+install-dev:
+	pip install -r requirements.txt
+
+test: install-dev
+	cd src && python -m unittest discover -s tests -v
+
 websocket: ws_validate_token
 	mkdir -p deploy && cd src && zip -r ../deploy/websocket.zip ws*.py auth_utils.py
 
-ws_validate_token: install_deps
+ws_validate_token: install_lambda_deps
 	mkdir -p deploy && cd build && \
 		cp ../src/ws_validate_token.py . && \
 		cp ../src/auth_utils.py . && \
 		zip -r ../deploy/ws_validate_token.zip * && \
 		rm ws_validate_token.py auth_utils.py
 
-validate_token: install_deps
+validate_token: install_lambda_deps
 	mkdir -p deploy && cd build && \
 		cp ../src/validate_token.py . && \
 		cp ../src/auth_utils.py . && \
 		zip -r ../deploy/validate_token.zip .
 
-task_status: install_deps
+task_status: install_lambda_deps
 	mkdir -p deploy && cd build && \
 		cp ../src/task_status.py . && \
 		cp ../src/logging_utils.py . && \
 		zip -r ../deploy/task_status.zip * && \
 		rm task_status.py logging_utils.py
 
-install_deps:
+install_lambda_deps:
 	mkdir -p build && cd build && \
 		pip install --upgrade \
 			--platform manylinux2014_x86_64 \

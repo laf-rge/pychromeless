@@ -892,26 +892,32 @@ def fix_wld_online_tips():
                         )
 
 
-def split_bill(original_bill, locations, split_ratios=None):
-    """Split a QuickBooks bill between multiple locations.
+def calculate_bill_splits(total_amount, line_amounts, locations, split_ratios=None):
+    """Calculate how a bill should be split between locations.
 
     Args:
-        original_bill (Bill): The original QuickBooks bill to split
-        locations (list): List of location/store codes to split between
+        total_amount (Decimal): Total bill amount
+        line_amounts (list[Decimal]): List of line item amounts
+        locations (list): List of location codes to split between
         split_ratios (dict, optional): Dictionary of {location: ratio} for custom splits.
-                                     Ratios must sum to 1.0. Defaults to equal splits.
+                                     Defaults to equal splits.
 
     Returns:
-        list: List of new Bill objects created from the split
+        dict: Dictionary mapping locations to lists of line amounts
 
-    Raises:
-        ValueError: If split ratios don't sum to 1.0 or locations list is empty
-        Exception: If bill voiding or creation fails
+    Example:
+        >>> amounts = calculate_bill_splits(
+        ...     Decimal('256.36'),
+        ...     [Decimal('256.36')],
+        ...     ['20025', '20358', '20366', '20367', '20368']
+        ... )
+        >>> amounts['20025']
+        [Decimal('51.27')]
+        >>> sum(sum(v) for v in amounts.values())
+        Decimal('256.36')
     """
-    refresh_session()
-
     if not locations:
-        raise ValueError("Must provide at least one location to split bill between")
+        raise ValueError("Must provide at least one location to split between")
 
     # Validate and normalize split ratios - keep full precision for calculations
     if split_ratios is None:
@@ -922,6 +928,97 @@ def split_bill(original_bill, locations, split_ratios=None):
         ratio_sum = sum(split_ratios.values())
         if abs(ratio_sum - Decimal("1")) > Decimal("0.001"):
             raise ValueError(f"Split ratios must sum to 1.0, got {ratio_sum}")
+
+    # Initialize results dictionary
+    results = {loc: [] for loc in locations}
+
+    # Track running totals for each location
+    location_totals = {loc: Decimal("0") for loc in locations}
+    total_allocated = Decimal("0")
+
+    # Process each line item
+    for line_amount in line_amounts:
+        remaining_amount = line_amount
+
+        # Split the line amount between locations
+        for location in locations[:-1]:  # Process all but last location
+            ratio = split_ratios[location]
+            exact_split = line_amount * ratio
+            split_amount = exact_split.quantize(TWO_PLACES)
+
+            results[location].append(split_amount)
+            location_totals[location] += split_amount
+            remaining_amount -= split_amount
+            total_allocated += split_amount
+
+        # Last location gets any remaining amount to ensure exact total
+        last_location = locations[-1]
+        results[last_location].append(remaining_amount.quantize(TWO_PLACES))
+        location_totals[last_location] += remaining_amount
+        total_allocated += remaining_amount
+
+    # Verify totals
+    if total_allocated != total_amount:
+        raise ValueError(
+            f"Split allocation mismatch: {total_allocated} != {total_amount}"
+        )
+
+    return results
+
+
+def test_bill_split():
+    """Test the bill splitting calculation with a specific test case."""
+    # Test case: $256.36 split over 5 locations
+    total = Decimal("256.36")
+    line_amounts = [Decimal("256.36")]
+    locations = ["20025", "20358", "20366", "20367", "20368"]
+
+    try:
+        splits = calculate_bill_splits(total, line_amounts, locations)
+
+        # Print the results
+        print("\nBill Split Test Results:")
+        print(f"Original Amount: ${total}")
+        print("\nSplit Amounts:")
+        for loc, amounts in splits.items():
+            loc_total = sum(amounts)
+            print(f"{loc}: ${loc_total} {amounts}")
+
+        # Verify total matches
+        total_split = sum(sum(amounts) for amounts in splits.values())
+        print(f"\nTotal Split Amount: ${total_split}")
+        print(f"Matches Original: {total == total_split}")
+
+        # Verify each location gets close to equal share
+        expected_share = total / len(locations)
+        print(f"\nExpected share per location: ${expected_share}")
+        for loc, amounts in splits.items():
+            loc_total = sum(amounts)
+            diff = abs(loc_total - expected_share)
+            print(f"{loc} diff from expected: ${diff}")
+
+        return total == total_split
+
+    except Exception as e:
+        print(f"Test failed with error: {str(e)}")
+        return False
+
+
+def split_bill(original_bill, locations, split_ratios=None):
+    """Split a QuickBooks bill between multiple locations."""
+    refresh_session()
+
+    # Calculate the splits first
+    total_amount = sum(Decimal(line.Amount) for line in original_bill.Line)
+    line_amounts = [Decimal(line.Amount) for line in original_bill.Line]
+
+    try:
+        split_amounts = calculate_bill_splits(
+            total_amount, line_amounts, locations, split_ratios
+        )
+    except ValueError as e:
+        logger.error("Failed to calculate bill splits", extra={"error": str(e)})
+        raise
 
     store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
 
@@ -936,12 +1033,6 @@ def split_bill(original_bill, locations, split_ratios=None):
     i = 1
 
     try:
-        # Calculate the total bill amount once
-        total_bill_amount = sum(Decimal(line.Amount) for line in original_bill.Line)
-
-        # Track the running total across all splits to handle remaining pennies
-        total_allocated = Decimal("0")
-
         for location in locations:
             new_bill = Bill()
 
@@ -956,12 +1047,12 @@ def split_bill(original_bill, locations, split_ratios=None):
             new_bill.DocNumber = f"{original_bill.DocNumber}S{i}"
             split_doc_numbers.append(new_bill.DocNumber)
 
-            ratio = split_ratios[location]
             new_bill.Line = []
-            running_total = Decimal("0")
 
-            # Split each line item
-            for line_num, orig_line in enumerate(original_bill.Line, 1):
+            # Create line items using pre-calculated amounts
+            for line_num, (orig_line, split_amount) in enumerate(
+                zip(original_bill.Line, split_amounts[location]), 1
+            ):
                 new_line = AccountBasedExpenseLine()
                 new_line.AccountBasedExpenseLineDetail = AccountBasedExpenseLineDetail()
                 new_line.AccountBasedExpenseLineDetail.AccountRef = (
@@ -969,20 +1060,7 @@ def split_bill(original_bill, locations, split_ratios=None):
                 )
                 new_line.LineNum = line_num
                 new_line.Id = line_num
-
-                # Calculate exact split amount first
-                exact_split = Decimal(orig_line.Amount) * ratio
-
-                # For the last location, adjust to account for previous rounding
-                if location == locations[-1] and line_num == len(original_bill.Line):
-                    expected_total = total_bill_amount * ratio
-                    split_amount = (expected_total - running_total).quantize(TWO_PLACES)
-                else:
-                    split_amount = exact_split.quantize(TWO_PLACES)
-
                 new_line.Amount = split_amount
-                running_total += split_amount
-                total_allocated += split_amount
                 new_line.Description = orig_line.Description
                 new_bill.Line.append(new_line)
 
@@ -993,8 +1071,7 @@ def split_bill(original_bill, locations, split_ratios=None):
                     "split_date": datetime.datetime.now().isoformat(),
                     "total_splits": len(locations),
                     "split_locations": locations,
-                    "split_ratio": str(ratio),
-                    "split_amount": str(running_total),
+                    "split_amount": str(sum(split_amounts[location])),
                 }
             }
             if hasattr(original_bill, "PrivateNote") and original_bill.PrivateNote:
@@ -1010,7 +1087,7 @@ def split_bill(original_bill, locations, split_ratios=None):
                         "original_doc": original_bill.DocNumber,
                         "split_doc": new_bill.DocNumber,
                         "location": location,
-                        "amount": str(running_total),
+                        "amount": str(sum(split_amounts[location])),
                     },
                 )
             except Exception as e:
@@ -1021,17 +1098,6 @@ def split_bill(original_bill, locations, split_ratios=None):
                 raise
 
             i += 1
-
-        # Verify total allocated matches original bill
-        if total_allocated != total_bill_amount:
-            logger.warning(
-                "Split allocation mismatch",
-                extra={
-                    "original_amount": str(total_bill_amount),
-                    "allocated_amount": str(total_allocated),
-                    "difference": str(total_bill_amount - total_allocated),
-                },
-            )
 
         # Now void the original bill
         void_note = {

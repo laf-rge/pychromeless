@@ -199,7 +199,7 @@ class Tips:
                     [
                         self._locations[shift["location_id"]]["name"],
                         f"{user['last_name']}, {user['first_name']}",
-                        f"\"{datetime.datetime.strptime(shift['start_time'], WHENIWORK_DATE_FORMAT).strftime('%Y-%m-%d %H:%M:%S')}\"",
+                        f'"{datetime.datetime.strptime(shift["start_time"], WHENIWORK_DATE_FORMAT).strftime("%Y-%m-%d %H:%M:%S")}"',
                         "N/A",
                         "N/A",
                         "no show on shift",
@@ -373,10 +373,10 @@ class Tips:
                 f"{mpv['last_name']},{mpv['first_name']},"
                 + "Crew (Primary),"
                 + f"{sum(item['hourly_rate'] for item in g)},"
-                + f"\"MPV {', '.join(list(str(item['day'].month) + '/' + str(item['day'].day) for item in g))}\""
+                + f'"MPV {", ".join(list(str(item["day"].month) + "/" + str(item["day"].day) for item in g))}"'
             )
             if pay_period == 0:
-                t += f",\"{mpv['store']}\""
+                t += f',"{mpv["store"]}"'
             text_csv.append(t)
         return "\n".join(text_csv)
 
