@@ -15,7 +15,7 @@ install-dev:
 	pip install -r requirements.txt
 
 test: install-dev
-	cd src && python -m unittest discover -s tests -v
+	PYTHONPATH=src python -m unittest discover -s src/tests -v
 
 websocket: ws_validate_token
 	mkdir -p deploy && cd src && zip -r ../deploy/websocket.zip ws*.py auth_utils.py

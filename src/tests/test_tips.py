@@ -4,7 +4,7 @@ from io import BytesIO
 from unittest.mock import Mock, patch
 
 from openpyxl import Workbook
-from ..tips import Tips
+from tips import Tips
 
 
 class TestTips(unittest.TestCase):
