@@ -49,23 +49,35 @@ class Grubhub:
             end_date = datetime.date.today() - datetime.timedelta(
                 days=(datetime.date.today().weekday() - 7)
             )
-        # if datetime.date.today() - start_date >= datetime.timedelta(days=30):
-        #    raise ValueError("Dates outside of 30 days is not supported.")
+
+        driver = None
         try:
-            # self._login()
             self._driver = initialise_driver()
-            input("pause")
+            input("pause...")
             driver = self._driver
+
+            # First switch to the first window to ensure we're in a valid context
+            driver.switch_to.window(driver.window_handles[0])
+
+            # Then look for the Grubhub tab
+            grubhub_handle = None
+            for handle in driver.window_handles:
+                driver.switch_to.window(handle)
+                if "Grubhub" in driver.title:
+                    grubhub_handle = handle
+                    break
+
+            if not grubhub_handle:
+                logger.warning("Could not find Grubhub tab")
+                raise Exception("Could not find Grubhub tab")
+
             try:
                 driver.get(
                     "https://restaurant.grubhub.com/financials/deposit-history/3192172,6177240,7583896,7585040/"
                 )
-            except Exception:
-                driver.switch_to.window(driver.window_handles[0])
-            finally:
-                driver.get(
-                    "https://restaurant.grubhub.com/financials/deposit-history/3192172,6177240,7583896,7585040/"
-                )
+            except Exception as e:
+                logger.warning(f"Error accessing URL: {str(e)}")
+                raise
 
             sleep(2)
             driver.find_element(By.CLASS_NAME, "date-picker-input__date-button").click()
@@ -120,9 +132,14 @@ class Grubhub:
                 ).click()
             return results
 
-        finally:
-            # driver.close()
-            pass
+        except Exception as e:
+            logger.exception("Error in get_payments")
+            if driver:
+                try:
+                    driver.quit()
+                except:
+                    pass
+            raise e
 
     def convert_num(self, number):
         return number.replace("$", "")

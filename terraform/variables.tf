@@ -42,6 +42,9 @@ variable "service_credentials" {
     wheniwork_password = string
     wheniwork_key      = string
 
+    # Zenput
+    zenput_token = string
+
     # Google Drive
     gdrive_json = string
   })
@@ -79,8 +82,10 @@ variable "store_config" {
 locals {
   # Base environment configuration template
   base_env_config = {
-    PATH       = "/opt/bin"
-    PYTHONPATH = "/var/task/src:/opt/lib"
+    PATH               = "/opt/bin"
+    PYTHONPATH         = "/var/task/src:/opt/lib"
+    CONNECTIONS_TABLE  = aws_dynamodb_table.websocket_connections.name
+    WEBSOCKET_ENDPOINT = replace(aws_apigatewayv2_stage.websocket.invoke_url, "wss://", "https://")
   }
 
   # Service environments using the base configuration
@@ -94,9 +99,7 @@ locals {
 
   # Websocket configuration with additional DynamoDB settings
   websocket = {
-    prod = merge(local.base_env_config, {
-      DYNAMODB_TABLE = aws_dynamodb_table.websocket_connections.name
-    })
+    prod = local.base_env_config
   }
 
   # Lambda environment mappings
@@ -107,7 +110,10 @@ locals {
   lambda_env_transform_tips = local.transform_tips[terraform.workspace]
   lambda_env_get_mpvs       = local.get_mpvs[terraform.workspace]
   lambda_env_authorizer     = local.authorizer[terraform.workspace]
-  lambda_env_websocket      = local.websocket[terraform.workspace]
+  lambda_env_websocket = {
+    CONNECTIONS_TABLE  = aws_dynamodb_table.websocket_connections.name
+    WEBSOCKET_ENDPOINT = replace(aws_apigatewayv2_stage.websocket.invoke_url, "wss://", "https://")
+  }
 
   # Common resource tags
   common_tags = {

@@ -54,7 +54,10 @@ resource "aws_api_gateway_integration" "lambda_root" {
                 {
                 "year": "$input.params('year')",
                 "month": "$input.params('month')",
-                "day": "$input.params('day')"
+                "day": "$input.params('day')",
+                "requestContext": {
+                    "requestId": "$context.requestId"
+                }
                 }
             EOT
   }
@@ -68,7 +71,8 @@ resource "aws_api_gateway_method_response" "root_method_response_200" {
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin"  = true,
     "method.response.header.Access-Control-Allow-Headers" = true,
-    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.X-Request-ID"                 = true
   }
 }
 
@@ -77,14 +81,20 @@ resource "aws_api_gateway_integration_response" "lambda_root_response" {
   resource_id = aws_api_gateway_rest_api.josiah.root_resource_id
   http_method = aws_api_gateway_integration.lambda_root.http_method
   status_code = aws_api_gateway_method_response.root_method_response_200.status_code
+
   response_templates = {
-    "application/json" = jsonencode({
-      body    = "Josiah is on it!",
-      headers = { "Access-Control-Allow-Origin" : "*" },
-    })
+    "application/json" = <<EOF
+    #set($context.responseOverride.header.X-Request-ID = $context.requestId)
+    {
+      "message": $input.json('$.message'),
+      "task_id": "$context.requestId"
+    }
+    EOF
   }
+
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin" = "'*'",
+    "method.response.header.X-Request-ID"                = "context.requestId"
   }
 }
 
@@ -169,7 +179,10 @@ resource "aws_api_gateway_integration" "lambda_email_tips" {
                 {
                 "year": "$input.params('year')",
                 "month": "$input.params('month')",
-                "day": "$input.params('day')"
+                "day": "$input.params('day')",
+                "requestContext": {
+                    "requestId": "$context.requestId"
+                }
                 }
             EOT
   }
@@ -180,9 +193,12 @@ resource "aws_api_gateway_method_response" "email_tips_method_response_200" {
   resource_id = aws_api_gateway_resource.email_tips_resource.id
   http_method = aws_api_gateway_method.proxy_email_tips.http_method
   status_code = "200"
-  response_parameters = { "method.response.header.Access-Control-Allow-Origin" = true,
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
     "method.response.header.Access-Control-Allow-Headers" = true,
-  "method.response.header.Access-Control-Allow-Methods" = true }
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.X-Request-ID"                 = true
+  }
 }
 
 resource "aws_api_gateway_integration_response" "lambda_email_tips_response" {
@@ -191,13 +207,17 @@ resource "aws_api_gateway_integration_response" "lambda_email_tips_response" {
   http_method = aws_api_gateway_integration.lambda_email_tips.http_method
   status_code = aws_api_gateway_method_response.email_tips_method_response_200.status_code
   response_templates = {
-    "application/json" = jsonencode({
-      body    = "Josiah is on it!",
-      headers = { "Access-Control-Allow-Origin" : "*" },
-    })
+    "application/json" = <<EOF
+    #set($context.responseOverride.header.X-Request-ID = $context.requestId)
+    {
+      "message": "Josiah is on it!",
+      "task_id": "$context.requestId"
+    }
+    EOF
   }
   response_parameters = {
-    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+    "method.response.header.Access-Control-Allow-Origin" = "'*'",
+    "method.response.header.X-Request-ID"                = "context.requestId"
   }
 }
 
@@ -272,9 +292,12 @@ resource "aws_api_gateway_method_response" "transform_tips_method_response_200" 
   resource_id = aws_api_gateway_resource.transform_tips_resource.id
   http_method = aws_api_gateway_method.proxy_transform_tips.http_method
   status_code = "200"
-  response_parameters = { "method.response.header.Access-Control-Allow-Origin" = true,
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
     "method.response.header.Access-Control-Allow-Headers" = true,
-  "method.response.header.Access-Control-Allow-Methods" = true }
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.X-Request-ID"                 = true
+  }
 }
 
 resource "aws_api_gateway_method" "method_transform_tips_options" {
@@ -432,7 +455,10 @@ resource "aws_api_gateway_integration" "lambda_invoice_sync" {
                 #set($inputRoot = $input.path('$'))
                 {
                 "year": "$input.params('year')",
-                "month": "$input.params('month')"
+                "month": "$input.params('month')",
+                "requestContext": {
+                    "requestId": "$context.requestId"
+                }
                 }
             EOT
   }
@@ -446,7 +472,8 @@ resource "aws_api_gateway_method_response" "invoice_sync_method_response_200" {
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin"  = true,
     "method.response.header.Access-Control-Allow-Headers" = true,
-    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.X-Request-ID"                 = true
   }
 }
 
@@ -456,13 +483,17 @@ resource "aws_api_gateway_integration_response" "lambda_invoice_sync_response" {
   http_method = aws_api_gateway_integration.lambda_invoice_sync.http_method
   status_code = aws_api_gateway_method_response.invoice_sync_method_response_200.status_code
   response_templates = {
-    "application/json" = jsonencode({
-      body    = "Josiah is on it!",
-      headers = { "Access-Control-Allow-Origin" : "*" },
-    })
+    "application/json" = <<EOF
+    #set($context.responseOverride.header.X-Request-ID = $context.requestId)
+    {
+      "message": "Josiah is on it!",
+      "task_id": "$context.requestId"
+    }
+    EOF
   }
   response_parameters = {
-    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+    "method.response.header.Access-Control-Allow-Origin" = "'*'",
+    "method.response.header.X-Request-ID"                = "context.requestId"
   }
 }
 
@@ -526,7 +557,10 @@ resource "aws_api_gateway_deployment" "josiah" {
     aws_api_gateway_integration.integration_get_food_handler_links_OPTIONS,
     aws_api_gateway_integration.integration_update_food_handler_pdfs_OPTIONS,
     aws_api_gateway_integration_response.update_food_handler_pdfs_response,
-    aws_api_gateway_method_response.update_food_handler_pdfs_method_response_202
+    aws_api_gateway_method_response.update_food_handler_pdfs_method_response_202,
+    aws_api_gateway_integration.get_task_status_by_id_integration,
+    aws_api_gateway_integration.get_task_status_by_operation_integration,
+    aws_api_gateway_integration.task_status_options_integration
   ]
 
   rest_api_id = aws_api_gateway_rest_api.josiah.id
@@ -541,6 +575,9 @@ resource "aws_api_gateway_deployment" "josiah" {
       update_food_handler_pdfs_method      = aws_api_gateway_method.proxy_update_food_handler_pdfs.id
       update_food_handler_pdfs_response    = aws_api_gateway_integration_response.update_food_handler_pdfs_response.id
       update_food_handler_pdfs_options     = aws_api_gateway_integration.integration_update_food_handler_pdfs_OPTIONS.id
+      task_status_integration              = aws_api_gateway_integration.get_task_status_by_id_integration.id
+      task_status_by_operation_integration = aws_api_gateway_integration.get_task_status_by_operation_integration.id
+      task_status_options_integration      = aws_api_gateway_integration.task_status_options_integration.id
     }))
   }
 
@@ -595,7 +632,7 @@ resource "aws_api_gateway_request_validator" "parameters" {
 }
 
 locals {
-  cors_headers = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+  cors_headers = "'Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amzn-RequestId'"
   cors_methods = "'GET,POST,OPTIONS'"
   cors_origin  = "'*'"
 }
@@ -734,7 +771,10 @@ resource "aws_api_gateway_integration" "lambda_update_food_handler_pdfs" {
   request_templates = {
     "application/json" = <<EOF
 {
-  "body": $input.json('$')
+  "body": $input.json('$'),
+  "requestContext": {
+    "requestId": "$context.requestId"
+  }
 }
 EOF
   }
@@ -751,12 +791,14 @@ resource "aws_api_gateway_integration_response" "update_food_handler_pdfs_respon
     "method.response.header.Access-Control-Allow-Origin"  = "'*'"
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
     "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.X-Request-ID"                 = "context.requestId"
   }
 
   response_templates = {
     "application/json" = <<EOF
 {
-  "message": "PDF update started"
+  "message": "PDF update started",
+  "task_id": "$context.requestId"
 }
 EOF
   }
@@ -777,7 +819,8 @@ resource "aws_api_gateway_method_response" "update_food_handler_pdfs_method_resp
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin"  = true,
     "method.response.header.Access-Control-Allow-Headers" = true,
-    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.X-Request-ID"                 = true
   }
 }
 
@@ -842,4 +885,136 @@ resource "aws_api_gateway_integration_response" "update_food_handler_pdfs_option
     aws_api_gateway_integration.integration_update_food_handler_pdfs_OPTIONS,
     aws_api_gateway_method_response.update_food_handler_pdfs_method_response_options
   ]
+}
+
+# Task Status API Resources
+resource "aws_api_gateway_resource" "task_status_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_rest_api.josiah.root_resource_id
+  path_part   = "task-status"
+}
+
+# Resource for getting specific task by ID
+resource "aws_api_gateway_resource" "task_status_by_id_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_resource.task_status_resource.id
+  path_part   = "{task_id}"
+}
+
+# Method for getting specific task by ID
+resource "aws_api_gateway_method" "get_task_status_by_id" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.task_status_by_id_resource.id
+  http_method   = "GET"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+}
+
+# Integration for getting specific task by ID
+resource "aws_api_gateway_integration" "get_task_status_by_id_integration" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.task_status_by_id_resource.id
+  http_method = aws_api_gateway_method.get_task_status_by_id.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.task_status.invoke_arn
+}
+
+# Method for getting tasks by operation type
+resource "aws_api_gateway_method" "get_task_status_by_operation" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.task_status_resource.id
+  http_method   = "GET"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+  request_parameters = {
+    "method.request.querystring.operation" = true
+  }
+}
+
+# Integration for getting tasks by operation type
+resource "aws_api_gateway_integration" "get_task_status_by_operation_integration" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.task_status_resource.id
+  http_method = aws_api_gateway_method.get_task_status_by_operation.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.task_status.invoke_arn
+}
+
+# Method response for task status endpoints
+resource "aws_api_gateway_method_response" "task_status_response" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.task_status_resource.id
+  http_method = aws_api_gateway_method.get_task_status_by_operation.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.X-Request-ID"                 = true
+  }
+}
+
+# Method response for specific task endpoint
+resource "aws_api_gateway_method_response" "task_status_by_id_response" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.task_status_by_id_resource.id
+  http_method = aws_api_gateway_method.get_task_status_by_id.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.X-Request-ID"                 = true
+  }
+}
+
+# OPTIONS method for task status endpoints
+resource "aws_api_gateway_method" "task_status_options" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.task_status_resource.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+# OPTIONS integration for task status endpoints
+resource "aws_api_gateway_integration" "task_status_options_integration" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.task_status_resource.id
+  http_method = aws_api_gateway_method.task_status_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+# OPTIONS method response for task status endpoints
+resource "aws_api_gateway_method_response" "task_status_options_response" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.task_status_resource.id
+  http_method = aws_api_gateway_method.task_status_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+# OPTIONS integration response for task status endpoints
+resource "aws_api_gateway_integration_response" "task_status_options_response" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.task_status_resource.id
+  http_method = aws_api_gateway_method.task_status_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
+  }
 }

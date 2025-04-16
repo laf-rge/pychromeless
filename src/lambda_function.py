@@ -22,16 +22,15 @@ import sys
 import os
 import time
 from datetime import date, datetime, timedelta
-from pythonjsonlogger.json import JsonFormatter
-from pygments import highlight
-from pygments.lexers import JsonLexer
-from pygments.formatters import TerminalFormatter
 from decimal import Decimal
 from email.message import Message
 from functools import partial  # noqa # pylint: disable=unused-import
 from locale import LC_NUMERIC, atof, setlocale
 from operator import itemgetter
-from typing import Any, Dict
+from typing import Any, Dict, cast
+import uuid
+from websocket_manager import WebSocketManager
+from logging_utils import setup_json_logger
 
 import crunchtime
 import pandas as pd
@@ -47,52 +46,26 @@ from wmcgdrive import WMCGdrive
 from store_config import StoreConfig
 from email_service import EmailService
 import boto3
+from dotenv import load_dotenv
+from operation_types import OperationType
+from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
 
+load_dotenv()
 
 store_config = StoreConfig()
 email_service = EmailService(store_config)
 
-dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table(os.environ["CONNECTIONS_TABLE"])
-
-
-class CustomJsonEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, (datetime, date)):
-            return o.isoformat()
-        return super().default(o)
-
-
-class ColorizedJsonFormatter(JsonFormatter):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs, json_default=CustomJsonEncoder().default)
-
-    def format(self, record: Any) -> str:
-        json_str = super().format(record)
-        return highlight(json_str, JsonLexer(), TerminalFormatter())
-
-
-def setup_json_logger():
-    json_handler = logging.StreamHandler(sys.stdout)
-    json_formatter = ColorizedJsonFormatter(
-        fmt="%(asctime)s %(levelname)s %(name)s %(message)s"
-    )
-    json_handler.setFormatter(json_formatter)
-
-    root_logger = logging.getLogger()
-    root_logger.handlers = []
-    root_logger.addHandler(json_handler)
-    root_logger.setLevel(logging.INFO)
-
-
-if "AWS_LAMBDA_FUNCTION_NAME" not in os.environ:
-    setup_json_logger()
-logger = logging.getLogger(__name__)
+dynamodb = cast(DynamoDBServiceResource, boto3.resource("dynamodb"))
+table = cast(Any, dynamodb.Table(os.environ["CONNECTIONS_TABLE"]))
 
 # warning! this won't work if we multiply
 TWO_PLACES = Decimal(10) ** -2
 setlocale(LC_NUMERIC, "en_US.UTF-8")
 pattern = re.compile(r"\d+\.\d\d")
+
+if "AWS_LAMBDA_FUNCTION_NAME" not in os.environ:
+    setup_json_logger()
+logger = logging.getLogger(__name__)
 
 
 def create_response(
@@ -100,14 +73,18 @@ def create_response(
     body: object,
     content_type: str = "application/json",
     filename: str | None = None,
+    request_id: str | None = None,
 ) -> dict:
+    """Create a standardized API response with request ID tracking"""
     headers = {
         "Content-type": content_type,
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+        "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amzn-RequestId",
     }
+
     if filename is not None:
         headers["Content-Disposition"] = f"attachment; filename={filename}"
+
     return {
         "statusCode": status_code,
         "body": json.dumps(body) if content_type == "application/json" else body,
@@ -127,7 +104,7 @@ def third_party_deposit_handler(*args, **kwargs) -> dict:
         >>> from lambda_function import third_party_deposit_handler
         >>> third_party_deposit_handler()
     """
-    start_date = date.today() - timedelta(days=28)
+    start_date = date.today() - timedelta(days=14)
     end_date = date.today()
 
     services = [
@@ -283,109 +260,189 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         >>> daily_sales_handler()  # Process yesterday's sales
         >>> daily_sales_handler({"year": "2024", "month": "01", "day": "15"})
     """
-    event = {}
-    if args is not None and len(args) > 0:
-        event = args[0]
-    if "year" in event:
-        txdates = [
-            date(
-                year=int(event["year"]),
-                month=int(event["month"]),
-                day=int(event["day"]),
-            )
-        ]
-    else:
-        txdates = [date.today() - timedelta(days=1)]
-    # txdates = [date(2024, 10, 29), date(2024, 10, 31)]
-    # txdates = list(map(partial(date, 2025, 1), range(13, 22)))
-    logger.info(
-        "Started daily sales",
-        extra={"txdates": [txdate.isoformat() for txdate in txdates]},
+    event = args[0] if args and len(args) > 0 else {}
+    context = args[1] if args and len(args) > 1 else None
+    request_id = (
+        event.get("requestContext", {}).get("requestId")
+        or (context.aws_request_id if context else None)
+        or f"local-{str(uuid.uuid4())}"
     )
-    dj = Flexepos()
-    success = False
-    for txdate in txdates:
-        stores = store_config.get_active_stores(txdate)
-        journal = {}
-        for store in stores:
-            retry = 3
-            while retry:
-                try:
-                    journal.update(dj.getDailySales(store, txdate))
-                    retry = 0
-                except (ConnectionError, TimeoutError, Exception) as e:
-                    logger.exception(f"error {txdate.isoformat()}: {str(e)}")
-                    retry -= 1
-            if store not in journal or "Payins" not in journal[store]:
-                logger.info(
-                    "Skipping store: no sales",
-                    extra={"store": store, "txdate": txdate.isoformat()},
+    ws_manager = WebSocketManager()
+    txdates = []
+    txdate = date.today()
+
+    try:
+        if "year" in event:
+            txdates = [
+                date(
+                    year=int(event["year"]),
+                    month=int(event["month"]),
+                    day=int(event["day"]),
                 )
-                journal.pop(store)
-        qb.create_daily_sales(txdate, journal)
+            ]
+        else:
+            txdates = [date.today() - timedelta(days=1)]
+        # txdates = [date(2024, 10, 29), date(2024, 10, 31)]
+        # txdates = list(map(partial(date, 2025, 1), range(13, 22)))
         logger.info(
-            "Successfully processed daily sales",
-            extra={"txdate": txdate.isoformat(), "stores": stores},
+            "Started daily sales",
+            extra={
+                "requestId": request_id,
+                "txdates": [txdate.isoformat() for txdate in txdates],
+            },
         )
-        for store in stores:
-            # store not open guard
-            if (
-                store_config.is_store_active(store, txdate)
-                and store in journal
-                and "Payins" in journal[store]
-            ):
-                if (
-                    journal[store]["Bank Deposits"] is None
-                    or journal[store]["Bank Deposits"] == ""
-                ):
-                    email_service.send_missing_deposit_alert(store, txdate)
-                payins = journal[store]["Payins"].strip()
-                if payins.count("\n") > 0:
-                    amount = Decimal(0)
-                    for payin_line in payins.split("\n")[1:]:
-                        if payin_line.startswith("TOTAL"):
-                            continue
-                        match = pattern.search(payin_line)
-                        if match:
-                            amount = amount + Decimal(atof(match.group()))
-                    if amount.quantize(TWO_PLACES) > Decimal(150):
-                        email_service.send_high_payin_alert(store, amount, payins)
-                else:
+
+        # Notify start
+        ws_manager.broadcast_status(
+            task_id=request_id, operation=OperationType.DAILY_SALES, status="started"
+        )
+
+        dj = Flexepos()
+        success = False
+        total_stores = len(store_config.all_stores)
+        processed_stores = 0
+        stores = []
+
+        for txdate in txdates:
+            stores = store_config.get_active_stores(txdate)
+            journal = {}
+
+            for store in stores:
+                processed_stores += 1
+                # Update progress
+                ws_manager.broadcast_status(
+                    task_id=request_id,
+                    operation=OperationType.DAILY_SALES,
+                    status="processing",
+                    progress={
+                        "current": processed_stores,
+                        "total": total_stores,
+                        "message": f"Processing store {store} for {txdate.isoformat()}",
+                    },
+                )
+
+                retry = 3
+                while retry:
+                    try:
+                        journal.update(dj.getDailySales(store, txdate))
+                        retry = 0
+                    except (ConnectionError, TimeoutError, Exception) as e:
+                        logger.exception(f"error {txdate.isoformat()}: {str(e)}")
+                        retry -= 1
+                if store not in journal or "Payins" not in journal[store]:
                     logger.info(
-                        "No payin or missing deposits issues detected",
+                        "Skipping store: no sales",
                         extra={"store": store, "txdate": txdate.isoformat()},
                     )
-            else:
-                logger.info(
-                    "Skipping store deposit emails: no sales data",
-                    extra={"store": store, "txdate": txdate.isoformat()},
-                )
-        success = True
-    if not success:
-        return create_response(500, {"message": "Error processing daily sales"})
-    txdate = txdates[0]
-    try:
-        payment_data = dj.getOnlinePayments(
-            store_config.all_stores, txdate.year, txdate.month
-        )
-        qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
-        royalty_data = dj.getRoyaltyReport(
-            "wmc",
-            date(txdate.year, txdate.month, 1),
-            date(
-                txdate.year,
-                txdate.month,
-                calendar.monthrange(txdate.year, txdate.month)[1],
-            ),
-        )
-        qb.update_royalty(txdate.year, txdate.month, royalty_data)
+                    journal.pop(store)
+            qb.create_daily_sales(txdate, journal)
+            logger.info(
+                "Successfully processed daily sales",
+                extra={"txdate": txdate.isoformat(), "stores": stores},
+            )
+            for store in stores:
+                # store not open guard
+                if (
+                    store_config.is_store_active(store, txdate)
+                    and store in journal
+                    and "Payins" in journal[store]
+                ):
+                    if (
+                        journal[store]["Bank Deposits"] is None
+                        or journal[store]["Bank Deposits"] == ""
+                    ):
+                        email_service.send_missing_deposit_alert(store, txdate)
+                    payins = journal[store]["Payins"].strip()
+                    if payins.count("\n") > 0:
+                        amount = Decimal(0)
+                        for payin_line in payins.split("\n")[1:]:
+                            if payin_line.startswith("TOTAL"):
+                                continue
+                            match = pattern.search(payin_line)
+                            if match:
+                                amount = amount + Decimal(atof(match.group()))
+                        if amount.quantize(TWO_PLACES) > Decimal(150):
+                            email_service.send_high_payin_alert(store, amount, payins)
+                    else:
+                        logger.info(
+                            "No payin or missing deposits issues detected",
+                            extra={"store": store, "txdate": txdate.isoformat()},
+                        )
+                else:
+                    logger.info(
+                        "Skipping store deposit emails: no sales data",
+                        extra={"store": store, "txdate": txdate.isoformat()},
+                    )
+            success = True
+
+        if not success:
+            ws_manager.broadcast_status(
+                task_id=request_id,
+                operation=OperationType.DAILY_SALES,
+                status="failed",
+                error="Failed to process daily sales",
+            )
+            return create_response(
+                500, {"message": "Error processing daily sales"}, request_id=request_id
+            )
+
+        # Process online payments and royalty
+        try:
+            txdate = txdates[0]
+            payment_data = dj.getOnlinePayments(
+                store_config.all_stores, txdate.year, txdate.month
+            )
+            qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
+            royalty_data = dj.getRoyaltyReport(
+                "wmc",
+                date(txdate.year, txdate.month, 1),
+                date(
+                    txdate.year,
+                    txdate.month,
+                    calendar.monthrange(txdate.year, txdate.month)[1],
+                ),
+            )
+            qb.update_royalty(txdate.year, txdate.month, royalty_data)
+
+            ws_manager.broadcast_status(
+                task_id=request_id,
+                operation=OperationType.DAILY_SALES,
+                status="completed",
+                result={
+                    "processed_dates": [d.isoformat() for d in txdates],
+                    "processed_stores": list(stores),
+                },
+            )
+
+            return create_response(
+                200,
+                {"message": "Success", "task_id": request_id},
+                request_id=request_id,
+            )
+
+        except Exception as e:
+            error_msg = "Error processing online payments or royalty report"
+            logger.exception(
+                error_msg, extra={"error": str(e), "txdate": txdate.isoformat()}
+            )
+
+            ws_manager.broadcast_status(
+                task_id=request_id,
+                operation=OperationType.DAILY_SALES,
+                status="failed",
+                error=error_msg,
+            )
+
+            return create_response(500, {"message": error_msg}, request_id=request_id)
+
     except Exception as e:
-        logger.exception(
-            "Error processing online payments or royalty report",
-            extra={"error": str(e), "txdate": txdate.isoformat()},
+        ws_manager.broadcast_status(
+            task_id=request_id,
+            operation=OperationType.DAILY_SALES,
+            status="failed",
+            error=str(e),
         )
-        return create_response(500, {"message": "Error processing daily sales"})
-    return create_response(200, {"message": "Success"})
+        return create_response(500, {"message": str(e)}, request_id=request_id)
 
 
 def online_cc_fee(*args, **kwargs) -> dict:
@@ -749,67 +806,45 @@ def default_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 
 def cleanup_connections_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
-    """Cleanup stale WebSocket connections"""
+    """Handler for cleaning up stale WebSocket connections."""
     try:
-        # Get current timestamp for comparison
-        current_time = int(time.time())
+        # Extract request ID from context
+        request_id = context.aws_request_id
+        logger.info(f"Processing cleanup request {request_id}")
 
-        # Scan for expired connections
-        response = table.scan(
-            FilterExpression="attribute_not_exists(ttl) OR ttl <= :current_time",
-            ExpressionAttributeValues={":current_time": current_time},
-        )
+        # Get the connections table
+        table = cast(Any, dynamodb.Table(os.environ["CONNECTIONS_TABLE"]))
 
-        deleted_count = 0
-        errors = []
+        # Scan for all connections
+        response = table.scan()
+        items = response.get("Items", [])
 
-        # Process each expired connection
-        for item in response.get("Items", []):
-            try:
-                connection_id = item["connection_id"]
-
-                # Delete the connection record
-                table.delete_item(Key={"connection_id": connection_id})
-                deleted_count += 1
-
-                logger.info(
-                    "Deleted expired connection",
-                    extra={
-                        "connection_id": connection_id,
-                        "ttl": item.get("ttl", "no_ttl"),
-                        "connected_at": item.get("connected_at", "unknown"),
-                    },
-                )
-            except Exception as e:
-                errors.append(str(e))
-                logger.exception(
-                    "Error deleting connection",
-                    extra={"connection_id": item.get("connection_id", "unknown")},
-                )
-
-        # Handle pagination if necessary
+        # Continue scanning if we have more items
         while "LastEvaluatedKey" in response:
-            response = table.scan(
-                FilterExpression="attribute_not_exists(ttl) OR ttl <= :current_time",
-                ExpressionAttributeValues={":current_time": current_time},
-                ExclusiveStartKey=response["LastEvaluatedKey"],
-            )
+            response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
+            items.extend(response.get("Items", []))
 
-            for item in response.get("Items", []):
-                try:
-                    connection_id = item["connection_id"]
-                    table.delete_item(Key={"connection_id": connection_id})
-                    deleted_count += 1
-                except Exception as e:
-                    errors.append(str(e))
+        # Delete each connection
+        for item in items:
+            connection_id = item["connection_id"]
+            table.delete_item(
+                Key={"connection_id": connection_id},
+                ConditionExpression="connection_id = :cid",
+                ExpressionAttributeValues={":cid": connection_id},
+            )
+            logger.info(f"Deleted connection {connection_id}")
 
         return {
             "statusCode": 200,
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                "Access-Control-Allow-Methods": "POST,OPTIONS",
+                "X-Request-ID": request_id,
+            },
             "body": json.dumps(
                 {
-                    "message": "Cleanup completed",
-                    "deleted_count": deleted_count,
-                    "errors": errors,
+                    "message": f"Successfully cleaned up {len(items)} connections",
                 }
             ),
         }

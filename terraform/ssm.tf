@@ -142,6 +142,15 @@ resource "aws_ssm_parameter" "gdrive_json" {
   tags        = local.common_tags
 }
 
+# Zenput configuration
+resource "aws_ssm_parameter" "zenput_token" {
+  name        = "/${terraform.workspace}/zenput/token"
+  description = "Zenput API token"
+  type        = "SecureString"
+  value       = var.service_credentials.zenput_token
+  tags        = local.common_tags
+}
+
 resource "aws_ssm_parameter" "gcp_employees_folder" {
   name        = "/${terraform.workspace}/gcp/employees_folder"
   description = "Google Drive employees folder ID"

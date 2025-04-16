@@ -20,7 +20,7 @@ resource "aws_lambda_function" "authorizer" {
   role        = aws_iam_role.flexepos_lambda_role.arn
   filename    = "../deploy/validate_token.zip"
   handler     = "validate_token.lambda_handler"
-  runtime     = "python3.12"
+  runtime     = "python3.13"
   timeout     = 30
   memory_size = 128
 
@@ -104,6 +104,10 @@ locals {
       env_vars    = local.lambda_env_update_food_handler_pdfs
     }
   }
+
+  lambda_env_get_task_status = {
+    TASK_STATES_TABLE = aws_dynamodb_table.task_states.name
+  }
 }
 
 resource "aws_lambda_function" "functions" {
@@ -133,6 +137,31 @@ resource "aws_lambda_function" "functions" {
   }
 }
 
+# Separate Lambda function for task status since it uses a zip file
+resource "aws_lambda_function" "task_status" {
+  function_name = "get-task-status-${terraform.workspace}"
+  description   = "[${terraform.workspace}] Retrieves task status by ID or operation type"
+
+  role        = aws_iam_role.flexepos_lambda_role.arn
+  filename    = "../deploy/task_status.zip"
+  handler     = "task_status.get_task_status_handler"
+  runtime     = "python3.13"
+  timeout     = 30
+  memory_size = 256
+
+  source_code_hash = filebase64sha256("../deploy/task_status.zip")
+
+  environment {
+    variables = local.lambda_env_get_task_status
+  }
+
+  tags = local.common_tags
+  logging_config {
+    application_log_level = local.common_logging.application_log_level
+    log_format            = local.common_logging.log_format
+  }
+}
+
 resource "aws_lambda_permission" "apigw" {
   for_each      = aws_lambda_function.functions
   statement_id  = "AllowAPIGatewayInvoke"
@@ -146,6 +175,15 @@ resource "aws_lambda_permission" "apigw-auth" {
   statement_id  = "AllowAPIGatewayInvoke-auth"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.authorizer.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.josiah.execution_arn}/*/*"
+}
+
+# Add API Gateway permission for the task status function
+resource "aws_lambda_permission" "apigw_task_status" {
+  statement_id  = "AllowAPIGatewayInvoke-task-status"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.task_status.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.josiah.execution_arn}/*/*"
 }

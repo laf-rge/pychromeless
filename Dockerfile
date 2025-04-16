@@ -1,6 +1,7 @@
-FROM  --platform=linux/amd64 amazon/aws-lambda-python:3.12
+FROM amazon/aws-lambda-python:3.13
 LABEL MAINTAINER=william@wagonermanagement.com
 ARG TARGETARCH
+
 # install chrome dependencies
 RUN dnf install -y atk cups-libs gtk3 libXcomposite alsa-lib \
     libXcursor libXdamage libXext libXi libXrandr libXScrnSaver \
@@ -15,6 +16,17 @@ COPY ./chrome-installer.sh ./chrome-installer.sh
 RUN ./chrome-installer.sh
 RUN rm ./chrome-installer.sh
 
+# Copy and install requirements first (for better caching)
 COPY requirements.txt ${LAMBDA_TASK_ROOT}
-RUN pip3 install -r requirements.txt
+
+# Install build dependencies
+RUN pip3 install --no-cache-dir "setuptools==68.0.0" wheel
+
+# Now install the rest of the requirements without build isolation
+RUN pip3 install --no-build-isolation -r requirements.txt
+
+# Copy source code (excluding .env files via .dockerignore)
 COPY src ${LAMBDA_TASK_ROOT}
+
+# Set production environment variables
+ENV CHROME_HEADLESS=0

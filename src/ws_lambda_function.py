@@ -134,7 +134,7 @@ def lambda_handler(event, context):
     :return: A response dict that contains an HTTP status code that indicates the
              result of handling the event.
     """
-    table_name = os.environ["DYNAMODB_TABLE"]
+    table_name = os.environ["CONNECTIONS_TABLE"]
     route_key = event.get("requestContext", {}).get("routeKey")
     connection_id = event.get("requestContext", {}).get("connectionId")
     if table_name is None or route_key is None or connection_id is None:

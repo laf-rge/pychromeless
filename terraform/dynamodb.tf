@@ -19,6 +19,45 @@ resource "aws_dynamodb_table" "websocket_connections" {
   tags = local.common_tags
 }
 
+# DynamoDB table for task states
+resource "aws_dynamodb_table" "task_states" {
+  name         = "${local.common_tags.Name}-task-states"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "task_id"
+  range_key    = "timestamp"
+
+  attribute {
+    name = "task_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "operation"
+    type = "S"
+  }
+
+  attribute {
+    name = "timestamp"
+    type = "N"
+  }
+
+  global_secondary_index {
+    name            = "operation_type-index"
+    hash_key        = "operation"
+    range_key       = "timestamp"
+    projection_type = "ALL"
+    write_capacity  = 5
+    read_capacity   = 5
+  }
+
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
+
+  tags = local.common_tags
+}
+
 # IAM policy for DynamoDB access
 resource "aws_iam_policy" "dynamodb_access" {
   name        = "${local.common_tags.Name}-dynamodb-access"
@@ -37,7 +76,11 @@ resource "aws_iam_policy" "dynamodb_access" {
           "dynamodb:Query",
           "dynamodb:UpdateItem"
         ]
-        Resource = aws_dynamodb_table.websocket_connections.arn
+        Resource = [
+          aws_dynamodb_table.websocket_connections.arn,
+          aws_dynamodb_table.task_states.arn,
+          "${aws_dynamodb_table.task_states.arn}/index/operation_type-index"
+        ]
       }
     ]
   })

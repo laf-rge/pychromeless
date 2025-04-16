@@ -31,3 +31,8 @@ src/.vscode/
 *.xlsx
 
 *.csv
+
+.env
+
+# Local environment variables
+.env.local
