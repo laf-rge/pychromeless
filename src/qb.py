@@ -890,3 +890,171 @@ def fix_wld_online_tips():
                                 "online_wld_tips": online_wld_tips_line.to_json(),
                             },
                         )
+
+
+def split_bill(original_bill, locations, split_ratios=None):
+    """Split a QuickBooks bill between multiple locations.
+
+    Args:
+        original_bill (Bill): The original QuickBooks bill to split
+        locations (list): List of location/store codes to split between
+        split_ratios (dict, optional): Dictionary of {location: ratio} for custom splits.
+                                     Ratios must sum to 1.0. Defaults to equal splits.
+
+    Returns:
+        list: List of new Bill objects created from the split
+
+    Raises:
+        ValueError: If split ratios don't sum to 1.0 or locations list is empty
+        Exception: If bill voiding or creation fails
+    """
+    refresh_session()
+
+    if not locations:
+        raise ValueError("Must provide at least one location to split bill between")
+
+    # Validate and normalize split ratios
+    if split_ratios is None:
+        split_ratios = {loc: Decimal("1.0") / len(locations) for loc in locations}
+    else:
+        # Convert any float ratios to Decimal
+        split_ratios = {k: Decimal(str(v)) for k, v in split_ratios.items()}
+        ratio_sum = sum(split_ratios.values())
+        if abs(ratio_sum - Decimal("1.0")) > Decimal("0.001"):
+            raise ValueError(f"Split ratios must sum to 1.0, got {ratio_sum}")
+
+    store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
+
+    # Verify all locations exist
+    for location in locations:
+        if location not in store_refs:
+            raise ValueError(f"Invalid location code: {location}")
+
+    # Create new bills first before voiding original
+    new_bills = []
+    split_doc_numbers = []
+
+    try:
+        for location in locations:
+            new_bill = Bill()
+
+            # Copy metadata from original
+            new_bill.VendorRef = original_bill.VendorRef
+            new_bill.TxnDate = original_bill.TxnDate
+            new_bill.DueDate = getattr(original_bill, "DueDate", None)
+            new_bill.SalesTermRef = getattr(original_bill, "SalesTermRef", None)
+            new_bill.DepartmentRef = store_refs[location]
+
+            # Generate split bill number
+            new_bill.DocNumber = f"{original_bill.DocNumber}-SPLIT-{location}"
+            split_doc_numbers.append(new_bill.DocNumber)
+
+            # Calculate split amounts for this location
+            ratio = split_ratios[location]
+            new_bill.Line = []
+            running_total = Decimal("0")
+
+            # Split each line item
+            for line_num, orig_line in enumerate(original_bill.Line, 1):
+                new_line = AccountBasedExpenseLine()
+                new_line.AccountBasedExpenseLineDetail = AccountBasedExpenseLineDetail()
+                new_line.AccountBasedExpenseLineDetail.AccountRef = (
+                    orig_line.AccountBasedExpenseLineDetail.AccountRef
+                )
+                new_line.LineNum = line_num
+                new_line.Id = line_num
+
+                # Calculate split amount with penny rounding
+                split_amount = (Decimal(orig_line.Amount) * ratio).quantize(TWO_PLACES)
+                if (
+                    location == locations[0]
+                ):  # First location gets any rounding remainder
+                    line_total = sum(Decimal(l.Amount) for l in original_bill.Line)
+                    expected_total = line_total * ratio
+                    if abs(running_total + split_amount - expected_total) > Decimal(
+                        "0.01"
+                    ):
+                        split_amount = expected_total - running_total
+
+                new_line.Amount = split_amount
+                running_total += split_amount
+                new_line.Description = orig_line.Description
+                new_bill.Line.append(new_line)
+
+            # Add split documentation
+            split_note = {
+                "split_info": {
+                    "original_doc_number": original_bill.DocNumber,
+                    "split_date": datetime.datetime.now().isoformat(),
+                    "total_splits": len(locations),
+                    "split_locations": locations,
+                    "split_ratio": str(ratio),
+                }
+            }
+            if hasattr(original_bill, "PrivateNote") and original_bill.PrivateNote:
+                split_note["original_note"] = original_bill.PrivateNote
+            new_bill.PrivateNote = json.dumps(split_note, indent=2)
+
+            try:
+                new_bill.save(qb=CLIENT)
+                new_bills.append(new_bill)
+                logger.info(
+                    "Created split bill",
+                    extra={
+                        "original_doc": original_bill.DocNumber,
+                        "split_doc": new_bill.DocNumber,
+                        "location": location,
+                        "amount": str(running_total),
+                    },
+                )
+            except Exception as e:
+                logger.exception(
+                    "Failed to save split bill",
+                    extra={"bill": new_bill.to_json(), "error": str(e)},
+                )
+                raise
+
+        # Now void the original bill
+        void_note = {
+            "void_info": {
+                "reason": "Split into multiple location bills",
+                "void_date": datetime.datetime.now().isoformat(),
+                "split_doc_numbers": split_doc_numbers,
+            }
+        }
+        if hasattr(original_bill, "PrivateNote") and original_bill.PrivateNote:
+            void_note["original_note"] = original_bill.PrivateNote
+
+        original_bill.PrivateNote = json.dumps(void_note, indent=2)
+        original_bill.save(qb=CLIENT)
+        original_bill.delete(qb=CLIENT)
+
+        logger.info(
+            "Voided original bill after splitting",
+            extra={
+                "doc_number": original_bill.DocNumber,
+                "split_docs": split_doc_numbers,
+            },
+        )
+
+        return new_bills
+
+    except Exception as e:
+        logger.exception(
+            "Bill split failed",
+            extra={
+                "original_doc": original_bill.DocNumber,
+                "locations": locations,
+                "error": str(e),
+            },
+        )
+        # Attempt to void any created bills
+        for bill in new_bills:
+            try:
+                bill.delete(qb=CLIENT)
+            except:
+                logger.exception(
+                    "Failed to delete split bill during rollback",
+                    extra={"doc_number": bill.DocNumber},
+                )
+        raise

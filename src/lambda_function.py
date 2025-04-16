@@ -18,7 +18,6 @@ import email
 import io
 import re
 import logging
-import sys
 import os
 import time
 from datetime import date, datetime, timedelta
