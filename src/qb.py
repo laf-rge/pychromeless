@@ -913,14 +913,14 @@ def split_bill(original_bill, locations, split_ratios=None):
     if not locations:
         raise ValueError("Must provide at least one location to split bill between")
 
-    # Validate and normalize split ratios
+    # Validate and normalize split ratios - keep full precision for calculations
     if split_ratios is None:
-        split_ratios = {loc: Decimal("1.0") / len(locations) for loc in locations}
+        split_ratios = {loc: Decimal("1") / len(locations) for loc in locations}
     else:
-        # Convert any float ratios to Decimal
+        # Convert any float ratios to Decimal but don't quantize yet
         split_ratios = {k: Decimal(str(v)) for k, v in split_ratios.items()}
         ratio_sum = sum(split_ratios.values())
-        if abs(ratio_sum - Decimal("1.0")) > Decimal("0.001"):
+        if abs(ratio_sum - Decimal("1")) > Decimal("0.001"):
             raise ValueError(f"Split ratios must sum to 1.0, got {ratio_sum}")
 
     store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
@@ -933,8 +933,15 @@ def split_bill(original_bill, locations, split_ratios=None):
     # Create new bills first before voiding original
     new_bills = []
     split_doc_numbers = []
+    i = 1
 
     try:
+        # Calculate the total bill amount once
+        total_bill_amount = sum(Decimal(line.Amount) for line in original_bill.Line)
+
+        # Track the running total across all splits to handle remaining pennies
+        total_allocated = Decimal("0")
+
         for location in locations:
             new_bill = Bill()
 
@@ -946,10 +953,9 @@ def split_bill(original_bill, locations, split_ratios=None):
             new_bill.DepartmentRef = store_refs[location]
 
             # Generate split bill number
-            new_bill.DocNumber = f"{original_bill.DocNumber}-SPLIT-{location}"
+            new_bill.DocNumber = f"{original_bill.DocNumber}S{i}"
             split_doc_numbers.append(new_bill.DocNumber)
 
-            # Calculate split amounts for this location
             ratio = split_ratios[location]
             new_bill.Line = []
             running_total = Decimal("0")
@@ -964,20 +970,19 @@ def split_bill(original_bill, locations, split_ratios=None):
                 new_line.LineNum = line_num
                 new_line.Id = line_num
 
-                # Calculate split amount with penny rounding
-                split_amount = (Decimal(orig_line.Amount) * ratio).quantize(TWO_PLACES)
-                if (
-                    location == locations[0]
-                ):  # First location gets any rounding remainder
-                    line_total = sum(Decimal(l.Amount) for l in original_bill.Line)
-                    expected_total = line_total * ratio
-                    if abs(running_total + split_amount - expected_total) > Decimal(
-                        "0.01"
-                    ):
-                        split_amount = expected_total - running_total
+                # Calculate exact split amount first
+                exact_split = Decimal(orig_line.Amount) * ratio
+
+                # For the last location, adjust to account for previous rounding
+                if location == locations[-1] and line_num == len(original_bill.Line):
+                    expected_total = total_bill_amount * ratio
+                    split_amount = (expected_total - running_total).quantize(TWO_PLACES)
+                else:
+                    split_amount = exact_split.quantize(TWO_PLACES)
 
                 new_line.Amount = split_amount
                 running_total += split_amount
+                total_allocated += split_amount
                 new_line.Description = orig_line.Description
                 new_bill.Line.append(new_line)
 
@@ -989,6 +994,7 @@ def split_bill(original_bill, locations, split_ratios=None):
                     "total_splits": len(locations),
                     "split_locations": locations,
                     "split_ratio": str(ratio),
+                    "split_amount": str(running_total),
                 }
             }
             if hasattr(original_bill, "PrivateNote") and original_bill.PrivateNote:
@@ -1013,6 +1019,19 @@ def split_bill(original_bill, locations, split_ratios=None):
                     extra={"bill": new_bill.to_json(), "error": str(e)},
                 )
                 raise
+
+            i += 1
+
+        # Verify total allocated matches original bill
+        if total_allocated != total_bill_amount:
+            logger.warning(
+                "Split allocation mismatch",
+                extra={
+                    "original_amount": str(total_bill_amount),
+                    "allocated_amount": str(total_allocated),
+                    "difference": str(total_bill_amount - total_allocated),
+                },
+            )
 
         # Now void the original bill
         void_note = {
