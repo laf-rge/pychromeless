@@ -15,6 +15,18 @@ from selenium.common.exceptions import (
 from selenium.webdriver.remote.webelement import WebElement
 
 
+# Only import webdriver_manager if not running in AWS Lambda
+def _get_chromedriver_service_local():
+    try:
+        from webdriver_manager.chrome import ChromeDriverManager
+
+        return Service(ChromeDriverManager().install())
+    except ImportError:
+        raise ImportError(
+            "webdriver-manager is required for local development. Please install it with 'pip install webdriver-manager'."
+        )
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,35 +34,11 @@ def initialise_driver(download_location: Optional[str] = None) -> webdriver.Chro
     chrome_options = ChromeOptions()
     driver = None
     CHROME_HEADLESS = int(os.environ.get("CHROME_HEADLESS", "0"))
-    if CHROME_HEADLESS > 1:
-        # chrome_options.debugger_address = "127.0.0.1:9222"
-        # chrome_options.add_argument(
-        #    r"--user-data-dir=/Users/wgreen/Library/Application Support/Google/Chrom--user-data-dir=/Users/wgreen/Library/Application Support/Google/Chromee"
-        # )
-        # chrome_options.add_argument(r"--profile-directory=Profile 3")
-        chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
-        chrome_options.add_argument("--no-sandbox")
-        driver = webdriver.Chrome(options=chrome_options, keep_alive=True)
-        if download_location:
-            driver.execute_script(
-                "var x = document.getElementsByTagName('a'); var i; for (i = 0; i < x.length; i++) { x[i].target = '_self'; }"
-            )
-            # add missing support for chrome "send_command"  to selenium webdriver
-            driver.command_executor._commands["send_command"] = (  # type: ignore hack for lambda
-                "POST",
-                "/session/$sessionId/chromium/send_command",
-            )
+    IS_LAMBDA = "AWS_LAMBDA_FUNCTION_NAME" in os.environ
+    CHROME_DEBUG_PORT = int(os.environ.get("CHROME_DEBUG_PORT", "0"))
 
-            params = {
-                "cmd": "Page.setDownloadBehavior",
-                "params": {"behavior": "allow", "downloadPath": download_location},
-            }
-            command_result = driver.execute("send_command", params)
-            logger.info(
-                "response from browser", extra={"command_result": command_result}
-            )
-        driver.switch_to.new_window("tab")
-    else:
+    if IS_LAMBDA:
+        # AWS Lambda: use pre-bundled binaries and explicit paths
         chrome_options.add_experimental_option(
             "prefs",
             {
@@ -70,11 +58,9 @@ def initialise_driver(download_location: Optional[str] = None) -> webdriver.Chro
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-dev-tools")
         chrome_options.add_argument("--no-zygote")
-        # chrome_options.add_argument("--single-process")
         chrome_options.add_argument(f"--user-data-dir={mkdtemp()}")
         chrome_options.add_argument(f"--data-path={mkdtemp()}")
         chrome_options.add_argument(f"--disk-cache-dir={mkdtemp()}")
-        # chrome_options.add_argument("--remote-debugging-pipe")
         chrome_options.add_argument("--log-path=/tmp")
         chrome_options.add_argument("--disable-infobars")
         chrome_options.add_argument("--window-size=1920,1080")
@@ -85,6 +71,42 @@ def initialise_driver(download_location: Optional[str] = None) -> webdriver.Chro
             executable_path="/opt/chrome-driver/chromedriver-linux64/chromedriver",
             service_log_path="/tmp/chromedriver.log",
         )
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+    elif CHROME_DEBUG_PORT:
+        # Debug port mode: attach to a running Chrome instance with remote debugging enabled
+        chrome_options.debugger_address = "localhost:9222"
+        # Optionally set binary_location if needed
+        # chrome_options.binary_location = "/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+        driver = webdriver.Chrome(options=chrome_options)
+    else:
+        # Local development: use webdriver-manager to auto-manage chromedriver
+        chrome_options.binary_location = "/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+        chrome_options.binary_location = (
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        )
+        chrome_options.add_experimental_option(
+            "prefs",
+            {
+                "download.default_directory": download_location
+                if download_location
+                else os.path.join(os.getcwd(), "downloads"),
+                "download.directory_upgrade": True,
+                "download.prompt_for_download": False,
+                "credentials_enable_service": False,
+                "profile.password_manager_enabled": False,
+            },
+        )
+        if CHROME_HEADLESS == 0:
+            chrome_options.add_argument("--headless=new")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--disable-dev-tools")
+        chrome_options.add_argument("--no-zygote")
+        chrome_options.add_argument("--disable-infobars")
+        chrome_options.add_argument("--window-size=1920,1080")
+        # Use webdriver-manager to get the correct chromedriver
+        service = _get_chromedriver_service_local()
         driver = webdriver.Chrome(service=service, options=chrome_options)
     return driver
 
