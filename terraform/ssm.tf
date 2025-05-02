@@ -133,6 +133,23 @@ resource "aws_ssm_parameter" "wheniwork_key" {
   tags        = local.common_tags
 }
 
+# BTC (Beyond the Counter) credentials
+resource "aws_ssm_parameter" "btc_user" {
+  name        = "/${terraform.workspace}/btc/user"
+  description = "Beyond the Counter username"
+  type        = "String"
+  value       = var.service_credentials.btc_user
+  tags        = local.common_tags
+}
+
+resource "aws_ssm_parameter" "btc_password" {
+  name        = "/${terraform.workspace}/btc/password"
+  description = "Beyond the Counter password"
+  type        = "SecureString"
+  value       = var.service_credentials.btc_password
+  tags        = local.common_tags
+}
+
 # Google Cloud Platform configuration
 resource "aws_ssm_parameter" "gdrive_json" {
   name        = "/${terraform.workspace}/gcp/gdrive"

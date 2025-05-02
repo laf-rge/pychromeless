@@ -25,6 +25,10 @@ store_config = {
 }
 
 service_credentials = {
+  # Behind The Counter credentials
+  btc_user     = "USER"
+  btc_password = "PASSWORD"
+
   # CrunchTime credentials
   crunchtime_user     = "YOUR_CRUNCHTIME_USERNAME"
   crunchtime_password = "YOUR_CRUNCHTIME_PASSWORD"

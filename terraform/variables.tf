@@ -12,6 +12,10 @@ variable "settings" {
 variable "service_credentials" {
   description = "Service credentials for various integrations"
   type = object({
+    # Behind The Counter
+    btc_user     = string
+    btc_password = string
+
     # EzCater
     ezcater_user     = string
     ezcater_password = string
