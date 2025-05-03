@@ -108,12 +108,42 @@ class Doordash:
             for section in sections:
                 spans = section.find_elements(By.TAG_NAME, "span")
                 notes[spans[0].text] = spans[1].text.replace("$", "")
-            lines.append(["1361", "Subtotal", notes["Subtotal"]])
-            lines.append(["1361", "Tax", notes["Tax (subtotal)"]])
-            lines.append(["6310", "Commission", notes["Commission"]])
-            lines.append(["6310", "Merchant fees", notes["Merchant fees"]])
-            lines.append(["4830", "Error charges", notes["Error charges"]])
-            lines.append(["4830", "Adjustments", notes["Adjustments"]])
+            if "Subtotal" in notes:
+                lines.append(["1361", "Subtotal", notes["Subtotal"]])
+            if "Tax (subtotal)" in notes:
+                lines.append(["1361", "Tax", notes["Tax (subtotal)"]])
+            if "Commission" in notes:
+                lines.append(["6310", "Commission", notes["Commission"]])
+            if "Merchant fees" in notes:
+                lines.append(["6310", "Merchant fees", notes["Merchant fees"]])
+            if "Marketing fees & discounts" in notes:
+                lines.append(
+                    [
+                        "6101",
+                        "Marketing fees & discounts",
+                        notes["Marketing fees & discounts"],
+                    ]
+                )
+            if "Marketing credit" in notes:
+                lines.append(
+                    [
+                        "6101",
+                        "Marketing credit",
+                        notes["Marketing credit"],
+                    ]
+                )
+            if "Third-party contribution" in notes:
+                lines.append(
+                    [
+                        "6101",
+                        "Third-party contribution",
+                        notes["Third-party contribution"],
+                    ]
+                )
+            if "Error charges" in notes:
+                lines.append(["4830", "Error charges", notes["Error charges"]])
+            if "Adjustments" in notes:
+                lines.append(["4830", "Adjustments", notes["Adjustments"]])
             # tips, merchant fee tax and customer fees tax not implemented
             store = store_inv_map.get(payout_id.split("/")[7], None)
             if store is None:
