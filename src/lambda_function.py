@@ -79,7 +79,10 @@ def create_response(
     headers = {
         "Content-type": content_type,
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Expose-Headers": "Content-Disposition,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amzn-RequestId",
+        "Access-Control-Expose-Headers": (
+            "Content-Disposition,Content-Type,X-Amz-Date,Authorization,"
+            "X-Api-Key,X-Amz-Security-Token,X-Amzn-RequestId"
+        ),
     }
 
     if filename is not None:
@@ -156,21 +159,23 @@ def invoice_sync_handler(*args, **kwargs) -> dict:
         >>> invoice_sync_handler({"year": "2024", "month": "03"})  # Process specific month
     """
     try:
-        event = {}
-        if args is not None and len(args) > 0:
-            event = args[0]
-
+        event = args[0] if args and len(args) > 0 else {}
         today = date.today()
 
         ct = crunchtime.Crunchtime()
         # Always process GL report
         ct.process_gl_report(store_config.all_stores)
 
-        # Determine which month's inventory to process based on business rules
-        # (process previous month until second Tuesday of new month)
-        inventory_year, inventory_month = store_config.get_inventory_processing_month(
-            today
-        )
+        # Determine which month's inventory to process
+        if "year" in event and "month" in event:
+            # Use specified year and month from event
+            inventory_year = int(event["year"])
+            inventory_month = int(event["month"])
+        else:
+            # Use business rules (process previous month until second Tuesday of new month)
+            inventory_year, inventory_month = (
+                store_config.get_inventory_processing_month(today)
+            )
 
         # Process inventory report for the determined month
         ct.process_inventory_report(
@@ -444,14 +449,14 @@ def daily_journal_handler(*args, **kwargs) -> dict:
     message += "</pre>\n\n<h2>Missing Punches:</h2>\n<pre>"
 
     t = Tips()
-    for time in t.getMissingPunches():
-        user = t._users[time["user_id"]]
+    for time_record in t.getMissingPunches():
+        user = t._users[time_record["user_id"]]
         message = "{}{}, {} : {} - {}\n".format(
             message,
             user["last_name"],
             user["first_name"],
-            t._locations[time["location_id"]]["name"],
-            time["start_time"],
+            t._locations[time_record["location_id"]]["name"],
+            time_record["start_time"],
         )
     message += "</pre>\n\n<h2>Meal Period Violations:</h2>\n<pre>"
     for item in sorted(
@@ -527,7 +532,8 @@ def decode_upload(event: dict[str, Any]) -> dict[str, bytes]:
                     logger.info(f"file_name: {file_name}")
                 logger.info(f"part.get_content_type(): {part.get_content_type()}")
                 logger.info(
-                    f"part.get_param('name', header='content-disposition'): {part.get_param('name', header='content-disposition')}"
+                    f"part.get_param('name', header='content-disposition'): "
+                    f"{part.get_param('name', header='content-disposition')}"
                 )
                 name_param = part.get_param("name", header="content-disposition")
                 if name_param:
