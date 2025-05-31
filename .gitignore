@@ -10,6 +10,13 @@ __pycache__/
 *$py.class
 env/
 
+### Testing
+htmlcov/
+.coverage
+.pytest_cache/
+*.cover
+coverage.xml
+
 ### Project specifics
 bin/
 layer.zip
@@ -35,4 +42,4 @@ src/.vscode/
 .env
 
 # Local environment variables
-.env.local
+.env.local*.egg-info/

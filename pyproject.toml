@@ -1,0 +1,165 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pychromeless"
+version = "1.0.0"
+description = "Jersey Mike's Data Integration Suite - Serverless automation for syncing POS, delivery, and inventory data to QuickBooks"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Wagoner Management Corp", email = "team@wagonermgmt.com"},
+]
+keywords = ["automation", "quickbooks", "pos", "lambda", "serverless"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+    "selenium>=4.15.2",
+    "requests-oauthlib>=1.2.0",
+    "python-quickbooks>=0.9.11",
+    "urllib3>=1.26.19",
+    "oauthlib>=3.0.1",
+    "botocore>=1.12.134",
+    "boto3",
+    "beautifulsoup4",
+    "wheniwork",
+    "openpyxl",
+    "google-api-python-client",
+    "google-auth-httplib2",
+    "icecream",
+    "pyjwt",
+    "cryptography",
+    "pandas",
+    "pypdf2",
+    "python-json-logger",
+    "python-dotenv",
+    "mypy-boto3-dynamodb>=1.34.0",
+    "mypy-boto3-apigatewaymanagementapi>=1.34.0",
+    "webdriver-manager>=4.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing framework
+    "pytest>=7.0.0",
+    "pytest-mock>=3.10.0",
+    "pytest-cov>=4.0.0",
+    "pytest-xdist>=3.0.0",  # parallel testing
+    # Mocking libraries for external services
+    "requests-mock>=1.10.0",
+    "responses>=0.23.0",
+    # Time/date mocking for testing
+    "freezegun>=1.2.0",
+    # Property-based testing (for complex financial calculations)
+    "hypothesis>=6.0.0",
+]
+quality = [
+    # Code formatting and linting
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+]
+all = [
+    "pychromeless[dev,quality]",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["src/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--disable-warnings",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "e2e: End-to-end tests",
+    "slow: Slow tests that may be skipped in CI",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "src/tests/*",
+    "src/__pycache__/*",
+    "*/migrations/*",
+    "*/venv/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["src"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false 

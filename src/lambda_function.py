@@ -161,80 +161,30 @@ def invoice_sync_handler(*args, **kwargs) -> dict:
             event = args[0]
 
         today = date.today()
-        target_year = int(event.get("year", today.year))
-        target_month = int(event.get("month", today.month))
-        target_date = date(target_year, target_month, 1)
 
         ct = crunchtime.Crunchtime()
         # Always process GL report
         ct.process_gl_report(store_config.all_stores)
 
-        # Determine if we should process inventory report
-        should_process_inventory = False
-        first_monday = None
-        first_tuesday = None
+        # Determine which month's inventory to process based on business rules
+        # (process previous month until second Tuesday of new month)
+        inventory_year, inventory_month = store_config.get_inventory_processing_month(
+            today
+        )
 
-        # Find first Monday and Tuesday of the target month
-        if target_date.year == today.year and target_date.month == today.month:
-            first_monday = target_date
-            while first_monday.weekday() != 0:  # 0 is Monday
-                first_monday += timedelta(days=1)
-            first_tuesday = first_monday + timedelta(days=1)
-
-        # Find the last day of the month
-        if target_month == 12:
-            next_month = date(target_year + 1, 1, 1)
-        else:
-            next_month = date(target_year, target_month + 1, 1)
-        last_day = next_month - timedelta(days=1)
-
-        # Logic for determining if we should process inventory
-        if target_date.year == today.year and target_date.month == today.month:
-            # For current month:
-            # - If we're still in the month, wait until after first Tuesday
-            # - If we're in the next month, wait until at least Tuesday
-            if today.month == target_month:
-                should_process_inventory = (
-                    first_tuesday is not None and today >= first_tuesday
-                )
-            else:
-                should_process_inventory = today.weekday() >= 1  # Tuesday or later
-        else:
-            # For past months, wait until at least the 2nd of the following month
-            second_of_next_month = next_month + timedelta(days=1)
-            should_process_inventory = today >= second_of_next_month
-
-        if should_process_inventory:
-            ct.process_inventory_report(
-                store_config.all_stores, target_year, target_month
-            )
-            logger.info(
-                "Processed inventory report",
-                extra={
-                    "year": target_year,
-                    "month": target_month,
-                    "stores": store_config.all_stores,
-                },
-            )
-        else:
-            wait_reason = (
-                "waiting for first Tuesday"
-                if today.month == target_month
-                else "waiting for complete end-of-month data (2nd of next month)"
-            )
-            logger.info(
-                f"Skipping inventory report - {wait_reason}",
-                extra={
-                    "year": target_year,
-                    "month": target_month,
-                    "first_monday": first_monday.isoformat() if first_monday else None,
-                    "first_tuesday": first_tuesday.isoformat()
-                    if first_tuesday
-                    else None,
-                    "today": today.isoformat(),
-                    "target_date": target_date.isoformat(),
-                },
-            )
+        # Process inventory report for the determined month
+        ct.process_inventory_report(
+            store_config.all_stores, inventory_year, inventory_month
+        )
+        logger.info(
+            "Processed inventory report",
+            extra={
+                "processing_date": today.isoformat(),
+                "inventory_year": inventory_year,
+                "inventory_month": inventory_month,
+                "stores": store_config.all_stores,
+            },
+        )
 
         return create_response(200, {"message": "Success"})
     except Exception:

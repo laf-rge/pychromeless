@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Optional, Dict, List, cast
+from typing import Optional, Dict, List, cast, Tuple
 import json
 import logging
 from ssm_parameter_store import SSMParameterStore
@@ -69,6 +69,43 @@ class StoreConfig:
     def get_store_ubereats_uuid(self, store_id: str) -> Optional[str]:
         """Get the Uber Eats UUID of a store."""
         return self._store_config.get(store_id, {}).get("ubereats_uuid")
+
+    def get_inventory_processing_month(self, processing_date: date) -> Tuple[int, int]:
+        """
+        Determine which month and year should be used for inventory processing.
+
+        Business rule: Continue processing the previous month's inventory until
+        the second Tuesday of the new month to allow for weekly inventories to be
+        completed and posted, while also allowing for late month-end inventory postings.
+
+        Args:
+            processing_date: The date when the processing is running
+
+        Returns:
+            Tuple of (year, month) that should be processed for inventory
+        """
+        # Find the first day of the current month
+        first_of_month = processing_date.replace(day=1)
+
+        # Find the first Tuesday of the month
+        first_tuesday = first_of_month
+        while first_tuesday.weekday() != 1:  # 1 is Tuesday
+            first_tuesday = first_tuesday.replace(day=first_tuesday.day + 1)
+
+        # Find the second Tuesday of the month
+        second_tuesday = first_tuesday.replace(day=first_tuesday.day + 7)
+
+        # If we haven't reached the second Tuesday yet, process previous month
+        if processing_date < second_tuesday:
+            if processing_date.month == 1:
+                # January -> December of previous year
+                return (processing_date.year - 1, 12)
+            else:
+                # Any other month -> previous month of same year
+                return (processing_date.year, processing_date.month - 1)
+        else:
+            # On or after second Tuesday, process current month
+            return (processing_date.year, processing_date.month)
 
     @property
     def all_stores(self) -> List[str]:
