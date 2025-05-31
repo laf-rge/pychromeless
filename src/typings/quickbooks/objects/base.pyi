@@ -1,5 +1,11 @@
-from ..mixins import FromJsonMixin as FromJsonMixin, ListMixin as ListMixin, ReadMixin as ReadMixin, ToDictMixin as ToDictMixin, ToJsonMixin as ToJsonMixin, UpdateMixin as UpdateMixin
 from _typeshed import Incomplete
+
+from ..mixins import FromJsonMixin as FromJsonMixin
+from ..mixins import ListMixin as ListMixin
+from ..mixins import ReadMixin as ReadMixin
+from ..mixins import ToDictMixin as ToDictMixin
+from ..mixins import ToJsonMixin as ToJsonMixin
+from ..mixins import UpdateMixin as UpdateMixin
 
 class QuickbooksBaseObject(ToJsonMixin, FromJsonMixin, ToDictMixin):
     class_dict: Incomplete
@@ -13,7 +19,9 @@ class QuickbooksTransactionEntity(QuickbooksBaseObject):
     domain: str
     def __init__(self) -> None: ...
 
-class QuickbooksManagedObject(QuickbooksBaseObject, ReadMixin, ListMixin, UpdateMixin): ...
+class QuickbooksManagedObject(
+    QuickbooksBaseObject, ReadMixin, ListMixin, UpdateMixin
+): ...
 class QuickbooksReadOnlyObject(QuickbooksBaseObject, ReadMixin, ListMixin): ...
 
 class MetaData(FromJsonMixin):

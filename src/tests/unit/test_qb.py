@@ -1,5 +1,6 @@
 import unittest
 from decimal import Decimal
+
 from qb import calculate_bill_splits
 
 

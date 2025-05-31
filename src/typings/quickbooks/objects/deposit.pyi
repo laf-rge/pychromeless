@@ -1,8 +1,17 @@
 from decimal import Decimal
-from ..mixins import DeleteMixin as DeleteMixin
-from .base import AttachableRef as AttachableRef, CustomField as CustomField, LinkedTxn as LinkedTxn, LinkedTxnMixin as LinkedTxnMixin, QuickbooksBaseObject as QuickbooksBaseObject, QuickbooksManagedObject as QuickbooksManagedObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
+from typing import Any, Dict, Type
+
 from _typeshed import Incomplete
-from typing import Dict, Type, Any
+
+from ..mixins import DeleteMixin as DeleteMixin
+from .base import AttachableRef as AttachableRef
+from .base import CustomField as CustomField
+from .base import LinkedTxn as LinkedTxn
+from .base import LinkedTxnMixin as LinkedTxnMixin
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
 
 class CashBackInfo(QuickbooksBaseObject):
     class_dict: Incomplete
@@ -41,7 +50,9 @@ class DepositLine(QuickbooksBaseObject):
     CustomField: Incomplete
     def __init__(self) -> None: ...
 
-class Deposit(DeleteMixin, QuickbooksManagedObject, QuickbooksTransactionEntity, LinkedTxnMixin):
+class Deposit(
+    DeleteMixin, QuickbooksManagedObject, QuickbooksTransactionEntity, LinkedTxnMixin
+):
     class_dict: Incomplete
     list_dict: Incomplete
     detail_dict: Incomplete

@@ -1,7 +1,8 @@
+from _typeshed import Incomplete
+
 from ..client import QuickBooks as QuickBooks
 from ..mixins import UpdateMixin as UpdateMixin
 from .base import QuickbooksBaseObject as QuickbooksBaseObject
-from _typeshed import Incomplete
 
 class TaxRateDetails(QuickbooksBaseObject):
     qbo_object_name: str

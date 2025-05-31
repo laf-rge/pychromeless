@@ -1,36 +1,94 @@
 from .account import Account as Account
 from .attachable import Attachable as Attachable
-from .base import Address as Address, AttachableRef as AttachableRef, CustomField as CustomField, CustomerMemo as CustomerMemo, EmailAddress as EmailAddress, LinkedTxn as LinkedTxn, MarkupInfo as MarkupInfo, PhoneNumber as PhoneNumber, Ref as Ref, WebAddress as WebAddress
+from .base import Address as Address
+from .base import AttachableRef as AttachableRef
+from .base import CustomerMemo as CustomerMemo
+from .base import CustomField as CustomField
+from .base import EmailAddress as EmailAddress
+from .base import LinkedTxn as LinkedTxn
+from .base import MarkupInfo as MarkupInfo
+from .base import PhoneNumber as PhoneNumber
+from .base import Ref as Ref
+from .base import WebAddress as WebAddress
 from .bill import Bill as Bill
-from .billpayment import BillPayment as BillPayment, BillPaymentCreditCard as BillPaymentCreditCard, BillPaymentLine as BillPaymentLine, CheckPayment as CheckPayment
-from .budget import Budget as Budget, BudgetDetail as BudgetDetail
+from .billpayment import BillPayment as BillPayment
+from .billpayment import BillPaymentCreditCard as BillPaymentCreditCard
+from .billpayment import BillPaymentLine as BillPaymentLine
+from .billpayment import CheckPayment as CheckPayment
+from .budget import Budget as Budget
+from .budget import BudgetDetail as BudgetDetail
 from .company_info import CompanyInfo as CompanyInfo
-from .creditcardpayment import CreditCardPayment as CreditCardPayment, CreditChargeInfo as CreditChargeInfo, CreditChargeResponse as CreditChargeResponse
+from .creditcardpayment import CreditCardPayment as CreditCardPayment
+from .creditcardpayment import CreditChargeInfo as CreditChargeInfo
+from .creditcardpayment import CreditChargeResponse as CreditChargeResponse
 from .creditmemo import CreditMemo as CreditMemo
 from .customer import Customer as Customer
 from .department import Department as Department
-from .deposit import CashBackInfo as CashBackInfo, Deposit as Deposit, DepositLine as DepositLine, DepositLineDetail as DepositLineDetail
-from .detailline import AccountBasedExpenseLine as AccountBasedExpenseLine, AccountBasedExpenseLineDetail as AccountBasedExpenseLineDetail, DescriptionLineDetail as DescriptionLineDetail, DescriptionOnlyLine as DescriptionOnlyLine, DetailLine as DetailLine, DiscountLine as DiscountLine, DiscountLineDetail as DiscountLineDetail, DiscountOverride as DiscountOverride, GroupLine as GroupLine, GroupLineDetail as GroupLineDetail, ItemBasedExpenseLine as ItemBasedExpenseLine, ItemBasedExpenseLineDetail as ItemBasedExpenseLineDetail, SalesItemLine as SalesItemLine, SalesItemLineDetail as SalesItemLineDetail, SubtotalLine as SubtotalLine, SubtotalLineDetail as SubtotalLineDetail, TDSLine as TDSLine, TDSLineDetail as TDSLineDetail
+from .deposit import CashBackInfo as CashBackInfo
+from .deposit import Deposit as Deposit
+from .deposit import DepositLine as DepositLine
+from .deposit import DepositLineDetail as DepositLineDetail
+from .detailline import AccountBasedExpenseLine as AccountBasedExpenseLine
+from .detailline import AccountBasedExpenseLineDetail as AccountBasedExpenseLineDetail
+from .detailline import DescriptionLineDetail as DescriptionLineDetail
+from .detailline import DescriptionOnlyLine as DescriptionOnlyLine
+from .detailline import DetailLine as DetailLine
+from .detailline import DiscountLine as DiscountLine
+from .detailline import DiscountLineDetail as DiscountLineDetail
+from .detailline import DiscountOverride as DiscountOverride
+from .detailline import GroupLine as GroupLine
+from .detailline import GroupLineDetail as GroupLineDetail
+from .detailline import ItemBasedExpenseLine as ItemBasedExpenseLine
+from .detailline import ItemBasedExpenseLineDetail as ItemBasedExpenseLineDetail
+from .detailline import SalesItemLine as SalesItemLine
+from .detailline import SalesItemLineDetail as SalesItemLineDetail
+from .detailline import SubtotalLine as SubtotalLine
+from .detailline import SubtotalLineDetail as SubtotalLineDetail
+from .detailline import TDSLine as TDSLine
+from .detailline import TDSLineDetail as TDSLineDetail
 from .employee import Employee as Employee
 from .estimate import Estimate as Estimate
-from .invoice import DeliveryInfo as DeliveryInfo, Invoice as Invoice
+from .invoice import DeliveryInfo as DeliveryInfo
+from .invoice import Invoice as Invoice
 from .item import Item as Item
-from .journalentry import Entity as Entity, JournalEntry as JournalEntry, JournalEntryLine as JournalEntryLine, JournalEntryLineDetail as JournalEntryLineDetail
-from .payment import Payment as Payment, PaymentLine as PaymentLine
+from .journalentry import Entity as Entity
+from .journalentry import JournalEntry as JournalEntry
+from .journalentry import JournalEntryLine as JournalEntryLine
+from .journalentry import JournalEntryLineDetail as JournalEntryLineDetail
+from .payment import Payment as Payment
+from .payment import PaymentLine as PaymentLine
 from .paymentmethod import PaymentMethod as PaymentMethod
-from .preferences import AccountingInfoPrefs as AccountingInfoPrefs, ClassTrackingPerTxnLine as ClassTrackingPerTxnLine, CurrencyPrefs as CurrencyPrefs, EmailMessageType as EmailMessageType, EmailMessagesPrefs as EmailMessagesPrefs, OtherPrefs as OtherPrefs, Preferences as Preferences, ProductAndServicesPrefs as ProductAndServicesPrefs, ReportPrefs as ReportPrefs, SalesFormsPrefs as SalesFormsPrefs, TaxPrefs as TaxPrefs, TimeTrackingPrefs as TimeTrackingPrefs, VendorAndPurchasesPrefs as VendorAndPurchasesPrefs
+from .preferences import AccountingInfoPrefs as AccountingInfoPrefs
+from .preferences import ClassTrackingPerTxnLine as ClassTrackingPerTxnLine
+from .preferences import CurrencyPrefs as CurrencyPrefs
+from .preferences import EmailMessagesPrefs as EmailMessagesPrefs
+from .preferences import EmailMessageType as EmailMessageType
+from .preferences import OtherPrefs as OtherPrefs
+from .preferences import Preferences as Preferences
+from .preferences import ProductAndServicesPrefs as ProductAndServicesPrefs
+from .preferences import ReportPrefs as ReportPrefs
+from .preferences import SalesFormsPrefs as SalesFormsPrefs
+from .preferences import TaxPrefs as TaxPrefs
+from .preferences import TimeTrackingPrefs as TimeTrackingPrefs
+from .preferences import VendorAndPurchasesPrefs as VendorAndPurchasesPrefs
 from .purchase import Purchase as Purchase
 from .purchaseorder import PurchaseOrder as PurchaseOrder
 from .refundreceipt import RefundReceipt as RefundReceipt
 from .salesreceipt import SalesReceipt as SalesReceipt
-from .tax import TaxLine as TaxLine, TaxLineDetail as TaxLineDetail, TxnTaxDetail as TxnTaxDetail
+from .tax import TaxLine as TaxLine
+from .tax import TaxLineDetail as TaxLineDetail
+from .tax import TxnTaxDetail as TxnTaxDetail
 from .taxagency import TaxAgency as TaxAgency
-from .taxcode import TaxCode as TaxCode, TaxRateDetail as TaxRateDetail, TaxRateList as TaxRateList
+from .taxcode import TaxCode as TaxCode
+from .taxcode import TaxRateDetail as TaxRateDetail
+from .taxcode import TaxRateList as TaxRateList
 from .taxrate import TaxRate as TaxRate
-from .taxservice import TaxRateDetails as TaxRateDetails, TaxService as TaxService
+from .taxservice import TaxRateDetails as TaxRateDetails
+from .taxservice import TaxService as TaxService
 from .term import Term as Term
 from .timeactivity import TimeActivity as TimeActivity
 from .trackingclass import Class as Class
 from .transfer import Transfer as Transfer
-from .vendor import ContactInfo as ContactInfo, Vendor as Vendor
+from .vendor import ContactInfo as ContactInfo
+from .vendor import Vendor as Vendor
 from .vendorcredit import VendorCredit as VendorCredit

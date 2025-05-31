@@ -1,10 +1,27 @@
-from ..mixins import DeleteMixin as DeleteMixin, QuickbooksPdfDownloadable as QuickbooksPdfDownloadable, VoidMixin as VoidMixin
-from .base import Address as Address, CustomField as CustomField, EmailAddress as EmailAddress, LinkedTxn as LinkedTxn, LinkedTxnMixin as LinkedTxnMixin, QuickbooksManagedObject as QuickbooksManagedObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
-from .detailline import DetailLine as DetailLine
-from .tax import TxnTaxDetail as TxnTaxDetail
 from _typeshed import Incomplete
 
-class SalesReceipt(DeleteMixin, QuickbooksPdfDownloadable, QuickbooksManagedObject, QuickbooksTransactionEntity, LinkedTxnMixin, VoidMixin):
+from ..mixins import DeleteMixin as DeleteMixin
+from ..mixins import QuickbooksPdfDownloadable as QuickbooksPdfDownloadable
+from ..mixins import VoidMixin as VoidMixin
+from .base import Address as Address
+from .base import CustomField as CustomField
+from .base import EmailAddress as EmailAddress
+from .base import LinkedTxn as LinkedTxn
+from .base import LinkedTxnMixin as LinkedTxnMixin
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
+from .detailline import DetailLine as DetailLine
+from .tax import TxnTaxDetail as TxnTaxDetail
+
+class SalesReceipt(
+    DeleteMixin,
+    QuickbooksPdfDownloadable,
+    QuickbooksManagedObject,
+    QuickbooksTransactionEntity,
+    LinkedTxnMixin,
+    VoidMixin,
+):
     class_dict: Incomplete
     list_dict: Incomplete
     detail_dict: Incomplete

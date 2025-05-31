@@ -1,7 +1,9 @@
+from _typeshed import Incomplete
+
 from .client import QuickBooks as QuickBooks
 from .exceptions import QuickbooksException as QuickbooksException
-from .utils import build_choose_clause as build_choose_clause, build_where_clause as build_where_clause
-from _typeshed import Incomplete
+from .utils import build_choose_clause as build_choose_clause
+from .utils import build_where_clause as build_where_clause
 
 class ToJsonMixin:
     def to_json(self): ...
@@ -36,36 +38,67 @@ class UpdateMixin:
     qbo_object_name: str
     qbo_json_object_name: str
     Id: Incomplete
-    def save(self, qb: Incomplete | None = None, request_id: Incomplete | None = None, params: Incomplete | None = None): ...
+    def save(
+        self,
+        qb: Incomplete | None = None,
+        request_id: Incomplete | None = None,
+        params: Incomplete | None = None,
+    ): ...
 
 class UpdateNoIdMixin:
     qbo_object_name: str
     qbo_json_object_name: str
-    def save(self, qb: Incomplete | None = None, request_id: Incomplete | None = None): ...
+    def save(
+        self, qb: Incomplete | None = None, request_id: Incomplete | None = None
+    ): ...
 
 class DeleteMixin:
     qbo_object_name: str
-    def delete(self, qb: Incomplete | None = None, request_id: Incomplete | None = None): ...
+    def delete(
+        self, qb: Incomplete | None = None, request_id: Incomplete | None = None
+    ): ...
 
 class DeleteNoIdMixin:
     qbo_object_name: str
-    def delete(self, qb: Incomplete | None = None, request_id: Incomplete | None = None): ...
+    def delete(
+        self, qb: Incomplete | None = None, request_id: Incomplete | None = None
+    ): ...
 
 class ListMixin:
     qbo_object_name: str
     qbo_json_object_name: str
     @classmethod
-    def all(cls, order_by: str = '', start_position: int | str = '', max_results: int = 100, qb: Incomplete | None = None): ...
+    def all(
+        cls,
+        order_by: str = "",
+        start_position: int | str = "",
+        max_results: int = 100,
+        qb: Incomplete | None = None,
+    ): ...
     @classmethod
-    def filter(cls, order_by: str = '', start_position: int | str = '', max_results: int | str = '', qb: Incomplete | None = None, **kwargs): ...
+    def filter(
+        cls,
+        order_by: str = "",
+        start_position: int | str = "",
+        max_results: int | str = "",
+        qb: Incomplete | None = None,
+        **kwargs,
+    ): ...
     @classmethod
-    def choose(cls, choices, field: str = 'Id', qb: Incomplete | None = None): ...
+    def choose(cls, choices, field: str = "Id", qb: Incomplete | None = None): ...
     @classmethod
-    def where(cls, where_clause: str = '', order_by: str = '', start_position: int | str = '', max_results: int | str = '', qb: Incomplete | None = None): ...
+    def where(
+        cls,
+        where_clause: str = "",
+        order_by: str = "",
+        start_position: int | str = "",
+        max_results: int | str = "",
+        qb: Incomplete | None = None,
+    ): ...
     @classmethod
     def query(cls, select, qb: Incomplete | None = None): ...
     @classmethod
-    def count(cls, where_clause: str = '', qb: Incomplete | None = None): ...
+    def count(cls, where_clause: str = "", qb: Incomplete | None = None): ...
 
 class QuickbooksPdfDownloadable:
     qbo_object_name: str

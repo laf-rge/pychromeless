@@ -1,15 +1,42 @@
-from ..mixins import DeleteMixin as DeleteMixin, QuickbooksPdfDownloadable as QuickbooksPdfDownloadable, SendMixin as SendMixin, VoidMixin as VoidMixin
-from .base import Address as Address, CustomField as CustomField, CustomerMemo as CustomerMemo, EmailAddress as EmailAddress, LinkedTxn as LinkedTxn, LinkedTxnMixin as LinkedTxnMixin, MetaData as MetaData, QuickbooksBaseObject as QuickbooksBaseObject, QuickbooksManagedObject as QuickbooksManagedObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
-from .detailline import DescriptionOnlyLine as DescriptionOnlyLine, DetailLine as DetailLine, DiscountLine as DiscountLine, GroupLine as GroupLine, SalesItemLine as SalesItemLine, SubtotalLine as SubtotalLine
-from .tax import TxnTaxDetail as TxnTaxDetail
 from _typeshed import Incomplete
+
+from ..mixins import DeleteMixin as DeleteMixin
+from ..mixins import QuickbooksPdfDownloadable as QuickbooksPdfDownloadable
+from ..mixins import SendMixin as SendMixin
+from ..mixins import VoidMixin as VoidMixin
+from .base import Address as Address
+from .base import CustomerMemo as CustomerMemo
+from .base import CustomField as CustomField
+from .base import EmailAddress as EmailAddress
+from .base import LinkedTxn as LinkedTxn
+from .base import LinkedTxnMixin as LinkedTxnMixin
+from .base import MetaData as MetaData
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
+from .detailline import DescriptionOnlyLine as DescriptionOnlyLine
+from .detailline import DetailLine as DetailLine
+from .detailline import DiscountLine as DiscountLine
+from .detailline import GroupLine as GroupLine
+from .detailline import SalesItemLine as SalesItemLine
+from .detailline import SubtotalLine as SubtotalLine
+from .tax import TxnTaxDetail as TxnTaxDetail
 
 class DeliveryInfo(QuickbooksBaseObject):
     DeliveryType: str
     DeliveryTime: str
     def __init__(self) -> None: ...
 
-class Invoice(DeleteMixin, QuickbooksPdfDownloadable, QuickbooksManagedObject, QuickbooksTransactionEntity, LinkedTxnMixin, SendMixin, VoidMixin):
+class Invoice(
+    DeleteMixin,
+    QuickbooksPdfDownloadable,
+    QuickbooksManagedObject,
+    QuickbooksTransactionEntity,
+    LinkedTxnMixin,
+    SendMixin,
+    VoidMixin,
+):
     class_dict: Incomplete
     list_dict: Incomplete
     detail_dict: Incomplete

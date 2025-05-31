@@ -7,9 +7,10 @@ from typing import cast
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+
 from ssm_parameter_store import SSMParameterStore
-from webdriver import initialise_driver
 from store_config import StoreConfig
+from webdriver import initialise_driver
 
 logger = logging.getLogger(__name__)
 

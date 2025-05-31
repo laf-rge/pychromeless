@@ -1,5 +1,13 @@
-from .base import Address as Address, EmailAddress as EmailAddress, PhoneNumber as PhoneNumber, QuickbooksBaseObject as QuickbooksBaseObject, QuickbooksManagedObject as QuickbooksManagedObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref, WebAddress as WebAddress
 from _typeshed import Incomplete
+
+from .base import Address as Address
+from .base import EmailAddress as EmailAddress
+from .base import PhoneNumber as PhoneNumber
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
+from .base import WebAddress as WebAddress
 
 class ContactInfo(QuickbooksBaseObject):
     class_dict: Incomplete

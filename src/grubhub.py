@@ -3,8 +3,14 @@ import logging
 from time import sleep
 from typing import cast
 
+from selenium.common.exceptions import (
+    ElementNotInteractableException,
+    TimeoutException,
+    WebDriverException,
+)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+
 from ssm_parameter_store import SSMParameterStore
 from webdriver import initialise_driver
 
@@ -82,6 +88,18 @@ class Grubhub:
             sleep(2)
             driver.find_element(By.CLASS_NAME, "date-picker-input__date-button").click()
             driver.find_element(By.LINK_TEXT, "Last 30 days").click()
+
+            sleep(10)
+            try:
+                driver.find_element(
+                    By.CLASS_NAME, "date-picker-input__date-button"
+                ).click()
+                driver.find_element(By.LINK_TEXT, "Last 30 days").click()
+            except (ElementNotInteractableException, TimeoutException):
+                logger.warning("Payment period dropdowns not found on page.")
+            except WebDriverException as e:
+                logger.exception(f"WebDriver error during payment scraping: {e}")
+                return
 
             sleep(15)
 

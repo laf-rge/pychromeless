@@ -10,10 +10,11 @@ import logging
 import sys
 from datetime import date, datetime
 from typing import Any
-from pythonjsonlogger.json import JsonFormatter
+
 from pygments import highlight
-from pygments.lexers import JsonLexer
 from pygments.formatters import TerminalFormatter
+from pygments.lexers import JsonLexer
+from pythonjsonlogger.json import JsonFormatter
 
 
 class CustomJsonEncoder(json.JSONEncoder):

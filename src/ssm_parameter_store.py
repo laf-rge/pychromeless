@@ -23,7 +23,7 @@
 # https://medium.com/@nqbao/how-to-use-aws-ssm-parameter-store-easily-in-python-94fda04fea84
 
 import datetime
-from typing import Any, Dict, List, Optional, Union, TypeVar, overload
+from typing import Any, Dict, List, Optional, TypeVar, Union, overload
 
 import boto3
 
@@ -211,9 +211,7 @@ class SSMParameterStore:
         self, name: slice
     ) -> Dict[str, Union[str, List[str], "SSMParameterStore"]]: ...
 
-    def __getitem__(
-        self, name: Union[str, slice]
-    ) -> Union[
+    def __getitem__(self, name: Union[str, slice]) -> Union[
         str,
         List[str],
         "SSMParameterStore",

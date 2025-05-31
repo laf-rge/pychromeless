@@ -2,17 +2,18 @@ import logging
 import os
 from tempfile import mkdtemp
 from typing import Optional
+
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import (
+    ElementNotInteractableException,
+    NoSuchElementException,
+    TimeoutException,
+)
 from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import (
-    TimeoutException,
-    NoSuchElementException,
-    ElementNotInteractableException,
-)
-from selenium.webdriver.remote.webelement import WebElement
 
 
 # Only import webdriver_manager if not running in AWS Lambda
@@ -42,9 +43,9 @@ def initialise_driver(download_location: Optional[str] = None) -> webdriver.Chro
         chrome_options.add_experimental_option(
             "prefs",
             {
-                "download.default_directory": download_location
-                if download_location
-                else "/tmp",
+                "download.default_directory": (
+                    download_location if download_location else "/tmp"
+                ),
                 "download.directory_upgrade": True,
                 "download.prompt_for_download": False,
                 "credentials_enable_service": False,
@@ -87,9 +88,11 @@ def initialise_driver(download_location: Optional[str] = None) -> webdriver.Chro
         chrome_options.add_experimental_option(
             "prefs",
             {
-                "download.default_directory": download_location
-                if download_location
-                else os.path.join(os.getcwd(), "downloads"),
+                "download.default_directory": (
+                    download_location
+                    if download_location
+                    else os.path.join(os.getcwd(), "downloads")
+                ),
                 "download.directory_upgrade": True,
                 "download.prompt_for_download": False,
                 "credentials_enable_service": False,

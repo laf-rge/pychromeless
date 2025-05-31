@@ -70,6 +70,13 @@ quality = [
     "flake8>=6.0.0",
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
+    # Additional linting tools
+    "pylint>=3.0.0",
+    "bandit>=1.7.0",  # Security linting
+    "safety>=2.3.0",  # Dependency vulnerability scanning
+    "flake8-docstrings>=1.7.0",  # Docstring linting
+    "flake8-import-order>=0.18.0",  # Import order checking
+    "flake8-bugbear>=23.0.0",  # Additional bug-finding checks
 ]
 all = [
     "pychromeless[dev,quality]",
@@ -162,4 +169,68 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "tests.*"
-disallow_untyped_defs = false 
+disallow_untyped_defs = false
+
+[tool.bandit]
+exclude_dirs = ["src/tests"]
+skips = ["B101", "B601"]  # Skip assert_used and paramiko_calls
+
+[tool.pylint.main]
+load-plugins = [
+    "pylint.extensions.code_style",
+    "pylint.extensions.typing",
+]
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-docstring",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-locals",
+    "import-error",  # Handled by mypy
+    "no-member",     # Handled by mypy
+]
+
+[tool.pylint.format]
+max-line-length = 88
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = [
+    "E203",  # whitespace before ':'
+    "W503",  # line break before binary operator
+    "D100",  # Missing docstring in public module - temporarily ignore
+    "D101",  # Missing docstring in public class - temporarily ignore
+    "D102",  # Missing docstring in public method - temporarily ignore
+    "D103",  # Missing docstring in public function - temporarily ignore
+    "D104",  # Missing docstring in public package
+    "D105",  # Missing docstring in magic method
+    "D107",  # Missing docstring in __init__
+    "D200",  # One-line docstring should fit on one line
+    "D202",  # No blank lines allowed after function docstring
+    "D205",  # 1 blank line required between summary line and description
+    "D400",  # First line should end with a period - temporarily ignore
+    "D401",  # First line should be in imperative mood - temporarily ignore
+    "D403",  # First word should be properly capitalized
+    "D419",  # Docstring is empty
+    "I100",  # Import statements are in the wrong order - temporarily ignore
+    "I201",  # Missing newline between import groups - temporarily ignore
+    "F401",  # Module imported but unused - fix these gradually
+    "B007",  # Loop control variable not used - fix these gradually
+    "E501",  # Line too long - fix these gradually with black
+    "B001",  # Do not use bare except - HIGH PRIORITY to fix
+    "E722",  # Do not use bare except - HIGH PRIORITY to fix
+]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+]
+per-file-ignores = [
+    "__init__.py:F401",  # Allow unused imports in __init__.py files
+    "conftest.py:F401,F811",  # Allow fixture redefinitions
+    "test_*.py:D100,D101,D102,D103",  # Don't require docstrings in tests
+]

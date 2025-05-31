@@ -1,5 +1,8 @@
-from .base import QuickbooksManagedObject as QuickbooksManagedObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
 from _typeshed import Incomplete
+
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
 
 class PaymentMethod(QuickbooksManagedObject, QuickbooksTransactionEntity):
     class_dict: Incomplete

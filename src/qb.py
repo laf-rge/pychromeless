@@ -2,8 +2,8 @@ import base64
 import calendar
 import datetime
 import json
-import re
 import logging
+import re
 from collections import OrderedDict
 from decimal import Decimal
 from functools import reduce
@@ -302,7 +302,7 @@ def create_daily_sales(txdate, daily_reports, overwrite=True):
 
         try:
             new_receipt.save(qb=CLIENT)
-        except Exception as e:
+        except Exception:
             logger.exception(
                 "Failed to save receipt",
                 extra={"receipt": json.loads(new_receipt.to_json())},
@@ -1137,9 +1137,12 @@ def split_bill(original_bill, locations, split_ratios=None):
         for bill in new_bills:
             try:
                 bill.delete(qb=CLIENT)
-            except:
+            except Exception as rollback_error:
                 logger.exception(
                     "Failed to delete split bill during rollback",
-                    extra={"doc_number": bill.DocNumber},
+                    extra={
+                        "doc_number": bill.DocNumber,
+                        "rollback_error": str(rollback_error),
+                    },
                 )
         raise

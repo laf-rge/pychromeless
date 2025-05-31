@@ -1,0 +1,142 @@
+# Cursor AI Code Assistant Rules for PyChromeless
+
+## Project Overview
+
+This is a Python project for Jersey Mike's financial operations automation using AWS Lambda functions. The codebase includes web scraping, data processing, and financial integration systems.
+
+## Code Quality Standards
+
+### Python Style Guidelines
+
+- Follow PEP 8 with modifications as defined in pyproject.toml
+- Line length: 88 characters (Black standard)
+- Use type hints for all function parameters and returns
+- Prefer f-strings over .format() or % formatting
+- Use descriptive variable names, especially for financial calculations
+
+### Import Organization
+
+Follow isort configuration:
+
+```python
+# Standard library imports
+import os
+import json
+
+# Third-party imports
+import boto3
+import pandas as pd
+
+# Local application imports
+from store_config import StoreConfig
+from tips import Tips
+```
+
+### Documentation Requirements
+
+- All public functions MUST have docstrings
+- Use Google-style docstrings for consistency
+- Document complex business logic extensively
+- Include parameter types and return types in docstrings
+
+### Error Handling
+
+- Use specific exception types instead of bare `except:`
+- Log errors with structured logging (JSON format)
+- Include context in error messages for debugging
+- Handle AWS service exceptions gracefully
+
+### Financial Data Handling
+
+- Use Decimal type for all monetary calculations
+- Never use float for financial data
+- Always validate currency amounts
+- Include audit trails for financial operations
+
+## Lambda Function Guidelines
+
+### Handler Functions
+
+- Keep handlers thin - delegate to service classes
+- Include proper request ID tracking
+- Use WebSocket manager for progress updates
+- Return standardized response format
+
+### Environment Variables
+
+- All secrets via AWS SSM Parameter Store
+- Use environment-specific prefixes (/prod/, /test/)
+- Never hardcode credentials or sensitive data
+
+### Testing Requirements
+
+- Mock all external dependencies (AWS, web scraping)
+- Use pytest fixtures for test data
+- Include edge cases for financial calculations
+- Test error conditions thoroughly
+
+## AWS Integration
+
+### Services Used
+
+- Lambda for compute
+- DynamoDB for state management
+- SSM Parameter Store for configuration
+- API Gateway for HTTP endpoints
+- CloudWatch for logging and monitoring
+
+### Security Considerations
+
+- Validate all input parameters
+- Use least privilege IAM roles
+- Sanitize data before database operations
+- Implement proper authentication for APIs
+
+## When Making Changes
+
+### Before Committing
+
+1. Run `make lint` and fix all issues
+2. Run `make test` and ensure all tests pass
+3. Update documentation for any API changes
+4. Consider impact on financial calculations
+
+### Code Review Focus
+
+- Verify financial calculation accuracy
+- Check error handling completeness
+- Ensure proper logging is in place
+- Review security implications
+- Validate AWS resource usage
+
+### Deployment Considerations
+
+- This code runs in AWS Lambda with size constraints
+- Chrome/Selenium dependencies are pre-installed in container
+- Environment variables are injected at runtime
+- Cold start performance matters for scheduled functions
+
+## Common Patterns in This Codebase
+
+### Web Scraping
+
+- Always use headless Chrome
+- Implement retry logic with exponential backoff
+- Handle dynamic content loading
+- Include proper error recovery
+
+### Data Processing
+
+- Validate data formats before processing
+- Use pandas for complex data transformations
+- Implement data quality checks
+- Log data processing metrics
+
+### QuickBooks Integration
+
+- Refresh API sessions before operations
+- Handle rate limiting appropriately
+- Validate financial data before sync
+- Implement rollback procedures for failures
+
+Remember: This code handles real financial data for restaurant operations. Accuracy and reliability are paramount.

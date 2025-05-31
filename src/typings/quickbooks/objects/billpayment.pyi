@@ -1,6 +1,13 @@
-from ..mixins import DeleteMixin as DeleteMixin, VoidMixin as VoidMixin
-from .base import LinkedTxn as LinkedTxn, LinkedTxnMixin as LinkedTxnMixin, QuickbooksBaseObject as QuickbooksBaseObject, QuickbooksManagedObject as QuickbooksManagedObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
 from _typeshed import Incomplete
+
+from ..mixins import DeleteMixin as DeleteMixin
+from ..mixins import VoidMixin as VoidMixin
+from .base import LinkedTxn as LinkedTxn
+from .base import LinkedTxnMixin as LinkedTxnMixin
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
 
 class CheckPayment(QuickbooksBaseObject):
     class_dict: Incomplete
@@ -22,7 +29,13 @@ class BillPaymentLine(QuickbooksBaseObject):
     LinkedTxn: Incomplete
     def __init__(self) -> None: ...
 
-class BillPayment(DeleteMixin, QuickbooksManagedObject, QuickbooksTransactionEntity, LinkedTxnMixin, VoidMixin):
+class BillPayment(
+    DeleteMixin,
+    QuickbooksManagedObject,
+    QuickbooksTransactionEntity,
+    LinkedTxnMixin,
+    VoidMixin,
+):
     class_dict: Incomplete
     list_dict: Incomplete
     qbo_object_name: str

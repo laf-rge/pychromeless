@@ -1,10 +1,33 @@
-from ..mixins import DeleteMixin as DeleteMixin, QuickbooksPdfDownloadable as QuickbooksPdfDownloadable, SendMixin as SendMixin
-from .base import Address as Address, CustomField as CustomField, CustomerMemo as CustomerMemo, EmailAddress as EmailAddress, LinkedTxn as LinkedTxn, LinkedTxnMixin as LinkedTxnMixin, QuickbooksManagedObject as QuickbooksManagedObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
-from .detailline import DescriptionOnlyLine as DescriptionOnlyLine, DetailLine as DetailLine, DiscountLine as DiscountLine, GroupLine as GroupLine, SalesItemLine as SalesItemLine, SubtotalLine as SubtotalLine
-from .tax import TxnTaxDetail as TxnTaxDetail
 from _typeshed import Incomplete
 
-class Estimate(DeleteMixin, QuickbooksPdfDownloadable, QuickbooksManagedObject, QuickbooksTransactionEntity, LinkedTxnMixin, SendMixin):
+from ..mixins import DeleteMixin as DeleteMixin
+from ..mixins import QuickbooksPdfDownloadable as QuickbooksPdfDownloadable
+from ..mixins import SendMixin as SendMixin
+from .base import Address as Address
+from .base import CustomerMemo as CustomerMemo
+from .base import CustomField as CustomField
+from .base import EmailAddress as EmailAddress
+from .base import LinkedTxn as LinkedTxn
+from .base import LinkedTxnMixin as LinkedTxnMixin
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
+from .detailline import DescriptionOnlyLine as DescriptionOnlyLine
+from .detailline import DetailLine as DetailLine
+from .detailline import DiscountLine as DiscountLine
+from .detailline import GroupLine as GroupLine
+from .detailline import SalesItemLine as SalesItemLine
+from .detailline import SubtotalLine as SubtotalLine
+from .tax import TxnTaxDetail as TxnTaxDetail
+
+class Estimate(
+    DeleteMixin,
+    QuickbooksPdfDownloadable,
+    QuickbooksManagedObject,
+    QuickbooksTransactionEntity,
+    LinkedTxnMixin,
+    SendMixin,
+):
     class_dict: Incomplete
     list_dict: Incomplete
     detail_dict: Incomplete

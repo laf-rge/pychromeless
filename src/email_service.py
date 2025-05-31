@@ -8,13 +8,15 @@ This module handles all email communications including:
 - Tips reports
 """
 
-import boto3
 from datetime import date
 from decimal import Decimal
 from typing import List, Optional, cast
-from tips import Tips
+
+import boto3
+
 from ssm_parameter_store import SSMParameterStore
 from store_config import StoreConfig
+from tips import Tips
 
 
 class EmailService:

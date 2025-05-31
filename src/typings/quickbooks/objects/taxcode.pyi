@@ -1,6 +1,10 @@
-from .base import QuickbooksBaseObject as QuickbooksBaseObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
 from _typeshed import Incomplete
-from quickbooks.mixins import ListMixin as ListMixin, ReadMixin as ReadMixin
+from quickbooks.mixins import ListMixin as ListMixin
+from quickbooks.mixins import ReadMixin as ReadMixin
+
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
 
 class TaxRateDetail(QuickbooksBaseObject):
     class_dict: Incomplete

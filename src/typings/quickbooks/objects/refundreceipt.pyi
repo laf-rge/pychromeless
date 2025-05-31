@@ -1,9 +1,19 @@
-from ..mixins import DeleteMixin as DeleteMixin
-from .base import Address as Address, CustomField as CustomField, CustomerMemo as CustomerMemo, EmailAddress as EmailAddress, LinkedTxn as LinkedTxn, LinkedTxnMixin as LinkedTxnMixin, QuickbooksBaseObject as QuickbooksBaseObject, QuickbooksManagedObject as QuickbooksManagedObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
-from .detailline import DetailLine as DetailLine
-from .tax import TxnTaxDetail as TxnTaxDetail
 from _typeshed import Incomplete
 from quickbooks.objects import CreditCardPayment as CreditCardPayment
+
+from ..mixins import DeleteMixin as DeleteMixin
+from .base import Address as Address
+from .base import CustomerMemo as CustomerMemo
+from .base import CustomField as CustomField
+from .base import EmailAddress as EmailAddress
+from .base import LinkedTxn as LinkedTxn
+from .base import LinkedTxnMixin as LinkedTxnMixin
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
+from .detailline import DetailLine as DetailLine
+from .tax import TxnTaxDetail as TxnTaxDetail
 
 class RefundReceiptCheckPayment(QuickbooksBaseObject):
     qbo_object_name: str
@@ -14,7 +24,9 @@ class RefundReceiptCheckPayment(QuickbooksBaseObject):
     BankName: str
     def __init__(self) -> None: ...
 
-class RefundReceipt(DeleteMixin, QuickbooksManagedObject, QuickbooksTransactionEntity, LinkedTxnMixin):
+class RefundReceipt(
+    DeleteMixin, QuickbooksManagedObject, QuickbooksTransactionEntity, LinkedTxnMixin
+):
     class_dict: Incomplete
     list_dict: Incomplete
     detail_dict: Incomplete

@@ -1,13 +1,15 @@
-import os
 import json
-import boto3
-from datetime import datetime
-from typing import Dict, Optional, Any, Protocol, cast
 import logging
+import os
 import time
-from operation_types import OperationType
-from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
+from datetime import datetime
+from typing import Any, Dict, Optional, Protocol, cast
+
+import boto3
 from mypy_boto3_apigatewaymanagementapi.client import ApiGatewayManagementApiClient
+from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
+
+from operation_types import OperationType
 
 logger = logging.getLogger(__name__)
 

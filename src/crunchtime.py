@@ -1,17 +1,18 @@
 import csv
 import datetime
 import glob
+import logging
 import os
 import re
-import logging
 from time import sleep
 from typing import cast
 
-import qb
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
+
+import qb
 from ssm_parameter_store import SSMParameterStore
 from webdriver import initialise_driver
 

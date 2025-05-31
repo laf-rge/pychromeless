@@ -1,6 +1,10 @@
-from .base import CustomField as CustomField, QuickbooksBaseObject as QuickbooksBaseObject
 from _typeshed import Incomplete
-from quickbooks.mixins import FromJsonMixin as FromJsonMixin, ListMixin as ListMixin, UpdateNoIdMixin as UpdateNoIdMixin
+from quickbooks.mixins import FromJsonMixin as FromJsonMixin
+from quickbooks.mixins import ListMixin as ListMixin
+from quickbooks.mixins import UpdateNoIdMixin as UpdateNoIdMixin
+
+from .base import CustomField as CustomField
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
 
 class ExchangeRateMetaData(FromJsonMixin):
     LastUpdatedTime: str

@@ -6,11 +6,13 @@ using DynamoDB to store and query task states.
 """
 
 import json
-import os
 import logging
-from typing import Any, Dict, cast, Optional
+import os
+from typing import Any, Dict, Optional, cast
+
 import boto3
 from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
+
 from logging_utils import setup_json_logger
 
 # Set up logging if not in Lambda environment

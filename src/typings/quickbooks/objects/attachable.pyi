@@ -1,7 +1,11 @@
+from _typeshed import Incomplete
+
 from ..client import QuickBooks as QuickBooks
 from ..mixins import DeleteMixin as DeleteMixin
-from .base import AttachableRef as AttachableRef, QuickbooksManagedObject as QuickbooksManagedObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
-from _typeshed import Incomplete
+from .base import AttachableRef as AttachableRef
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
 
 class Attachable(DeleteMixin, QuickbooksManagedObject, QuickbooksTransactionEntity):
     class_dict: Incomplete
@@ -23,4 +27,9 @@ class Attachable(DeleteMixin, QuickbooksManagedObject, QuickbooksTransactionEnti
     def __init__(self) -> None: ...
     def to_ref(self): ...
     Id: Incomplete
-    def save(self, qb: Incomplete | None = None, request_id: Incomplete | None = None, params: Incomplete | None = None): ...
+    def save(
+        self,
+        qb: Incomplete | None = None,
+        request_id: Incomplete | None = None,
+        params: Incomplete | None = None,
+    ): ...

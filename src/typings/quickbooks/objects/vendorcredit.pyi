@@ -1,9 +1,18 @@
-from ..mixins import DeleteMixin as DeleteMixin
-from .base import LinkedTxnMixin as LinkedTxnMixin, QuickbooksManagedObject as QuickbooksManagedObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
-from .detailline import AccountBasedExpenseLine as AccountBasedExpenseLine, DetailLine as DetailLine, ItemBasedExpenseLine as ItemBasedExpenseLine, TDSLine as TDSLine
 from _typeshed import Incomplete
 
-class VendorCredit(DeleteMixin, QuickbooksManagedObject, QuickbooksTransactionEntity, LinkedTxnMixin):
+from ..mixins import DeleteMixin as DeleteMixin
+from .base import LinkedTxnMixin as LinkedTxnMixin
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
+from .detailline import AccountBasedExpenseLine as AccountBasedExpenseLine
+from .detailline import DetailLine as DetailLine
+from .detailline import ItemBasedExpenseLine as ItemBasedExpenseLine
+from .detailline import TDSLine as TDSLine
+
+class VendorCredit(
+    DeleteMixin, QuickbooksManagedObject, QuickbooksTransactionEntity, LinkedTxnMixin
+):
     class_dict: Incomplete
     list_dict: Incomplete
     detail_dict: Incomplete

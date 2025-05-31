@@ -1,6 +1,11 @@
-from .base import EmailAddress as EmailAddress, QuickbooksBaseObject as QuickbooksBaseObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
 from _typeshed import Incomplete
-from quickbooks.mixins import PrefMixin as PrefMixin, UpdateNoIdMixin as UpdateNoIdMixin
+from quickbooks.mixins import PrefMixin as PrefMixin
+from quickbooks.mixins import UpdateNoIdMixin as UpdateNoIdMixin
+
+from .base import EmailAddress as EmailAddress
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
 
 class PreferencesCustomField(QuickbooksBaseObject):
     Type: str

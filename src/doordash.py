@@ -3,15 +3,16 @@ import datetime
 import glob
 import io
 import json
-import os
-import zipfile
-import re
 import logging
+import os
+import re
+import zipfile
 from time import sleep
 from typing import cast
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+
 from ssm_parameter_store import SSMParameterStore
 from webdriver import initialise_driver
 

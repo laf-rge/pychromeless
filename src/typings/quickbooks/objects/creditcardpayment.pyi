@@ -1,5 +1,6 @@
-from .base import QuickbooksBaseObject as QuickbooksBaseObject
 from _typeshed import Incomplete
+
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
 
 class CreditChargeInfo(QuickbooksBaseObject):
     class_dict: Incomplete

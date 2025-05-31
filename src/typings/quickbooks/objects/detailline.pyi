@@ -1,6 +1,12 @@
 from decimal import Decimal
-from .base import CustomField as CustomField, LinkedTxn as LinkedTxn, MarkupInfo as MarkupInfo, QuickbooksBaseObject as QuickbooksBaseObject, Ref as Ref
+
 from _typeshed import Incomplete
+
+from .base import CustomField as CustomField
+from .base import LinkedTxn as LinkedTxn
+from .base import MarkupInfo as MarkupInfo
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
+from .base import Ref as Ref
 
 class DetailLine(QuickbooksBaseObject):
     list_dict: Incomplete

@@ -1,8 +1,16 @@
-from ..client import QuickBooks as QuickBooks
-from ..mixins import DeleteMixin as DeleteMixin, VoidMixin as VoidMixin
-from .base import LinkedTxn as LinkedTxn, LinkedTxnMixin as LinkedTxnMixin, MetaData as MetaData, QuickbooksBaseObject as QuickbooksBaseObject, QuickbooksManagedObject as QuickbooksManagedObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
-from .creditcardpayment import CreditCardPayment as CreditCardPayment
 from _typeshed import Incomplete
+
+from ..client import QuickBooks as QuickBooks
+from ..mixins import DeleteMixin as DeleteMixin
+from ..mixins import VoidMixin as VoidMixin
+from .base import LinkedTxn as LinkedTxn
+from .base import LinkedTxnMixin as LinkedTxnMixin
+from .base import MetaData as MetaData
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
+from .creditcardpayment import CreditCardPayment as CreditCardPayment
 
 class PaymentLine(QuickbooksBaseObject):
     list_dict: Incomplete
@@ -10,7 +18,13 @@ class PaymentLine(QuickbooksBaseObject):
     LinkedTxn: Incomplete
     def __init__(self) -> None: ...
 
-class Payment(DeleteMixin, QuickbooksManagedObject, QuickbooksTransactionEntity, LinkedTxnMixin, VoidMixin):
+class Payment(
+    DeleteMixin,
+    QuickbooksManagedObject,
+    QuickbooksTransactionEntity,
+    LinkedTxnMixin,
+    VoidMixin,
+):
     class_dict: Incomplete
     list_dict: Incomplete
     qbo_object_name: str

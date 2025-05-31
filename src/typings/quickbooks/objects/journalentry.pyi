@@ -1,8 +1,14 @@
-from ..mixins import DeleteMixin as DeleteMixin
-from .base import LinkedTxnMixin as LinkedTxnMixin, QuickbooksBaseObject as QuickbooksBaseObject, QuickbooksManagedObject as QuickbooksManagedObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
-from .detailline import DescriptionOnlyLine as DescriptionOnlyLine, DetailLine as DetailLine
-from .tax import TxnTaxDetail as TxnTaxDetail
 from _typeshed import Incomplete
+
+from ..mixins import DeleteMixin as DeleteMixin
+from .base import LinkedTxnMixin as LinkedTxnMixin
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
+from .detailline import DescriptionOnlyLine as DescriptionOnlyLine
+from .detailline import DetailLine as DetailLine
+from .tax import TxnTaxDetail as TxnTaxDetail
 
 class Entity(QuickbooksBaseObject):
     class_dict: Incomplete
@@ -29,7 +35,9 @@ class JournalEntryLine(DetailLine):
     JournalEntryLineDetail: Incomplete
     def __init__(self) -> None: ...
 
-class JournalEntry(DeleteMixin, QuickbooksManagedObject, QuickbooksTransactionEntity, LinkedTxnMixin):
+class JournalEntry(
+    DeleteMixin, QuickbooksManagedObject, QuickbooksTransactionEntity, LinkedTxnMixin
+):
     class_dict: Incomplete
     list_dict: Incomplete
     detail_dict: Incomplete

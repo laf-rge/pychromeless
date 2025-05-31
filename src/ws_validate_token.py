@@ -1,5 +1,6 @@
 import logging
 from typing import Any, Dict
+
 from auth_utils import OAuth2TokenValidation, extract_token
 
 logger = logging.getLogger(__name__)
@@ -37,9 +38,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 "Statement": [
                     {
                         "Action": "execute-api:Invoke",
-                        "Effect": "Allow"
-                        if bearer["scp"] == "WMCWeb.Josiah"
-                        else "Deny",
+                        "Effect": (
+                            "Allow" if bearer["scp"] == "WMCWeb.Josiah" else "Deny"
+                        ),
                         "Resource": [
                             # Allow/deny access to all routes if authorized
                             f"arn:aws:execute-api:{tmp[3]}:{awsAccountId}:{apiGatewayArnTmp[0]}/{apiGatewayArnTmp[1]}/*"

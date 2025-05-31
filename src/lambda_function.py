@@ -11,44 +11,45 @@ This module contains Lambda handlers for various financial operations including:
 The handlers can be invoked both via AWS Lambda and locally for development.
 """
 
-import json
 import base64
 import calendar
 import email
 import io
-import re
+import json
 import logging
 import os
+import re
 import time
-from datetime import date, datetime, timedelta
+import uuid
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from email.message import Message
 from functools import partial  # noqa # pylint: disable=unused-import
 from locale import LC_NUMERIC, atof, setlocale
 from operator import itemgetter
 from typing import Any, Dict, cast
-import uuid
-from websocket_manager import WebSocketManager
-from logging_utils import setup_json_logger
+
+import boto3
+import pandas as pd
+from botocore.exceptions import ClientError
+from dotenv import load_dotenv
+from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
+from quickbooks.objects import Bill
 
 import crunchtime
-import pandas as pd
 import qb
-from botocore.exceptions import ClientError
 from doordash import Doordash
+from email_service import EmailService
 from ezcater import EZCater
 from flexepos import Flexepos
 from grubhub import Grubhub
+from logging_utils import setup_json_logger
+from operation_types import OperationType
+from store_config import StoreConfig
 from tips import Tips
 from ubereats import UberEats
+from websocket_manager import WebSocketManager
 from wmcgdrive import WMCGdrive
-from store_config import StoreConfig
-from email_service import EmailService
-import boto3
-from dotenv import load_dotenv
-from operation_types import OperationType
-from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
-from quickbooks.objects import Bill
 
 load_dotenv()
 
@@ -796,7 +797,7 @@ def connect_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             Item={
                 "connection_id": connection_id,
                 "ttl": ttl_timestamp,
-                "connected_at": datetime.utcnow().isoformat(),
+                "connected_at": datetime.now(UTC).isoformat(),
                 "client_info": {
                     # Extract client info from request if available
                     "source_ip": event["requestContext"]

@@ -1,5 +1,8 @@
-from .base import QuickbooksBaseObject as QuickbooksBaseObject, QuickbooksManagedObject as QuickbooksManagedObject, Ref as Ref
 from _typeshed import Incomplete
+
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import Ref as Ref
 
 class TaxLineDetail(QuickbooksBaseObject):
     class_dict: Incomplete

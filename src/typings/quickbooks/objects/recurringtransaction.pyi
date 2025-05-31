@@ -1,5 +1,11 @@
-from ..mixins import DeleteNoIdMixin as DeleteNoIdMixin, ListMixin as ListMixin, ReadMixin as ReadMixin, UpdateNoIdMixin as UpdateNoIdMixin
-from .base import QuickbooksBaseObject as QuickbooksBaseObject, Ref as Ref
+from _typeshed import Incomplete
+
+from ..mixins import DeleteNoIdMixin as DeleteNoIdMixin
+from ..mixins import ListMixin as ListMixin
+from ..mixins import ReadMixin as ReadMixin
+from ..mixins import UpdateNoIdMixin as UpdateNoIdMixin
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
+from .base import Ref as Ref
 from .bill import Bill as Bill
 from .creditmemo import CreditMemo as CreditMemo
 from .deposit import Deposit as Deposit
@@ -12,7 +18,6 @@ from .refundreceipt import RefundReceipt as RefundReceipt
 from .salesreceipt import SalesReceipt as SalesReceipt
 from .transfer import Transfer as Transfer
 from .vendorcredit import VendorCredit as VendorCredit
-from _typeshed import Incomplete
 
 class ScheduleInfo(QuickbooksBaseObject):
     StartDate: Incomplete
@@ -77,6 +82,8 @@ class RecurringVendorCredit(VendorCredit):
 class RecurringPurchaseOrder(PurchaseOrder):
     class_dict: Incomplete
 
-class RecurringTransaction(QuickbooksBaseObject, ReadMixin, UpdateNoIdMixin, ListMixin, DeleteNoIdMixin):
+class RecurringTransaction(
+    QuickbooksBaseObject, ReadMixin, UpdateNoIdMixin, ListMixin, DeleteNoIdMixin
+):
     class_dict: Incomplete
     qbo_object_name: str

@@ -42,11 +42,27 @@ test-e2e: install-dev
 test-financial: install-dev
 	PYTHONPATH=src python -m pytest src/tests -v -m "financial"
 
+# Add comprehensive linting with additional tools
+lint-comprehensive: install-dev
+	black --check src/
+	isort --check-only src/
+	flake8 src/
+	mypy src/ --ignore-missing-imports
+	bandit -r src/ -f json || true
+	pylint src/ --output-format=json || true
+
+# Enhanced lint target (backwards compatible)
 lint: install-dev
 	black --check src/
 	isort --check-only src/
 	flake8 src/
 	mypy src/ --ignore-missing-imports
+
+# New target that runs both linting and tests
+test-all: lint test
+
+# CI target that includes linting
+ci-test-all: lint ci-test
 
 format: install-dev
 	black src/
@@ -58,6 +74,11 @@ ci-test: install-dev
 
 pre-commit-install: install-dev
 	pre-commit install
+
+# Security checking
+security-check: install-dev
+	bandit -r src/
+	safety check
 
 websocket: ws_validate_token
 	mkdir -p deploy && cd src && zip -r ../deploy/websocket.zip ws*.py auth_utils.py
@@ -105,14 +126,19 @@ help:
 	@echo "  install           - Install development dependencies"
 	@echo "  install-prod      - Install production dependencies only"
 	@echo "  test              - Run all tests"
+	@echo "  test-all          - Run linting + tests"
 	@echo "  test-parallel     - Run tests in parallel"
 	@echo "  test-coverage     - Run tests with coverage report"
 	@echo "  test-unit         - Run unit tests only"
 	@echo "  test-integration  - Run integration tests only"
 	@echo "  test-e2e          - Run end-to-end tests only"
 	@echo "  test-financial    - Run financial calculation tests only"
-	@echo "  lint              - Run code quality checks"
+	@echo "  lint              - Run basic code quality checks"
+	@echo "  lint-comprehensive - Run comprehensive linting (includes pylint, bandit)"
+	@echo "  security-check    - Run security vulnerability scanning"
 	@echo "  format            - Format code with black and isort"
 	@echo "  ci-test           - Run tests for CI/CD"
+	@echo "  ci-test-all       - Run linting + tests for CI/CD"
+	@echo "  pre-commit-install - Install pre-commit hooks"
 	@echo "  clean             - Clean build artifacts and test outputs"
 	@echo "  help              - Show this help message"

@@ -1,5 +1,7 @@
-from .base import QuickbooksManagedObject as QuickbooksManagedObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity
 from _typeshed import Incomplete
+
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
 
 class TaxAgency(QuickbooksManagedObject, QuickbooksTransactionEntity):
     class_dict: Incomplete

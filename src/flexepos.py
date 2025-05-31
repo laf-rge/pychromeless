@@ -6,15 +6,15 @@ from time import sleep
 from typing import Optional, cast
 
 from bs4 import BeautifulSoup, Tag
+from selenium.common.exceptions import (
+    ElementNotInteractableException,
+    NoSuchElementException,
+    WebDriverException,
+)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select, WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import (
-    NoSuchElementException,
-    ElementNotInteractableException,
-    WebDriverException,
-)
+
 from ssm_parameter_store import SSMParameterStore
 from webdriver import initialise_driver, wait_for_element
 
@@ -233,7 +233,7 @@ class Flexepos:
             if driver:
                 try:
                     self._driver.close()
-                except:
+                except WebDriverException:
                     pass
                 self._driver.quit()
 
@@ -542,7 +542,7 @@ class Flexepos:
             if driver:
                 try:
                     self._driver.close()
-                except:
+                except WebDriverException:
                     pass
                 self._driver.quit()
         return drawer_opens
@@ -580,7 +580,7 @@ class Flexepos:
             if driver:
                 try:
                     self._driver.close()
-                except:
+                except WebDriverException:
                     pass
                 self._driver.quit()
 
@@ -628,7 +628,7 @@ class Flexepos:
             if driver:
                 try:
                     self._driver.close()
-                except:
+                except WebDriverException:
                     pass
                 self._driver.quit()
 
@@ -667,30 +667,30 @@ class Flexepos:
             if driver:
                 try:
                     self._driver.close()
-                except:
+                except WebDriverException:
                     pass
                 self._driver.quit()
 
         return rv
 
     """
-    The gift card periods are Thursday to Wednesday with funding on Friday's. Comparing your 
+    The gift card periods are Thursday to Wednesday with funding on Friday's. Comparing your
     debits/credits each Friday with the GC report on Flexepos should help you reconcile.
 
-    You are including the online gift cards. Online payments are paid by Anne Sheehan in the 
+    You are including the online gift cards. Online payments are paid by Anne Sheehan in the
     corporate accounting department (copied). Tickets with "99" are online/app orders.
 
-    Online credit card and gift card payments are an ACH transaction made by the corporate 
+    Online credit card and gift card payments are an ACH transaction made by the corporate
     office. So, yes, any tickets with a "00" in the middle are online tickets.
-    
+
     The $12.50 are monthly fees.
 
     using the gift card report in Flexepos
 
-    Add the instore amounts minus the gift cards redeemed. 
+    Add the instore amounts minus the gift cards redeemed.
 
     Should the online amount get used from the JM online deposit?
-    No, since the online gift card entry is charged minus to online credit card   
+    No, since the online gift card entry is charged minus to online credit card
     [ store, txdate, sold, instore, online]
     """
 
@@ -779,7 +779,7 @@ class Flexepos:
             if driver:
                 try:
                     self._driver.close()
-                except:
+                except WebDriverException:
                     pass
                 self._driver.quit()
 

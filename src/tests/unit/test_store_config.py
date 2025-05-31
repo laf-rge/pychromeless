@@ -1,8 +1,8 @@
+import os
+import sys
 import unittest
 from datetime import date
-from unittest.mock import patch, MagicMock
-import sys
-import os
+from unittest.mock import MagicMock, patch
 
 # Add the src directory to the path so we can import modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))

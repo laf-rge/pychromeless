@@ -1,4 +1,5 @@
-from ..mixins import FromJsonMixin as FromJsonMixin, ObjectListMixin as ObjectListMixin
+from ..mixins import FromJsonMixin as FromJsonMixin
+from ..mixins import ObjectListMixin as ObjectListMixin
 
 class CDCResponse(FromJsonMixin):
     qbo_object_name: str

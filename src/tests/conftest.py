@@ -5,13 +5,14 @@ This file contains common fixtures and test configuration that can be used
 across all test modules in the project.
 """
 
-import pytest
 import os
 import sys
-from unittest.mock import Mock, patch, MagicMock
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Dict, Any
+from typing import Any, Dict
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # Add src to Python path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))

@@ -1,5 +1,10 @@
-from .base import CustomField as CustomField, MetaData as MetaData, QuickbooksManagedObject as QuickbooksManagedObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
 from _typeshed import Incomplete
+
+from .base import CustomField as CustomField
+from .base import MetaData as MetaData
+from .base import QuickbooksManagedObject as QuickbooksManagedObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
 
 class CompanyCurrency(QuickbooksManagedObject, QuickbooksTransactionEntity):
     class_dict: Incomplete

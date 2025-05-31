@@ -1,12 +1,14 @@
 import datetime
-import logging
 import json
+import logging
 from time import sleep
 from typing import cast
 
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
+
 from ssm_parameter_store import SSMParameterStore
 from webdriver import initialise_driver
 
@@ -35,7 +37,8 @@ class EZCater:
             driver.find_element(By.ID, "password").send_keys(
                 str(self._parameters["password"]) + Keys.ENTER
             )
-        except:  # noqa: E722
+        except WebDriverException as e:
+            logger.exception(f"Login exception occurred: {e}")
             input("login exception...")
 
         WebDriverWait(driver, 45)

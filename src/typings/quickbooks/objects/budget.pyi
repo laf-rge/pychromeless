@@ -1,5 +1,9 @@
-from .base import QuickbooksBaseObject as QuickbooksBaseObject, QuickbooksReadOnlyObject as QuickbooksReadOnlyObject, QuickbooksTransactionEntity as QuickbooksTransactionEntity, Ref as Ref
 from _typeshed import Incomplete
+
+from .base import QuickbooksBaseObject as QuickbooksBaseObject
+from .base import QuickbooksReadOnlyObject as QuickbooksReadOnlyObject
+from .base import QuickbooksTransactionEntity as QuickbooksTransactionEntity
+from .base import Ref as Ref
 
 class BudgetDetail(QuickbooksBaseObject):
     class_dict: Incomplete
