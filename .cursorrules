@@ -140,3 +140,19 @@ from tips import Tips
 - Implement rollback procedures for failures
 
 Remember: This code handles real financial data for restaurant operations. Accuracy and reliability are paramount.
+
+## File Exclusions
+
+**Do not lint or analyze these directories/files:**
+
+- `build/` - Build artifacts and compiled dependencies
+- `dist/` - Distribution packages
+- `.venv/`, `venv/` - Virtual environment directories
+- `__pycache__/` - Python bytecode cache
+- `.pytest_cache/` - Pytest cache
+- `.mypy_cache/` - MyPy cache
+- `.git/` - Git repository data
+- `*.pyc`, `*.pyo` - Python bytecode files
+- `node_modules/` - Node.js dependencies (if any)
+
+**Focus linting and code analysis only on the `src/` directory and project configuration files.**

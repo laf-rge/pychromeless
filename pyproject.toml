@@ -166,6 +166,14 @@ warn_no_return = true
 warn_unreachable = true
 strict_equality = true
 ignore_missing_imports = true
+exclude = [
+    "build/.*",
+    "dist/.*",
+    ".venv/.*",
+    "venv/.*",
+    "__pycache__/.*",
+    ".git/.*",
+]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
@@ -179,6 +187,14 @@ skips = ["B101", "B601"]  # Skip assert_used and paramiko_calls
 load-plugins = [
     "pylint.extensions.code_style",
     "pylint.extensions.typing",
+]
+ignore-paths = [
+    "build/.*",
+    "dist/.*",
+    ".venv/.*",
+    "venv/.*",
+    "__pycache__/.*",
+    ".git/.*",
 ]
 
 [tool.pylint.messages_control]
