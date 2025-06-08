@@ -86,10 +86,11 @@ variable "store_config" {
 locals {
   # Base environment configuration template
   base_env_config = {
-    PATH               = "/opt/bin"
-    PYTHONPATH         = "/var/task/src:/opt/lib"
-    CONNECTIONS_TABLE  = aws_dynamodb_table.websocket_connections.name
-    WEBSOCKET_ENDPOINT = replace(aws_apigatewayv2_stage.websocket.invoke_url, "wss://", "https://")
+    PATH                       = "/opt/bin"
+    PYTHONPATH                 = "/var/task/src:/opt/lib"
+    CONNECTIONS_TABLE          = aws_dynamodb_table.websocket_connections.name
+    WEBSOCKET_ENDPOINT         = replace(aws_apigatewayv2_stage.websocket.invoke_url, "wss://", "https://")
+    DAILY_SALES_PROGRESS_TABLE = aws_dynamodb_table.daily_sales_progress.name
   }
 
   # Service environments using the base configuration

@@ -228,8 +228,35 @@ resource "aws_iam_policy" "manage_websocket_connections" {
   tags = local.common_tags
 }
 
+# Create policy for invoking Lambda functions
+resource "aws_iam_policy" "invoke_lambda_functions" {
+  name        = "invoke_lambda_functions_${terraform.workspace}"
+  description = "Allow invoking other Lambda functions"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:InvokeFunction"
+        ]
+        Resource = "arn:aws:lambda:*:*:function:*-${terraform.workspace}"
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
 # Attach WebSocket management policy to Lambda role
 resource "aws_iam_role_policy_attachment" "manage_websocket_connections_attach" {
   role       = aws_iam_role.flexepos_lambda_role.name
   policy_arn = aws_iam_policy.manage_websocket_connections.arn
+}
+
+# Attach Lambda invocation policy to Lambda role
+resource "aws_iam_role_policy_attachment" "invoke_lambda_functions_attach" {
+  role       = aws_iam_role.flexepos_lambda_role.name
+  policy_arn = aws_iam_policy.invoke_lambda_functions.arn
 }

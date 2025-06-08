@@ -110,6 +110,14 @@ locals {
       timeout     = 480 # 8 minutes since this runs async
       memory      = 10240
       env_vars    = local.lambda_env_update_food_handler_pdfs
+    },
+    process_store_sales_internal = {
+      name        = "process-store-sales-internal"
+      description = "Internal Lambda to process daily sales for a single store"
+      handler     = "lambda_function.process_store_sales_internal_handler"
+      timeout     = 300 # 5 minutes for single store processing
+      memory      = 10240
+      env_vars    = local.lambda_env_daily_sales
     }
   }
 
@@ -194,4 +202,13 @@ resource "aws_lambda_permission" "apigw_task_status" {
   function_name = aws_lambda_function.task_status.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.josiah.execution_arn}/*/*"
+}
+
+# Allow the daily_sales Lambda to invoke the internal store processing Lambda
+resource "aws_lambda_permission" "daily_sales_invoke_internal" {
+  statement_id  = "AllowDailySalesInvokeInternal"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.functions["process_store_sales_internal"].function_name
+  principal     = "lambda.amazonaws.com"
+  source_arn    = aws_lambda_function.functions["daily_sales"].arn
 }

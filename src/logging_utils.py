@@ -9,6 +9,7 @@ import json
 import logging
 import sys
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 from pygments import highlight
@@ -18,11 +19,15 @@ from pythonjsonlogger.json import JsonFormatter
 
 
 class CustomJsonEncoder(json.JSONEncoder):
-    """Custom JSON encoder that handles datetime and date objects."""
+    """Custom JSON encoder that handles datetime, date, and Decimal objects."""
 
     def default(self, o):
         if isinstance(o, (datetime, date)):
             return o.isoformat()
+        elif isinstance(o, Decimal):
+            # Convert Decimal to float for JSON serialization
+            # This preserves precision for financial calculations while allowing serialization
+            return float(o)
         return super().default(o)
 
 

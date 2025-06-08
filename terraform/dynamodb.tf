@@ -79,11 +79,31 @@ resource "aws_iam_policy" "dynamodb_access" {
         Resource = [
           aws_dynamodb_table.websocket_connections.arn,
           aws_dynamodb_table.task_states.arn,
-          "${aws_dynamodb_table.task_states.arn}/index/operation_type-index"
+          "${aws_dynamodb_table.task_states.arn}/index/operation_type-index",
+          aws_dynamodb_table.daily_sales_progress.arn
         ]
       }
     ]
   })
+}
+
+# DynamoDB table for daily sales progress tracking
+resource "aws_dynamodb_table" "daily_sales_progress" {
+  name         = "${local.common_tags.Name}-daily-sales-progress"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "request_id"
+
+  attribute {
+    name = "request_id"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
+
+  tags = local.common_tags
 }
 
 # Attach DynamoDB access policy to Lambda role

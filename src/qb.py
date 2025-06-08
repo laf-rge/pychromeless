@@ -887,7 +887,11 @@ def fix_wld_online_tips():
                                 "sales_receipt": sales_receipt.DocNumber,
                                 "store": sales_receipt.DepartmentRef.name,
                                 "date": sales_receipt.TxnDate,
-                                "online_wld_tips": online_wld_tips_line.to_json(),
+                                "online_wld_tips": (
+                                    online_wld_tips_line.to_json()
+                                    if online_wld_tips_line
+                                    else None
+                                ),
                             },
                         )
 
