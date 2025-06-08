@@ -255,6 +255,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         # Initialize Lambda client only if running in AWS
         if "AWS_LAMBDA_FUNCTION_NAME" in os.environ:
             # Configure boto3 client with timeouts that match Lambda function timeout (300s + buffer)
+            # pylint: disable=import-outside-toplevel
             from botocore.config import Config
 
             config = Config(
@@ -300,6 +301,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
             failed_stores.clear()
 
             # Import here to avoid issues with availability
+            # pylint: disable=import-outside-toplevel
             from concurrent.futures import ThreadPoolExecutor, as_completed
 
             def invoke_store_lambda(store):
@@ -986,8 +988,6 @@ def process_store_sales_internal_handler(
         txdate = datetime.fromisoformat(event["txdate"]).date()
         request_id = event["request_id"]
 
-        ws_manager = WebSocketManager()
-
         # Process this store's daily sales with retry logic
         dj = Flexepos()
         journal_data = None
@@ -1108,53 +1108,47 @@ def process_store_sales_internal_handler(
 
 def transform_tips_handler(*args, **kwargs) -> dict:
     """Wrapper for tips_processing.transform_tips_handler (required by Terraform)"""
-    from tips_processing import (
-        transform_tips_handler as _impl,  # pylint: disable=import-outside-toplevel
-    )
+    # pylint: disable=import-outside-toplevel
+    from tips_processing import transform_tips_handler as _impl
 
     return _impl(*args, **kwargs)
 
 
 def get_mpvs_handler(*args, **kwargs) -> dict:
     """Wrapper for tips_processing.get_mpvs_handler (required by Terraform)"""
-    from tips_processing import (
-        get_mpvs_handler as _impl,  # pylint: disable=import-outside-toplevel
-    )
+    # pylint: disable=import-outside-toplevel
+    from tips_processing import get_mpvs_handler as _impl
 
     return _impl(*args, **kwargs)
 
 
 def connect_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Wrapper for websocket_handlers.connect_handler (required by Terraform)"""
-    from websocket_handlers import (
-        connect_handler as _impl,  # pylint: disable=import-outside-toplevel
-    )
+    # pylint: disable=import-outside-toplevel
+    from websocket_handlers import connect_handler as _impl
 
     return _impl(event, context)
 
 
 def disconnect_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Wrapper for websocket_handlers.disconnect_handler (required by Terraform)"""
-    from websocket_handlers import (
-        disconnect_handler as _impl,  # pylint: disable=import-outside-toplevel
-    )
+    # pylint: disable=import-outside-toplevel
+    from websocket_handlers import disconnect_handler as _impl
 
     return _impl(event, context)
 
 
 def default_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Wrapper for websocket_handlers.default_handler (required by Terraform)"""
-    from websocket_handlers import (
-        default_handler as _impl,  # pylint: disable=import-outside-toplevel
-    )
+    # pylint: disable=import-outside-toplevel
+    from websocket_handlers import default_handler as _impl
 
     return _impl(event, context)
 
 
 def cleanup_connections_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Wrapper for websocket_handlers.cleanup_connections_handler (required by Terraform)"""
-    from websocket_handlers import (
-        cleanup_connections_handler as _impl,  # pylint: disable=import-outside-toplevel
-    )
+    # pylint: disable=import-outside-toplevel
+    from websocket_handlers import cleanup_connections_handler as _impl
 
     return _impl(event, context)
