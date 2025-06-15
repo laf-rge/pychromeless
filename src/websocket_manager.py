@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import time
-from datetime import datetime
 from typing import Any, Dict, Optional, Protocol, cast
 
 import boto3
@@ -78,6 +77,11 @@ class WebSocketManager:
         """
         current_time = int(time.time())
 
+        # Standardize result format to always include success boolean
+        standardized_result = None
+        if result is not None:
+            standardized_result = self._standardize_result_format(result, status)
+
         # Construct the message to match API format
         message = {
             "type": "task_status",
@@ -86,7 +90,7 @@ class WebSocketManager:
                 "operation": operation,
                 "status": status,
                 "progress": progress,
-                "result": result,
+                "result": standardized_result,
                 "error": error,
                 "created_at": current_time,
                 "updated_at": current_time,
@@ -121,6 +125,43 @@ class WebSocketManager:
                         "error": str(e),
                     },
                 )
+
+    def _standardize_result_format(self, result: Dict, status: str) -> Dict:
+        """Standardize result format to ensure consistent structure with success boolean
+
+        Args:
+            result: Original result dictionary
+            status: Current task status to determine success
+
+        Returns:
+            Standardized result dictionary with success boolean and consistent structure
+        """
+        # Determine success based on status
+        success = status in ["completed", "completed_with_errors"]
+
+        # Create standardized result
+        standardized = {
+            "success": success,
+            "message": result.get("summary", "Operation completed"),
+        }
+
+        # Preserve existing fields that match frontend interface
+        if "processed_dates" in result:
+            standardized["processed_dates"] = result["processed_dates"]
+        if "successful_stores" in result:
+            standardized["successful_stores"] = result["successful_stores"]
+        if "failed_stores" in result:
+            standardized["failed_stores"] = result["failed_stores"]
+        if "total_stores" in result:
+            standardized["total_stores"] = result["total_stores"]
+        if "success_count" in result:
+            standardized["success_count"] = result["success_count"]
+        if "failure_count" in result:
+            standardized["failure_count"] = result["failure_count"]
+        if "summary" in result:
+            standardized["summary"] = result["summary"]
+
+        return standardized
 
 
 class TaskManager:
