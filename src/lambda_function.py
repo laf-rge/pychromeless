@@ -22,7 +22,7 @@ from decimal import Decimal
 from functools import partial  # noqa # pylint: disable=unused-import
 from locale import LC_NUMERIC, atof, setlocale
 from operator import itemgetter
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 import boto3
 from botocore.exceptions import ClientError
@@ -968,8 +968,8 @@ def split_bill_handler(*args, **kwargs) -> dict:
 
 
 def process_store_sales_internal_handler(
-    event: Dict[str, Any], context: Any
-) -> Dict[str, Any]:
+    event: dict[str, Any], context: Any
+) -> dict[str, Any]:
     """
     Internal Lambda handler to process daily sales for a single store.
 
@@ -1122,7 +1122,7 @@ def get_mpvs_handler(*args, **kwargs) -> dict:
     return _impl(*args, **kwargs)
 
 
-def connect_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def connect_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """Wrapper for websocket_handlers.connect_handler (required by Terraform)"""
     # pylint: disable=import-outside-toplevel
     from websocket_handlers import connect_handler as _impl
@@ -1130,7 +1130,7 @@ def connect_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     return _impl(event, context)
 
 
-def disconnect_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def disconnect_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """Wrapper for websocket_handlers.disconnect_handler (required by Terraform)"""
     # pylint: disable=import-outside-toplevel
     from websocket_handlers import disconnect_handler as _impl
@@ -1138,7 +1138,7 @@ def disconnect_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     return _impl(event, context)
 
 
-def default_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def default_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """Wrapper for websocket_handlers.default_handler (required by Terraform)"""
     # pylint: disable=import-outside-toplevel
     from websocket_handlers import default_handler as _impl
@@ -1146,7 +1146,7 @@ def default_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     return _impl(event, context)
 
 
-def cleanup_connections_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def cleanup_connections_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """Wrapper for websocket_handlers.cleanup_connections_handler (required by Terraform)"""
     # pylint: disable=import-outside-toplevel
     from websocket_handlers import cleanup_connections_handler as _impl

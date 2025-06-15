@@ -10,7 +10,7 @@ import logging
 import os
 import time
 from datetime import UTC, datetime
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 import boto3
 from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
@@ -27,7 +27,7 @@ else:
     table = None
 
 
-def connect_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def connect_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """Handle WebSocket connect events"""
     connection_id = event["requestContext"]["connectionId"]
 
@@ -66,7 +66,7 @@ def connect_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         return {"statusCode": 500, "body": json.dumps({"message": "Failed to connect"})}
 
 
-def disconnect_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def disconnect_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """Handle WebSocket disconnect events"""
     connection_id = event["requestContext"]["connectionId"]
 
@@ -90,7 +90,7 @@ def disconnect_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
 
 
-def default_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def default_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """Handle default WebSocket messages and update connection TTL"""
     connection_id = event["requestContext"]["connectionId"]
 
@@ -135,7 +135,7 @@ def default_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
 
 
-def cleanup_connections_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def cleanup_connections_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """Handler for cleaning up stale WebSocket connections."""
     try:
         # Extract request ID from context
