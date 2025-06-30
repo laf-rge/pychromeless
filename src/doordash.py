@@ -27,7 +27,7 @@ store_map = {
 
 store_inv_map = {v: k for k, v in store_map.items()}
 
-company_id = "1431"
+COMPANY_ID = "1431"
 
 
 class Doordash:
@@ -37,9 +37,7 @@ class Doordash:
         self._parameters = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["doordash"]
         )
-
-    """
-    """
+        self._driver = initialise_driver()
 
     def _login(self):
         self._driver = initialise_driver()
@@ -57,7 +55,6 @@ class Doordash:
         ).send_keys(str(self._parameters["password"]))
         driver.find_element(By.ID, "login-submit-button").click()
         input("pause...")
-        return
 
     def get_payments(self, stores, start_date, end_date):
         self._login()
@@ -66,7 +63,7 @@ class Doordash:
         results = []
 
         driver.get(
-            f"https://merchant-portal.doordash.com/merchant/financials?business_id={company_id}"
+            f"https://merchant-portal.doordash.com/merchant/financials?business_id={COMPANY_ID}"
         )
 
         driver.find_element(
@@ -89,110 +86,122 @@ class Doordash:
             if store_id == "20025":
                 continue
             payout_ids.append(
-                f"https://merchant-portal.doordash.com/merchant/financials/payout-details/{company_id}/{store_map[store_id]}/{payout_id}"
+                f"https://merchant-portal.doordash.com/merchant/financials/payout-details/{COMPANY_ID}/{store_map[store_id]}/{payout_id}"
             )
 
         for payout_id in payout_ids:
-            lines = []
-            driver.get(f"{payout_id}?business_id={company_id}")
-            sleep(3)
+            payment = self._extract_payment(payout_id)
+            if payment is not None:
+                results.append(payment)
+        return results
 
-            txdate_str = driver.find_element(
-                By.XPATH, "//*[contains(text(),'Payout on')]"
-            ).text
-            logger.info(f"txdate_str: {txdate_str}")
-            txdate = datetime.datetime.strptime(
-                txdate_str, "Payout on %B %d, %Y"
-            ).date()
-            sections = driver.find_elements(By.TAG_NAME, "section")
-            notes: dict[str, str] = {}
-            for section in sections:
-                spans = section.find_elements(By.TAG_NAME, "span")
-                notes[spans[0].text] = spans[1].text.replace("$", "")
-            if "Subtotal" in notes:
-                lines.append(["1361", "Subtotal", notes["Subtotal"]])
-            if "Tax (subtotal)" in notes:
-                lines.append(["1361", "Tax", notes["Tax (subtotal)"]])
-            if "Commission" in notes:
-                lines.append(["6310", "Commission", notes["Commission"]])
-            if "Merchant fees" in notes:
-                lines.append(["6310", "Merchant fees", notes["Merchant fees"]])
-            if "Marketing fees & discounts" in notes:
-                lines.append(
-                    [
-                        "6101",
-                        "Marketing fees & discounts",
-                        notes["Marketing fees & discounts"],
-                    ]
+    def _extract_payment(self, payout_id: str) -> list | None:
+        """
+        Extract payment details from a DoorDash payout page.
+
+        Args:
+            payout_id (str): The payout URL to extract details from.
+
+        Returns:
+            list | None: The extracted payment details, or None if store is not found.
+        """
+        driver = self._driver
+        lines = []
+        driver.get(f"{payout_id}?business_id={COMPANY_ID}")
+        sleep(3)
+
+        txdate_str = driver.find_element(
+            By.XPATH, "//*[contains(text(),'Payout on')]"
+        ).text
+        logger.info("txdate_str: %s", txdate_str)
+        txdate = datetime.datetime.strptime(txdate_str, "Payout on %B %d, %Y").date()
+
+        # Click the 'Show details' button
+        driver.find_element(By.XPATH, "//button[.//div[text()='Show details']]").click()
+        sleep(1)
+
+        notes = {}
+        # Extract all amounts by finding label spans and their next sibling value spans
+        labels = [
+            "Subtotal",
+            "Tax (subtotal)",
+            "Customer fees",
+            "Tax (customer fees)",
+            "Commission",
+            "Merchant fees",
+            "Tax (merchant fees)",
+            "Error charges",
+            "Adjustments",
+            "Marketing fees",
+            "Customer discounts",
+            "Marketing credit",
+        ]
+        for label in labels:
+            try:
+                label_span = driver.find_element(
+                    By.XPATH, f"//span[normalize-space(text())='{label}']"
                 )
-            if "Marketing credit" in notes:
-                lines.append(
-                    [
-                        "6101",
-                        "Marketing credit",
-                        notes["Marketing credit"],
-                    ]
+                value_span = (
+                    label_span.find_element(By.XPATH, "../following-sibling::span[1]")
+                    if label != "Customer discounts"
+                    else label_span.find_element(
+                        By.XPATH, "../../following-sibling::span[1]"
+                    )
                 )
-            if "Third-party contribution" in notes:
-                lines.append(
-                    [
-                        "6101",
-                        "Third-party contribution",
-                        notes["Third-party contribution"],
-                    ]
-                )
-            if "Error charges" in notes:
-                lines.append(["4830", "Error charges", notes["Error charges"]])
-            if "Adjustments" in notes:
-                lines.append(["4830", "Adjustments", notes["Adjustments"]])
-            # tips, merchant fee tax and customer fees tax not implemented
-            store = store_inv_map.get(payout_id.split("/")[7], None)
-            if store is None:
-                continue
-            results.append(
+                value = value_span.text.strip().replace("$", "").replace(",", "")
+                if value:
+                    notes[label] = value
+            except Exception:
+                logger.exception("Error extracting %s", label)
+                continue  # Label not found, skip
+        logger.info("notes: %s", notes)
+        if "Subtotal" in notes:
+            lines.append(["1361", "Subtotal", notes["Subtotal"]])
+        if "Tax (subtotal)" in notes:
+            lines.append(["1361", "Tax", notes["Tax (subtotal)"]])
+        if "Commission" in notes:
+            lines.append(["6310", "Commission", notes["Commission"]])
+        if "Merchant fees" in notes:
+            lines.append(["6310", "Merchant fees", notes["Merchant fees"]])
+        if "Marketing fees" in notes:
+            lines.append(
                 [
-                    "Doordash",
-                    txdate,
-                    str(notes),
-                    lines,
-                    store_inv_map[payout_id.split("/")[7]],
+                    "6101",
+                    "Marketing fees",
+                    notes["Marketing fees"],
                 ]
             )
-        return results
-
-    def get_payments_old(self, stores, start_date, end_date):
-        self._login()
-        driver = self._driver
-
-        results = []
-
-        for store in stores:
-            driver.get(
-                "https://merchant-portal.doordash.com/merchant/financials?store_id={0}".format(
-                    store_map[store]
-                )
+        if "Marketing credit" in notes:
+            lines.append(
+                [
+                    "6101",
+                    "Marketing credit",
+                    notes["Marketing credit"],
+                ]
             )
-            driver.find_element(
-                By.XPATH, '//button[@data-anchor-id="ExportButtonDropdown"]'
-            ).click()
-            sleep(2)
-            driver.find_element(
-                By.XPATH, '//span[@data-anchor-id="Export Payouts"]'
-            ).click()
-            driver.find_elements(By.XPATH, "//input")[0].click()
-            driver.find_elements(By.XPATH, "//input")[0].send_keys(
-                start_date.strftime("%m/%d/%Y")
+        if "Customer discounts" in notes:
+            lines.append(
+                [
+                    "6101",
+                    "Customer discounts",
+                    notes["Customer discounts"],
+                ]
             )
-
-            driver.find_element(By.XPATH, '//input[@placeholder="End"]').click()
-            driver.find_element(
-                By.XPATH, '//input[@placeholder="MM/DD/YYYY"]'
-            ).send_keys(end_date.strftime("%m/%d/%Y"))
-
-            driver.find_elements(By.XPATH, "//button")[-1].click()
-            sleep(10)
-            results.extend(self._process_payments(start_date, end_date))
-        return results
+        if "Error charges" in notes:
+            lines.append(["4830", "Error charges", notes["Error charges"]])
+        if "Adjustments" in notes:
+            lines.append(["4830", "Adjustments", notes["Adjustments"]])
+        # tips, merchant fee tax and customer fees tax not implemented
+        store = store_inv_map.get(payout_id.split("/")[7], None)
+        if store is None:
+            return None
+        return [
+            "Doordash",
+            txdate,
+            str(notes),
+            lines,
+            store,
+        ]
 
     def _process_payments(self, start_date, end_date):
         filename = glob.glob("/tmp/summary*.zip")[0]
