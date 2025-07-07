@@ -460,11 +460,16 @@ def daily_sales_handler(*args, **kwargs) -> dict:
                 start_time = time.time()
 
                 with ThreadPoolExecutor(max_workers=min(len(stores), 10)) as executor:
-                    # Submit all lambda invocations
-                    future_to_store = {
-                        executor.submit(invoke_store_lambda, store): store
-                        for store in stores
-                    }
+                    # Submit all lambda invocations with a 10-second delay between each
+                    future_to_store = {}
+                    for idx, store in enumerate(stores):
+                        future_to_store[executor.submit(invoke_store_lambda, store)] = (
+                            store
+                        )
+                        if idx < len(stores) - 1:
+                            time.sleep(
+                                10
+                            )  # Wait 10 seconds before submitting the next store
 
                     logger.info(
                         "Submitted all Lambda invocations",
