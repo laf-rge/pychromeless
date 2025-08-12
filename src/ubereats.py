@@ -208,7 +208,7 @@ class UberEats:
         # print(invoice)
 
         # third party
-        lines.append(["1362", "Sales", invoice["Sales"]])
+        lines.append(["1362", "Sales", invoice["Sales (excl. tax)"]])
 
         # tips
         if "Customer contributions" in invoice:
@@ -217,6 +217,14 @@ class UberEats:
             )
         if "Customer Refunds" in invoice:
             lines.append(["4830", "Customer Refunds", invoice["Customer Refunds"]])
+        if "Net Order Error Adjustments" in invoice:
+            lines.append(
+                [
+                    "4830",
+                    "Net Order Error Adjustments",
+                    invoice["Net Order Error Adjustments"],
+                ]
+            )
         if "Marketing" in invoice:
             lines.append(["1362", "Uber Marketing", invoice["Marketing"]])
         if "Other payments" in invoice:
@@ -225,7 +233,7 @@ class UberEats:
         #    lines.append(["2310", 'Marketplace Facilitator Tax', invoice['Marketplace Facilitator (MF) Tax']])
         # if 'Total Taxes' in invoice:
         #    lines.append(["1361", 'Total Taxes', invoice['Total Taxes']])
-        lines.append(["6310", "Uber fees", invoice["Uber fees"]])
+        lines.append(["6310", "Uber Fees", invoice["Uber Fees"]])
         notes += str(txt)
 
         # pay day is always Monday
