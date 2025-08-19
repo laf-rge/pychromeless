@@ -94,7 +94,7 @@ class Flexepos:
     def _login(self):
         self._driver = initialise_driver()
         driver = self._driver
-        driver.set_page_load_timeout(15)
+        driver.set_page_load_timeout(45)
         driver.get(
             "https://fms.flexepos.com/FlexeposWeb/login.seam?actionMethod=home.xhtml%3Auser.clear"
         )
@@ -155,7 +155,7 @@ class Flexepos:
                 rows = online_table.find_all("tr")
                 for row in rows[1:]:
                     r = [ele.text.strip() for ele in row.find_all("td")]
-                    payment_data[store][r[0]] = r[4]
+                    payment_data[store][r[0]] = r[5]
                 driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
         finally:
             if driver:
@@ -403,7 +403,7 @@ class Flexepos:
 
             # get pay ins
             driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
-            WebDriverWait(driver, 15, ignored_exceptions=errors).until(
+            WebDriverWait(driver, 25, ignored_exceptions=errors).until(
                 lambda d: driver.find_element(
                     By.ID, TAG_IDS["menu_item"].format(1, 6)
                 ).click()
@@ -429,31 +429,31 @@ class Flexepos:
                     raise Exception("Failed to find payins element")
             sales_data[store]["Payins"] = payins
 
-            # get pay outs
-            if driver.find_element(By.ID, TAG_IDS["switch_off"]).is_displayed():
-                driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
-            sleep(4)
-            WebDriverWait(driver, 18, ignored_exceptions=errors).until(
-                lambda d: driver.find_element(By.ID, TAG_IDS["types"]).send_keys(
-                    "Store Payouts"
-                )
-                or True
-            )
-            self.setDateRange(driver, tx_date_str)
-            driver.find_element(By.ID, TAG_IDS["submit"]).click()
-            sleep(10)
-            payouts_element = wait_for_element(
-                driver, (By.ID, TAG_IDS["transactions"]), 7
-            )
-            if payouts_element is not None:
-                payouts = payouts_element.text
-            else:
-                payouts = driver.find_element(By.ID, "j_id84").text
-            sales_data[store]["Payouts"] = payouts
+            # # get pay outs
+            # if driver.find_element(By.ID, TAG_IDS["switch_off"]).is_displayed():
+            #     driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
+            # sleep(4)
+            # WebDriverWait(driver, 18, ignored_exceptions=errors).until(
+            #     lambda d: driver.find_element(By.ID, TAG_IDS["types"]).send_keys(
+            #         "Store Payouts"
+            #     )
+            #     or True
+            # )
+            # self.setDateRange(driver, tx_date_str)
+            # driver.find_element(By.ID, TAG_IDS["submit"]).click()
+            # sleep(10)
+            # payouts_element = wait_for_element(
+            #     driver, (By.ID, TAG_IDS["transactions"]), 7
+            # )
+            # if payouts_element is not None:
+            #     payouts = payouts_element.text
+            # else:
+            #     payouts = driver.find_element(By.ID, "j_id84").text
+            # sales_data[store]["Payouts"] = payouts
 
             # break down third party
             driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
-            WebDriverWait(driver, 15, ignored_exceptions=errors).until(
+            WebDriverWait(driver, 25, ignored_exceptions=errors).until(
                 lambda d: driver.find_element(
                     By.ID, TAG_IDS["menu_item"].format(0, 13)
                 ).click()
@@ -467,14 +467,18 @@ class Flexepos:
                 driver.find_element(By.ID, TAG_IDS["group_by"])
             ).select_by_visible_text("Summary")
             driver.find_element(By.ID, TAG_IDS["submit"]).click()
-            sleep(5)
+            WebDriverWait(driver, 35, ignored_exceptions=errors).until(
+                lambda d: driver.find_element(By.CLASS_NAME, "table-standard")
+                is not None
+                or True
+            )
             soup = BeautifulSoup(driver.page_source, features="html.parser")
             online_table = soup.find("table", attrs={"class": "table-standard"})
             if online_table and isinstance(online_table, Tag):
                 rows = online_table.find_all("tr")
                 for row in rows[1:-1]:
                     r = [ele.text.strip() for ele in row.find_all("td")]
-                    sales_data[store][r[0]] = r[4]
+                    sales_data[store][r[0]] = r[5]
             logger.info(
                 "completed daily sales", extra={"store": store, "date": tx_date_str}
             )
@@ -530,7 +534,7 @@ class Flexepos:
                     driver.find_element(By.ID, TAG_IDS["journal_scope"])
                 ).select_by_visible_text("Store")
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
-                WebDriverWait(driver, 15)
+                WebDriverWait(driver, 25)
                 if len(driver.find_elements(By.ID, TAG_IDS["no_journal_body"])) > 0:
                     drawer_opens[store_number] = driver.find_element(
                         By.ID, TAG_IDS["no_journal_body"]
