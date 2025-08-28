@@ -149,10 +149,6 @@ class UberEats:
             except Exception as ex:
                 logger.exception("month search failed trying anyway")
                 raise ex
-            # print('//div[contains(@aria-label, "{}")]'.format(date_text))
-            driver.find_element(
-                By.XPATH, '//div[contains(@aria-label, "{}")]'.format(date_text)
-            ).click()
             sleep(2)
             logger.info('//div[contains(@aria-label, "{}")]'.format(date_text))
             driver.find_element(
