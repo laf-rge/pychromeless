@@ -136,24 +136,40 @@ class Doordash:
             "Customer discounts",
             "Marketing credit",
         ]
-        for label in labels:
-            try:
-                label_span = driver.find_element(
-                    By.XPATH, f"//span[normalize-space(text())='{label}']"
-                )
-                value_span = (
-                    label_span.find_element(By.XPATH, "../following-sibling::span[1]")
-                    if label != "Customer discounts"
-                    else label_span.find_element(
-                        By.XPATH, "../../following-sibling::span[1]"
+
+        # Temporarily reduce timeout for data extraction since page is already loaded
+        original_implicit_wait = driver.timeouts.implicit_wait
+        driver.implicitly_wait(
+            2
+        )  # 2 seconds should be plenty for already-loaded elements
+
+        try:
+            for label in labels:
+                try:
+                    label_span = driver.find_element(
+                        By.XPATH, f"//span[normalize-space(text())='{label}']"
                     )
-                )
-                value = value_span.text.strip().replace("$", "").replace(",", "")
-                if value:
-                    notes[label] = value
-            except Exception:
-                logger.exception("Error extracting %s", label)
-                continue  # Label not found, skip
+                    # Navigate up to the parent div, then find the sibling div containing the value
+                    value_span = (
+                        label_span.find_element(
+                            By.XPATH,
+                            "../following-sibling::div[1]//span",
+                        )
+                        if label != "Customer discounts"
+                        else label_span.find_element(
+                            By.XPATH,
+                            "../following-sibling::span",
+                        )
+                    )
+                    value = value_span.text.strip().replace("$", "").replace(",", "")
+                    if value:
+                        notes[label] = value
+                except Exception:
+                    logger.warning("Error extracting %s", label)
+                    continue  # Label not found, skip
+        finally:
+            # Restore original timeout
+            driver.implicitly_wait(original_implicit_wait)
         logger.info("notes: %s", notes)
         if "Subtotal" in notes:
             lines.append(["1361", "Subtotal", notes["Subtotal"]])
