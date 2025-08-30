@@ -135,6 +135,7 @@ class Doordash:
             "Marketing fees",
             "Customer discounts",
             "Marketing credit",
+            "Third-party contribution",
         ]
 
         # Temporarily reduce timeout for data extraction since page is already loaded
@@ -158,7 +159,7 @@ class Doordash:
                         if label != "Customer discounts"
                         else label_span.find_element(
                             By.XPATH,
-                            "../following-sibling::span",
+                            "../../following-sibling::span",
                         )
                     )
                     value = value_span.text.strip().replace("$", "").replace(",", "")
@@ -193,6 +194,14 @@ class Doordash:
                     "6101",
                     "Marketing credit",
                     notes["Marketing credit"],
+                ]
+            )
+        if "Third-party contribution" in notes:
+            lines.append(
+                [
+                    "6101",
+                    "Third-party contribution",
+                    notes["Third-party contribution"],
                 ]
             )
         if "Customer discounts" in notes:
