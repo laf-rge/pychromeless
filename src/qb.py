@@ -615,6 +615,7 @@ def vendor_lookup(gl_vendor_name):
             "SYSSAC": Vendor.where("DisplayName like 'Sysco Sac%'", qb=CLIENT)[0],
             "SAL": Vendor.where("DisplayName like 'Sala%'", qb=CLIENT)[0],
             "DONOGH": Vendor.where("DisplayName like 'Donoghue%'", qb=CLIENT)[0],
+            "USFOOD": Vendor.where("DisplayName like 'US Foods%'", qb=CLIENT)[0],
         }
     return vendor[gl_vendor_name]
 
