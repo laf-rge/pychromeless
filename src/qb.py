@@ -794,7 +794,7 @@ def fix_deposit():
 
 def find_unmatched_deposits():
     refresh_session()
-    where_clause = "TxnDate >= '2025-07-01' AND TxnDate < '2025-08-07'"
+    where_clause = "TxnDate >= '2025-01-01' AND TxnDate < '2025-10-01'"
     qb_data_type = SalesReceipt
     query_count = qb_data_type.count(where_clause=where_clause, qb=CLIENT)
     r_count = 1
