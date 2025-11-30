@@ -20,6 +20,34 @@ from webdriver import initialise_driver, wait_for_element
 
 logger = logging.getLogger(__name__)
 
+
+def find_element_text_by_label(soup: BeautifulSoup, label_text: str) -> Optional[str]:
+    """
+    Find element text by searching for a label in section-header divs.
+
+    This is useful for JSF-generated IDs that change frequently. The function
+    searches for divs with class 'section-header' that contain the label text,
+    then extracts the full text content (label: value).
+
+    Args:
+        soup: BeautifulSoup instance of the page
+        label_text: Label text to search for (e.g., "Gift Cards Sold")
+
+    Returns:
+        Full text content of the element if found, None otherwise
+    """
+    # Find all section-header divs
+    section_headers = soup.find_all("div", class_="section-header")
+    for header in section_headers:
+        if isinstance(header, Tag):
+            header_text = header.get_text()
+            # Check if this header contains our label text
+            if label_text in header_text:
+                # Return the full text (e.g., "Gift Cards Sold: $0.00")
+                return header_text.strip()
+    return None
+
+
 errors = (
     NoSuchElementException,
     ElementNotInteractableException,
@@ -45,8 +73,6 @@ TAG_IDS = {
     "total_sales": "TotalSales",
     "payments": "Payments",
     "total_tax": "TotalTax",
-    "gift_cards_sold": "j_id318_header",
-    "register_audit": "j_id240_header",
     "deposits": "Deposits",
     # "cc_online": "j_id114:1:j_id130:0:j_id139",
     "cc_tips_1": "j_id87:1:j_id101:0:j_id106",
@@ -344,18 +370,48 @@ class Flexepos:
                 sales_data[store]["Sales Tax"] = row[7]
 
             # Gift Cards Sold
-            gift_cards_sold = driver.find_element(
-                By.ID, TAG_IDS["gift_cards_sold"]
-            ).text.split(":")
-            sales_data[store][gift_cards_sold[0].strip()[2:]] = gift_cards_sold[
-                1
-            ].strip()
+            gift_cards_sold_text = find_element_text_by_label(soup, "Gift Cards Sold")
+            if gift_cards_sold_text:
+                gift_cards_sold = gift_cards_sold_text.split(":")
+                if len(gift_cards_sold) >= 2:
+                    # Remove any leading characters (like bullet points) from label
+                    label = gift_cards_sold[0].strip()
+                    if len(label) > 2 and label[:2] in ["• ", "  "]:
+                        label = label[2:]
+                    sales_data[store][label] = gift_cards_sold[1].strip()
+                else:
+                    logger.warning(
+                        "Unexpected format for 'Gift Cards Sold' text: %s",
+                        gift_cards_sold_text,
+                    )
+                    sales_data[store]["Gift Cards Sold"] = None
+            else:
+                logger.warning(
+                    "Could not find 'Gift Cards Sold' element for store %s", store
+                )
+                sales_data[store]["Gift Cards Sold"] = None
 
             # Register Audit
-            register_audit = driver.find_element(
-                By.ID, TAG_IDS["register_audit"]
-            ).text.split(":")
-            sales_data[store][register_audit[0].strip()[2:]] = register_audit[1].strip()
+            register_audit_text = find_element_text_by_label(soup, "Register Audit")
+            if register_audit_text:
+                register_audit = register_audit_text.split(":")
+                if len(register_audit) >= 2:
+                    # Remove any leading characters (like bullet points) from label
+                    label = register_audit[0].strip()
+                    if len(label) > 2 and label[:2] in ["• ", "  "]:
+                        label = label[2:]
+                    sales_data[store][label] = register_audit[1].strip()
+                else:
+                    logger.warning(
+                        "Unexpected format for 'Register Audit' text: %s",
+                        register_audit_text,
+                    )
+                    sales_data[store]["Register Audit"] = None
+            else:
+                logger.warning(
+                    "Could not find 'Register Audit' element for store %s", store
+                )
+                sales_data[store]["Register Audit"] = None
 
             # Bank Deposits
             deposit_table = soup.find("table", attrs={"id": TAG_IDS["deposits"]})

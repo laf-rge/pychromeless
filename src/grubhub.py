@@ -1,5 +1,6 @@
 import datetime
 import logging
+import re
 from time import sleep
 from typing import cast
 
@@ -31,10 +32,12 @@ class Grubhub:
     def _login(self):
         self._driver = initialise_driver()
         driver = self._driver
-        driver.implicitly_wait(25)
-        driver.set_page_load_timeout(45)
+        # driver.implicitly_wait(25)
 
-        driver.get("https://restaurant.grubhub.com/financials/deposit-history/1669366/")
+        try:
+            driver.get("https://restaurant.grubhub.com/login")
+        except Exception as e:
+            logger.exception("Error accessing URL: %s", e)
         sleep(3)
         driver.find_elements(By.XPATH, "//input")[0].send_keys(
             str(self._parameters["user"])
@@ -58,24 +61,10 @@ class Grubhub:
 
         driver = None
         try:
-            self._driver = initialise_driver()
-            input("pause...")
+            # self._driver = initialise_driver()
+            # input("pause...")
+            self._login()
             driver = self._driver
-
-            # First switch to the first window to ensure we're in a valid context
-            driver.switch_to.window(driver.window_handles[0])
-
-            # Then look for the Grubhub tab
-            grubhub_handle = None
-            for handle in driver.window_handles:
-                driver.switch_to.window(handle)
-                if "Grubhub" in driver.title:
-                    grubhub_handle = handle
-                    break
-
-            if not grubhub_handle:
-                logger.warning("Could not find Grubhub tab")
-                raise Exception("Could not find Grubhub tab")
 
             try:
                 driver.get(
@@ -108,30 +97,54 @@ class Grubhub:
             for tr in driver.find_elements(By.CLASS_NAME, "fin-deposits-table-row"):
                 notes = ""
                 lines = []
+                # Get all td elements for more reliable parsing
+                tds = tr.find_elements(By.TAG_NAME, "td")
+                # Get date from first td element
+                date_text = tds[0].text
                 txdate = datetime.datetime.strptime(
-                    tr.text.split()[0], "%m/%d/%y"
+                    date_text.split()[0], "%m/%d/%y"
                 ).date()
-                store = tr.text.split()[4].strip(" ()")
-                tr.click()
+                store = tds[1].text.split()[-1].strip(" ()")
+                # Click the first td element for Safari compatibility
+                tds[0].click()
                 sleep(2)
-                txt = (
-                    driver.find_element(
-                        By.XPATH,
-                        '//div[@class="fin-deposit-history-deposit-details__section fin-deposit-history-deposit-details__section--bleed"]',
-                    )
-                    .text.replace(")", ")\n")
-                    .replace("Total", "Total\n")
-                    .split("\n")
-                )
-                logger.info(txt, extra={"txdate": txdate.isoformat(), "store": store})
 
-                for i in range(0, len(txt), 2):
-                    if i == 0:
-                        lines.append(["1363", txt[0], self.convert_num(txt[1])])
-                    elif i == len(txt) - 2:
-                        continue  # skip the deposit total
-                    else:
-                        lines.append(["6310", txt[i], self.convert_num(txt[i + 1])])
+                # Parse using HTML structure - much more reliable than text parsing!
+                # Find the deposit totals container
+                try:
+                    totals_container = driver.find_element(
+                        By.CLASS_NAME, "fin-deposit-history-deposit-totals"
+                    )
+
+                    # First line: header with main label and amount
+                    header = totals_container.find_element(
+                        By.CLASS_NAME, "fin-deposit-history-deposit-totals__header"
+                    )
+                    header_text = header.text  # e.g., "Prepaid Orders (8) $197.12"
+                    # Extract label (everything before the last dollar amount)
+                    amount_match = re.search(r"(\$[\d.]+)$", header_text)
+                    if amount_match:
+                        label = header_text[: amount_match.start()].strip()
+                        amount = amount_match.group(1)
+                        lines.append(["1363", label, self.convert_num(amount)])
+
+                    # Remaining lines: terms and descriptions (skip the footer "Deposit Total")
+                    definitions = totals_container.find_elements(
+                        By.CLASS_NAME, "fin-deposit-history-deposit-totals__definition"
+                    )
+                    for definition in definitions:
+                        term = definition.find_element(
+                            By.CLASS_NAME, "fin-deposit-history-deposit-totals__term"
+                        ).text
+                        description = definition.find_element(
+                            By.CLASS_NAME,
+                            "fin-deposit-history-deposit-totals__description",
+                        ).text
+                        lines.append(["6310", term, self.convert_num(description)])
+
+                except (NoSuchElementException, ElementNotInteractableException) as e:
+                    logger.error("Could not parse deposit structure: %s", e)
+                    raise
 
                 refunds = driver.find_elements(By.XPATH, "//h5")[0]
                 if refunds.text.split()[0] == "Refunds":
