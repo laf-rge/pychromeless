@@ -320,16 +320,22 @@ class Flexepos:
             if not totalsales_table or not isinstance(totalsales_table, Tag):
                 raise Exception("Failed to find total sales table")
             rows = totalsales_table.find_all("tr")
+            print(len(rows))
             if len(rows) != 6:
                 sales_data[store]["Pre-Discount Sales"] = None
                 sales_data[store]["Discounts"] = None
                 sales_data[store]["Donations"] = None
+                sales_data[store]["Surcharge Sales"] = None
                 return sales_data
             else:
                 row = [ele.text.strip() for ele in rows[4].find_all("td")]
-                sales_data[store]["Pre-Discount Sales"] = row[3]
-                sales_data[store]["Discounts"] = row[2]
-                sales_data[store]["Donations"] = row[4]
+                # Column structure: Day, Net Sales, Surcharge Sales, Royalty Sales,
+                # Total Discounts and Coupons, Pre-Discount Sales, Donations,
+                # Ticket Count, Average Check
+                sales_data[store]["Pre-Discount Sales"] = row[5]
+                sales_data[store]["Discounts"] = row[4]
+                sales_data[store]["Donations"] = row[6]
+                sales_data[store]["Surcharge Sales"] = row[2]
 
             # Payment Breakdown
             payment_table = soup.find("table", attrs={"id": TAG_IDS["payments"]})
@@ -534,7 +540,7 @@ class Flexepos:
                 rows = online_table.find_all("tr")
                 for row in rows[1:-1]:
                     r = [ele.text.strip() for ele in row.find_all("td")]
-                    sales_data[store][r[0]] = r[5]
+                    sales_data[store][r[0]] = r[6]
             logger.info(
                 "completed daily sales", extra={"store": store, "date": tx_date_str}
             )
@@ -660,6 +666,7 @@ class Flexepos:
             sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(2, 0)).click()
             driver.find_element(By.ID, TAG_IDS["search_type"]).click()
+            sleep(2)
             driver.find_element(By.ID, TAG_IDS["parameters_group"]).clear()
             driver.find_element(By.ID, TAG_IDS["parameters_group"]).send_keys(group)
             sleep(2)
@@ -675,7 +682,9 @@ class Flexepos:
             else:
                 rows = royalty_table.find_all("tr")[1:-1]
             for row_html in rows:
-                row = [ele.text.strip() for ele in row_html.find_all("td")]
+                row = [
+                    ele.text.strip().replace(",", "") for ele in row_html.find_all("td")
+                ]
                 royalty_data[row[0]] = {
                     "Net Sales": row[1],
                     "Royalty": row[2],
