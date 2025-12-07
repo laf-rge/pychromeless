@@ -32,11 +32,12 @@ class EZCater:
         try:
             driver.get("https://www.ezcater.com/caterer_portal/sign_in")
             driver.find_element(By.ID, "contact_username").send_keys(
-                str(self._parameters["user"])
+                str(self._parameters["user"]) + Keys.ENTER
             )
             driver.find_element(By.ID, "password").send_keys(
                 str(self._parameters["password"]) + Keys.ENTER
             )
+            input("pause...")
         except WebDriverException as e:
             logger.exception(f"Login exception occurred: {e}")
             input("login exception...")
