@@ -36,7 +36,6 @@ from doordash import Doordash
 from email_service import EmailService
 from ezcater import EZCater
 from flexepos import Flexepos
-from grubhub import Grubhub
 from logging_utils import setup_json_logger
 from operation_types import OperationType
 from store_config import StoreConfig
@@ -120,7 +119,7 @@ def third_party_deposit_handler(*args, **kwargs) -> dict:
             start_date,
             end_date,
         ),
-        (Grubhub(), "get_payments", start_date, end_date),
+        # (Grubhub(), "get_payments", start_date, end_date),
         (EZCater(), "get_payments", store_config.all_stores, start_date, end_date),
     ]
 

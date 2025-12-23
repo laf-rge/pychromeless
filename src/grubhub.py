@@ -1,11 +1,14 @@
+import csv
 import datetime
 import logging
 import re
+from decimal import Decimal
 from time import sleep
 from typing import cast
 
 from selenium.common.exceptions import (
     ElementNotInteractableException,
+    NoSuchElementException,
     TimeoutException,
     WebDriverException,
 )
@@ -174,3 +177,185 @@ class Grubhub:
 
     def convert_num(self, number):
         return number.replace("$", "")
+
+    def get_payments_from_csv(
+        self, filename: str, start_date=None, end_date=None
+    ) -> list:
+        """Parse Grubhub deposit CSV export and return payments in same format as get_payments.
+
+        Args:
+            filename: Path to the CSV file exported from Grubhub
+            start_date: Optional start date filter (datetime.date)
+            end_date: Optional end date filter (datetime.date)
+
+        Returns:
+            List of payment records in format: ["Grubhub", txdate, notes, lines, store]
+            where lines is a list of [account_code, description, amount] tuples
+        """
+        if isinstance(start_date, type(None)):
+            start_date = datetime.date.today() - datetime.timedelta(
+                days=(datetime.date.today().weekday() + 7)
+            )
+        if isinstance(end_date, type(None)):
+            end_date = datetime.date.today() - datetime.timedelta(
+                days=(datetime.date.today().weekday() - 7)
+            )
+
+        # Helper function to parse numeric values, handling "n/a" and empty strings
+        def parse_decimal(value):
+            if value in ("n/a", "", None):
+                return Decimal("0")
+            try:
+                return Decimal(str(value))
+            except (ValueError, TypeError):
+                return Decimal("0")
+
+        # Dictionary to aggregate data by deposit ID
+        deposits: dict[str, dict] = {}
+
+        try:
+            with open(filename, "r", encoding="utf-8") as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    deposit_id = row["Deposit ID"]
+
+                    # Initialize deposit data if not exists
+                    if deposit_id not in deposits:
+                        deposits[deposit_id] = {
+                            "deposit_date": None,
+                            "store": None,
+                            "restaurant_total": Decimal("0"),
+                            "commission": Decimal("0"),
+                            "delivery_commission": Decimal("0"),
+                            "processing_fee": Decimal("0"),
+                            "order_count": 0,
+                            "adjustments": [],
+                        }
+
+                    deposit_data = deposits[deposit_id]
+
+                    # Parse deposit date (format: 2025-11-05T12:13:42.713Z)
+                    if deposit_data["deposit_date"] is None:
+                        deposit_date_str = row["Deposit Date"]
+                        # Extract just the date part before 'T'
+                        date_part = deposit_date_str.split("T")[0]
+                        deposit_data["deposit_date"] = datetime.datetime.strptime(
+                            date_part, "%Y-%m-%d"
+                        ).date()
+
+                    # Extract store number from Restaurant column
+                    # Format: "Jersey Mike's -  (20358)" or "Jersey Mike's - 20400"
+                    if deposit_data["store"] is None:
+                        restaurant = row["Restaurant"]
+                        # Try to find store number in parentheses first
+                        store_match = re.search(r"\((\d+)\)", restaurant)
+                        if store_match:
+                            deposit_data["store"] = store_match.group(1)
+                        else:
+                            # Fallback: extract number at the end
+                            store_match = re.search(r"(\d+)$", restaurant.strip())
+                            if store_match:
+                                deposit_data["store"] = store_match.group(1)
+
+                    # Aggregate totals
+                    deposit_data["restaurant_total"] += parse_decimal(
+                        row["Restaurant Total"]
+                    )
+                    deposit_data["commission"] += parse_decimal(row["Commission"])
+                    deposit_data["delivery_commission"] += parse_decimal(
+                        row["Delivery Commission"]
+                    )
+                    deposit_data["processing_fee"] += parse_decimal(
+                        row["Processing Fee"]
+                    )
+
+                    # Count orders (skip adjustments)
+                    if not row["Type"].startswith("Adjustment"):
+                        deposit_data["order_count"] += 1
+
+                    # Track adjustments/refunds for notes
+                    if row["Type"].startswith("Adjustment"):
+                        deposit_data["adjustments"].append(
+                            {
+                                "description": row["Description"],
+                                "amount": parse_decimal(row["Restaurant Total"]),
+                                "date": row["Date"],
+                            }
+                        )
+
+        except FileNotFoundError:
+            logger.error("CSV file not found: %s", filename)
+            raise
+        except Exception:
+            logger.exception("Error reading CSV file: %s", filename)
+            raise
+
+        # Convert aggregated deposits to result format
+        results = []
+        for deposit_id, deposit_data in deposits.items():
+            txdate = deposit_data["deposit_date"]
+            store = deposit_data["store"]
+
+            # Skip if outside date range or missing required data
+            if txdate is None or store is None:
+                continue
+            if txdate < start_date or txdate > end_date:
+                continue
+
+            # Build notes from adjustments
+            notes = ""
+            if deposit_data["adjustments"]:
+                adjustment_texts = []
+                for adj in deposit_data["adjustments"]:
+                    adjustment_texts.append(
+                        f"{adj['date']}: {adj['description']} ${adj['amount']}"
+                    )
+                notes = "Refunds/Adjustments:\n" + "\n".join(adjustment_texts)
+
+            # Build lines array matching get_payments format
+            lines = []
+
+            # First line: main deposit total (account 1363 = Grubhub)
+            order_count = deposit_data["order_count"]
+            main_label = f"Prepaid Orders ({order_count})"
+            main_amount = deposit_data["restaurant_total"]
+            lines.append(
+                ["1363", main_label, str(main_amount.quantize(Decimal("0.01")))]
+            )
+
+            # Additional lines for deductions (account 6310 = Other Current Assets)
+            # Preserve negative signs as they represent deductions
+            if deposit_data["commission"] != 0:
+                lines.append(
+                    [
+                        "6310",
+                        "Commission",
+                        str(deposit_data["commission"].quantize(Decimal("0.01"))),
+                    ]
+                )
+
+            if deposit_data["delivery_commission"] != 0:
+                lines.append(
+                    [
+                        "6310",
+                        "Delivery Commission",
+                        str(
+                            deposit_data["delivery_commission"].quantize(
+                                Decimal("0.01")
+                            )
+                        ),
+                    ]
+                )
+
+            if deposit_data["processing_fee"] != 0:
+                lines.append(
+                    [
+                        "6310",
+                        "Processing Fee",
+                        str(deposit_data["processing_fee"].quantize(Decimal("0.01"))),
+                    ]
+                )
+
+            results.append(["Grubhub", txdate, notes, lines, store])
+
+        return results
