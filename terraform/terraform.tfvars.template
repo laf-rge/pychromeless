@@ -92,3 +92,13 @@ email_config = {
   ]
   from_email = "Bot Name <notifications@example.com>"
 }
+
+namecheap_frontend_config = {
+  host    = "CHANGEME"
+  user    = "CHANGEME"
+  path    = "CHANGEME"
+  port    = 22
+  ssh_key = <<-EOT
+CHANGEME
+EOT
+}

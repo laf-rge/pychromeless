@@ -1,4 +1,4 @@
-all: websocket validate_token task_status
+all: websocket validate_token task_status frontend-build
 	@if [ $$? -eq 0 ]; then \
 		aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 262877227567.dkr.ecr.us-east-2.amazonaws.com && \
 		DOCKER_BUILDKIT=1 docker build --platform linux/amd64 -t wmc . --no-cache && \
@@ -7,7 +7,7 @@ all: websocket validate_token task_status
 		cd terraform && \
 			terraform apply; \
 	else \
-		echo "websocket, validate_token, or task_status failed, stopping execution"; \
+		echo "websocket, validate_token, task_status, or frontend-build failed, stopping execution"; \
 		exit 1; \
 	fi
 
@@ -114,12 +114,32 @@ install_lambda_deps:
 			cryptography \
 			cffi
 
+# Frontend targets
+frontend-install:
+	cd frontend && bun install --frozen-lockfile
+
+frontend-build: frontend-install
+	cd frontend && bun run build
+
+frontend-test: frontend-install
+	cd frontend && bun run test
+
+frontend-lint: frontend-install
+	cd frontend && bun run lint
+
+frontend-deploy:
+	cd terraform && terraform apply -target=null_resource.frontend_deploy
+
+frontend-clean:
+	cd frontend && rm -rf node_modules dist
+
 clean:
 	rm -rf build/*
 	rm -rf deploy/*.zip deploy/*.base64sha256
 	rm -rf htmlcov/
 	rm -rf .coverage
 	rm -rf .pytest_cache/
+	$(MAKE) frontend-clean
 
 help:
 	@echo "Available targets:"
@@ -140,5 +160,11 @@ help:
 	@echo "  ci-test           - Run tests for CI/CD"
 	@echo "  ci-test-all       - Run linting + tests for CI/CD"
 	@echo "  pre-commit-install - Install pre-commit hooks"
+	@echo "  frontend-install  - Install frontend dependencies (uses Bun)"
+	@echo "  frontend-build    - Build frontend for production"
+	@echo "  frontend-test     - Run frontend tests"
+	@echo "  frontend-lint     - Run frontend linting"
+	@echo "  frontend-deploy   - Deploy frontend to Namecheap server"
+	@echo "  frontend-clean    - Clean frontend build artifacts"
 	@echo "  clean             - Clean build artifacts and test outputs"
 	@echo "  help              - Show this help message"

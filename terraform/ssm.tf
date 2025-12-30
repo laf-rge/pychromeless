@@ -216,3 +216,44 @@ resource "aws_ssm_parameter" "store_config" {
   value       = jsonencode(var.store_config)
   tags        = local.common_tags
 }
+
+# Namecheap frontend deployment configuration
+resource "aws_ssm_parameter" "namecheap_server_host" {
+  name        = "/${terraform.workspace}/frontend/namecheap/host"
+  description = "Namecheap server hostname for frontend deployment"
+  type        = "String"
+  value       = var.namecheap_frontend_config.host
+  tags        = local.common_tags
+}
+
+resource "aws_ssm_parameter" "namecheap_server_user" {
+  name        = "/${terraform.workspace}/frontend/namecheap/user"
+  description = "Namecheap server username for frontend deployment"
+  type        = "String"
+  value       = var.namecheap_frontend_config.user
+  tags        = local.common_tags
+}
+
+resource "aws_ssm_parameter" "namecheap_server_path" {
+  name        = "/${terraform.workspace}/frontend/namecheap/path"
+  description = "Namecheap server deployment path for frontend"
+  type        = "String"
+  value       = var.namecheap_frontend_config.path
+  tags        = local.common_tags
+}
+
+resource "aws_ssm_parameter" "namecheap_server_port" {
+  name        = "/${terraform.workspace}/frontend/namecheap/port"
+  description = "SSH port for Namecheap server access"
+  type        = "String"
+  value       = tostring(var.namecheap_frontend_config.port)
+  tags        = local.common_tags
+}
+
+resource "aws_ssm_parameter" "namecheap_ssh_key" {
+  name        = "/${terraform.workspace}/frontend/namecheap/ssh_key"
+  description = "SSH private key for Namecheap server access"
+  type        = "SecureString"
+  value       = var.namecheap_frontend_config.ssh_key
+  tags        = local.common_tags
+}

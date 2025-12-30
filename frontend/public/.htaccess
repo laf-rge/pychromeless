@@ -1,0 +1,16 @@
+Options -MultiViews
+RewriteEngine On
+
+# HTTPS redirect (from old site)
+RewriteCond %{SERVER_PORT} 80
+RewriteRule ^(.*)$ https://wagonermanagement.com/$1 [R,L]
+
+# cPanel redirect (from old site)
+RewriteCond %{HTTPS} =on
+RewriteRule ^cpanelwebcall/(.*)$ https://server211.web-hosting.com:2083/cpanelwebcall/$1 [R,L]
+
+# SPA routing - must come after other redirects
+RewriteRule ^index\.html$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [QSA,L]

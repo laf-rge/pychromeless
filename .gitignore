@@ -4,6 +4,9 @@
 ### PyCharm
 .idea/
 
+### Cursor IDE
+.cursor/
+
 ### Python
 __pycache__/
 *.py[cod]

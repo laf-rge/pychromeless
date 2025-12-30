@@ -82,6 +82,18 @@ variable "store_config" {
   }))
 }
 
+variable "namecheap_frontend_config" {
+  description = "Namecheap server configuration for frontend deployment"
+  type = object({
+    host    = string
+    user    = string
+    path    = string
+    port    = number
+    ssh_key = string
+  })
+  sensitive = true
+}
+
 # Environment configurations
 locals {
   # Base environment configuration template

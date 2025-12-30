@@ -1,0 +1,14 @@
+# Bun configuration for frontend project
+
+[install]
+# Use frozen lockfile in CI/CD
+frozen = false
+
+# Production install settings
+production = false
+
+# Auto install peer dependencies
+peer = true
+
+# Install optional dependencies
+optional = true

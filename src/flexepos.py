@@ -320,7 +320,6 @@ class Flexepos:
             if not totalsales_table or not isinstance(totalsales_table, Tag):
                 raise Exception("Failed to find total sales table")
             rows = totalsales_table.find_all("tr")
-            print(len(rows))
             if len(rows) != 6:
                 sales_data[store]["Pre-Discount Sales"] = None
                 sales_data[store]["Discounts"] = None
@@ -529,18 +528,20 @@ class Flexepos:
                 driver.find_element(By.ID, TAG_IDS["group_by"])
             ).select_by_visible_text("Summary")
             driver.find_element(By.ID, TAG_IDS["submit"]).click()
-            WebDriverWait(driver, 35, ignored_exceptions=errors).until(
-                lambda d: driver.find_element(By.CLASS_NAME, "table-standard")
-                is not None
-                or True
-            )
-            soup = BeautifulSoup(driver.page_source, features="html.parser")
-            online_table = soup.find("table", attrs={"class": "table-standard"})
-            if online_table and isinstance(online_table, Tag):
+            try:
+                soup = BeautifulSoup(driver.page_source, features="html.parser")
+                online_table = soup.find("table", attrs={"class": "table-standard"})
+                if not online_table or not isinstance(online_table, Tag):
+                    raise Exception("Failed to find online table")
                 rows = online_table.find_all("tr")
                 for row in rows[1:-1]:
                     r = [ele.text.strip() for ele in row.find_all("td")]
                     sales_data[store][r[0]] = r[6]
+            except (TimeoutError, Exception):
+                logger.warning(
+                    "No third party transactions found",
+                    extra={"store": store, "date": tx_date_str},
+                )
             logger.info(
                 "completed daily sales", extra={"store": store, "date": tx_date_str}
             )

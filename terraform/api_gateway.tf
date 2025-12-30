@@ -16,7 +16,7 @@ resource "aws_api_gateway_rest_api" "josiah" {
 }
 
 output "base_url" {
-  value = aws_api_gateway_deployment.josiah.invoke_url
+  value = aws_api_gateway_stage.test.invoke_url
 }
 
 resource "aws_api_gateway_method" "proxy_root" {

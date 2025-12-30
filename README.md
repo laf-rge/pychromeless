@@ -18,10 +18,12 @@ Serverless automation for syncing Jersey Mike's point-of-sale, delivery, and inv
 - Scheduled data collection and processing
 - Secure credential management via AWS Systems Manager Parameter Store
 - Error monitoring and notification system
+- React 19 frontend application (see `frontend/` directory)
 
 ## Prerequisites
 
 - AWS Account with appropriate permissions
+- [Bun](https://bun.sh) >= 1.0.0 (for frontend development)
 - Credentials for the following services:
   - FlexePOS
   - DoorDash
@@ -106,6 +108,17 @@ email_config = {
   from_email     = "Bot Name <notifications@example.com>"
 }
 ```
+
+## Frontend
+
+The frontend is a React 19 application located in the `frontend/` directory. It uses:
+
+- **Bun** as the package manager (not npm/yarn)
+- **Vite 7** for building and development
+- **Tailwind CSS 4** for styling
+- **Headless UI + Radix UI** for accessible components
+
+See `frontend/README.md` for frontend-specific setup and development instructions.
 
 ## Deployment
 
