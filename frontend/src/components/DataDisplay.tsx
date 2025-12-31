@@ -1,6 +1,7 @@
 import { createClaimsTable } from "../utils/claimUtils";
 
 interface IdTokenDataProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   idTokenClaims: any;
 }
 

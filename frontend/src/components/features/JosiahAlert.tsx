@@ -8,7 +8,8 @@ interface TaskStatus {
     | "processing"
     | "completed"
     | "completed_with_errors"
-    | "failed";
+    | "failed"
+    | "error"; // Added to match TaskStatusType from global store
   progress?: {
     current: number;
     total: number;
@@ -52,6 +53,7 @@ export function JosiahAlert({
       completed: "Processing Complete",
       completed_with_errors: "Processing Complete with Errors",
       failed: "Processing Failed",
+      error: "Processing Error",
     }[taskStatus.status];
 
     const progressPercent = taskStatus.progress

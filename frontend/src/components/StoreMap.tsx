@@ -105,6 +105,7 @@ export default function StoreMap() {
         map.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapContainer]);
 
   useEffect(() => {
@@ -140,6 +141,7 @@ export default function StoreMap() {
     map.current.on("mouseleave", "store-locations", () => {
       map.current!.getCanvas().style.cursor = "";
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore]);
 
   return (

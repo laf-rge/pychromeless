@@ -7,15 +7,11 @@ and modules to ensure consistent logging behavior.
 
 import json
 import logging
+import os
 import sys
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
-
-from pygments import highlight
-from pygments.formatters import TerminalFormatter
-from pygments.lexers import JsonLexer
-from pythonjsonlogger.json import JsonFormatter
 
 
 class CustomJsonEncoder(json.JSONEncoder):
@@ -31,26 +27,39 @@ class CustomJsonEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-class ColorizedJsonFormatter(JsonFormatter):
-    """JSON formatter that adds syntax highlighting to the output."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs, json_default=CustomJsonEncoder().default)
-
-    def format(self, record: Any) -> str:
-        json_str = super().format(record)
-        return highlight(json_str, JsonLexer(), TerminalFormatter())
-
-
 def setup_json_logger():
-    """Configure the root logger with JSON formatting and syntax highlighting."""
-    json_handler = logging.StreamHandler(sys.stdout)
-    json_formatter = ColorizedJsonFormatter(
-        fmt="%(asctime)s %(levelname)s %(name)s %(message)s"
-    )
-    json_handler.setFormatter(json_formatter)
+    """Configure the root logger with JSON formatting and syntax highlighting.
 
-    root_logger = logging.getLogger()
-    root_logger.handlers = []
-    root_logger.addHandler(json_handler)
-    root_logger.setLevel(logging.INFO)
+    Only imports pygments and pythonjsonlogger when needed (local development).
+    These dependencies are not available in Lambda.
+    """
+    # Only import these when we're not in Lambda (they're dev dependencies)
+    if "AWS_LAMBDA_FUNCTION_NAME" not in os.environ:
+        from pygments import highlight
+        from pygments.formatters import TerminalFormatter
+        from pygments.lexers import JsonLexer
+        from pythonjsonlogger.json import JsonFormatter
+
+        class ColorizedJsonFormatter(JsonFormatter):
+            """JSON formatter that adds syntax highlighting to the output."""
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs, json_default=CustomJsonEncoder().default)
+
+            def format(self, record: Any) -> str:
+                json_str = super().format(record)
+                return highlight(json_str, JsonLexer(), TerminalFormatter())
+
+        json_handler = logging.StreamHandler(sys.stdout)
+        json_formatter = ColorizedJsonFormatter(
+            fmt="%(asctime)s %(levelname)s %(name)s %(message)s"
+        )
+        json_handler.setFormatter(json_formatter)
+
+        root_logger = logging.getLogger()
+        root_logger.handlers = []
+        root_logger.addHandler(json_handler)
+        root_logger.setLevel(logging.INFO)
+    else:
+        # In Lambda, just use basic logging (CloudWatch handles the rest)
+        logging.basicConfig(level=logging.INFO)

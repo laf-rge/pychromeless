@@ -3,17 +3,17 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../utils/cn";
 
 const alertVariants = cva(
-  "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
+  "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground backdrop-blur-sm",
   {
     variants: {
       variant: {
-        default: "bg-background text-foreground border-border",
+        default: "bg-card text-foreground border-border shadow-lg",
         destructive:
-          "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive bg-destructive/10",
+          "border-destructive/70 text-destructive-foreground dark:border-destructive [&>svg]:text-destructive-foreground bg-destructive/90 shadow-lg",
         warning:
-          "border-yellow-500/50 text-yellow-900 dark:text-yellow-100 [&>svg]:text-yellow-500 bg-yellow-500/10",
+          "border-yellow-500/70 text-yellow-50 [&>svg]:text-yellow-50 bg-yellow-600/90 shadow-lg",
         success:
-          "border-green-500/50 text-green-900 dark:text-green-100 [&>svg]:text-green-500 bg-green-500/10",
+          "border-green-500/70 text-green-50 [&>svg]:text-green-50 bg-green-600/90 shadow-lg",
       },
     },
     defaultVariants: {

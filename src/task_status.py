@@ -8,10 +8,13 @@ using DynamoDB to store and query task states.
 import json
 import logging
 import os
-from typing import Any, Dict, Optional, cast
+import time
+from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 
 import boto3
-from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
+
+if TYPE_CHECKING:
+    from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
 
 from logging_utils import setup_json_logger
 
@@ -21,7 +24,7 @@ if "AWS_LAMBDA_FUNCTION_NAME" not in os.environ:
 logger = logging.getLogger(__name__)
 
 # Initialize DynamoDB client
-dynamodb = cast(DynamoDBServiceResource, boto3.resource("dynamodb"))
+dynamodb = cast("DynamoDBServiceResource", boto3.resource("dynamodb"))
 table = cast(Any, dynamodb.Table(os.environ["TASK_STATES_TABLE"]))
 
 
@@ -65,9 +68,45 @@ def get_task_status_handler(event: Dict[str, Any], context: Any) -> Dict[str, An
 
             return create_response(200, response["Item"], request_id)
 
-        # Check if we're getting tasks by operation type
+        # Check if we're getting tasks by operation type or recent tasks
         if "queryStringParameters" in event and event["queryStringParameters"]:
-            operation = event["queryStringParameters"].get("operation")
+            params = event["queryStringParameters"]
+
+            # Check if we're requesting recent tasks
+            if params.get("recent") == "true":
+                limit = int(params.get("limit", 50))
+                hours = int(params.get("hours", 24))
+
+                logger.info(f"Fetching recent tasks: last {hours} hours, limit {limit}")
+
+                # Scan all tasks
+                response = table.scan()
+                items = response.get("Items", [])
+
+                # Handle pagination
+                while "LastEvaluatedKey" in response:
+                    response = table.scan(
+                        ExclusiveStartKey=response["LastEvaluatedKey"]
+                    )
+                    items.extend(response.get("Items", []))
+
+                # Filter by timestamp (last H hours)
+                cutoff_time = int(time.time()) - (hours * 3600)
+                recent_items = [
+                    item for item in items
+                    if item.get("updated_at", 0) >= cutoff_time
+                ]
+
+                # Sort by updated_at descending (newest first)
+                recent_items.sort(key=lambda x: x.get("updated_at", 0), reverse=True)
+
+                # Limit results
+                recent_items = recent_items[:limit]
+
+                logger.info(f"Returning {len(recent_items)} recent tasks")
+                return create_response(200, recent_items, request_id)
+
+            operation = params.get("operation")
             if not operation:
                 # If no operation provided, return all tasks
                 response = table.scan()

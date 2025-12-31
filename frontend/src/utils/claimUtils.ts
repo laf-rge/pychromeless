@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createClaimsTable(idTokenClaims: any): Record<string, [string, string, string]> {
   const claims: Record<string, [string, string, string]> = {};
 

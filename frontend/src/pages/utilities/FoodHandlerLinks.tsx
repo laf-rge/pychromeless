@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Feature } from "../../components/features/Feature";
 import axios from "axios";
 import { useMsal } from "@azure/msal-react";
 import { InteractionRequiredAuthError } from "@azure/msal-browser";
 import { useToast } from "../../hooks/useToast";
 import { Toast } from "../../components/ui/toast";
+import { API_BASE_URL, API_ENDPOINTS } from "../../config/api";
 
 interface FoodHandlerLinksResponse {
   [storeNumber: string]: string;
@@ -16,7 +17,7 @@ export function FoodHandlerLinks() {
   const { instance } = useMsal();
   const { toast, toasts, removeToast } = useToast();
 
-  const fetchLinks = async () => {
+  const fetchLinks = useCallback(async () => {
     setLoading(true);
     try {
       const account = instance.getActiveAccount();
@@ -59,7 +60,7 @@ export function FoodHandlerLinks() {
       }
 
       const client = axios.create({
-        baseURL: "https://uu7jn6wcdh.execute-api.us-east-2.amazonaws.com/",
+        baseURL: API_BASE_URL,
       });
 
       const config = {
@@ -71,7 +72,7 @@ export function FoodHandlerLinks() {
       };
 
       const response = await client.get<FoodHandlerLinksResponse>(
-        "test/get_food_handler_links",
+        API_ENDPOINTS.GET_FOOD_HANDLER_LINKS,
         config
       );
 
@@ -87,7 +88,7 @@ export function FoodHandlerLinks() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [instance, toast]);
 
   const updateLinks = async () => {
     setLoading(true);
@@ -132,7 +133,7 @@ export function FoodHandlerLinks() {
       }
 
       const client = axios.create({
-        baseURL: "https://uu7jn6wcdh.execute-api.us-east-2.amazonaws.com/",
+        baseURL: API_BASE_URL,
       });
 
       const config = {
@@ -144,7 +145,7 @@ export function FoodHandlerLinks() {
       };
 
       await client.post<FoodHandlerLinksResponse>(
-        "test/update_food_handler_pdfs",
+        API_ENDPOINTS.UPDATE_FOOD_HANDLER_PDFS,
         {},
         config
       );
@@ -170,7 +171,7 @@ export function FoodHandlerLinks() {
 
   useEffect(() => {
     fetchLinks();
-  }, []);
+  }, [fetchLinks]);
 
   return (
     <>

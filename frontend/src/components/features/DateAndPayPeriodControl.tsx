@@ -20,6 +20,7 @@ export const DateAndPayPeriodControl: React.FC<DateAndPayPeriodProps> = ({
 
   useEffect(() => {
     setValue("mp", selectedMonthData);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setValue]);
 
   const handleChange = useCallback(

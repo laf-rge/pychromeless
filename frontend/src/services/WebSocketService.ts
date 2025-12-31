@@ -1,6 +1,10 @@
 import { logger } from "../utils/logger";
-import { InteractionRequiredAuthError } from "@azure/msal-browser";
+import {
+  InteractionRequiredAuthError,
+  type IPublicClientApplication,
+} from "@azure/msal-browser";
 import { TaskStatus } from "./TaskStatusService";
+import { WS_BASE_URL } from "../config/api";
 
 export enum OperationType {
   DAILY_SALES = "daily_sales",
@@ -36,22 +40,23 @@ class WebSocketService {
   private static instance: WebSocketService;
   private ws: WebSocket | null = null;
   private subscribers: Map<string, Set<MessageHandler>> = new Map();
-  private messageQueue: Map<string, any[]> = new Map();
+  private globalSubscribers: Set<MessageHandler> = new Set(); // Global subscribers for all tasks
+  private messageQueue: Map<string, EnrichedTaskStatus[]> = new Map();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectTimeout = 1000;
-  private msalInstance: any;
+  private msalInstance: IPublicClientApplication;
   private isConnected = false;
   private isReconnecting = false;
   private reconnectTimer: number | null = null;
   private connectionListeners: Set<(connected: boolean) => void> = new Set();
 
-  private constructor(msalInstance: any) {
+  private constructor(msalInstance: IPublicClientApplication) {
     this.msalInstance = msalInstance;
     this.connect();
   }
 
-  static getInstance(msalInstance: any): WebSocketService {
+  static getInstance(msalInstance: IPublicClientApplication): WebSocketService {
     if (!WebSocketService.instance) {
       WebSocketService.instance = new WebSocketService(msalInstance);
     }
@@ -153,9 +158,7 @@ class WebSocketService {
     console.log("Connecting to WebSocket...");
     try {
       const accessToken = await this.getAccessToken();
-      const WS_ENDPOINT =
-        "wss://ozj082t179.execute-api.us-east-2.amazonaws.com/production";
-      const wsUrl = `${WS_ENDPOINT}?Authorization=${encodeURIComponent(
+      const wsUrl = `${WS_BASE_URL}?Authorization=${encodeURIComponent(
         `Bearer ${accessToken}`
       )}`;
       console.log("Connecting to WebSocket with URL:", wsUrl);
@@ -181,15 +184,25 @@ class WebSocketService {
               `Processing message for task ${taskId} (${OperationDisplayNames[operation]})`
             );
 
+            const enrichedPayload: EnrichedTaskStatus = {
+              ...message.payload,
+              operationDisplayName: OperationDisplayNames[operation],
+            };
+
+            // Broadcast to global subscribers first
+            if (this.globalSubscribers.size > 0) {
+              console.log(
+                `Broadcasting to ${this.globalSubscribers.size} global subscribers`
+              );
+              this.globalSubscribers.forEach((handler) => handler(enrichedPayload));
+            }
+
+            // Then handle task-specific subscribers
             const subscribers = this.subscribers.get(taskId);
             if (subscribers) {
               console.log(
                 `Found ${subscribers.size} subscribers for task ${taskId}`
               );
-              const enrichedPayload: EnrichedTaskStatus = {
-                ...message.payload,
-                operationDisplayName: OperationDisplayNames[operation],
-              };
               subscribers.forEach((handler) => handler(enrichedPayload));
             } else {
               console.log(
@@ -198,7 +211,7 @@ class WebSocketService {
               if (!this.messageQueue.has(taskId)) {
                 this.messageQueue.set(taskId, []);
               }
-              this.messageQueue.get(taskId)!.push(message.payload);
+              this.messageQueue.get(taskId)!.push(enrichedPayload);
             }
           }
         } catch (error) {
@@ -304,6 +317,22 @@ class WebSocketService {
           console.log(`Removed empty subscription set for task ${taskId}`);
         }
       }
+    };
+  }
+
+  /**
+   * Subscribe to all task status updates globally
+   * Useful for global state management that needs to track all tasks
+   */
+  subscribeGlobal(handler: MessageHandler): () => void {
+    console.log("Adding global subscriber");
+    this.globalSubscribers.add(handler);
+    console.log(`Total global subscribers: ${this.globalSubscribers.size}`);
+
+    return () => {
+      console.log("Removing global subscriber");
+      this.globalSubscribers.delete(handler);
+      console.log(`Total global subscribers: ${this.globalSubscribers.size}`);
     };
   }
 }

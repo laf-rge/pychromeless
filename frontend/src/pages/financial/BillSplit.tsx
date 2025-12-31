@@ -11,6 +11,7 @@ import { InteractionRequiredAuthError } from "@azure/msal-browser";
 import { Checkbox } from "../../components/ui/checkbox";
 import { useToast } from "../../hooks/useToast";
 import { Toast } from "../../components/ui/toast";
+import { API_BASE_URL, API_ENDPOINTS } from "../../config/api";
 
 const AVAILABLE_LOCATIONS = [
   "20358",
@@ -90,7 +91,7 @@ export function BillSplit() {
       }
 
       const client = axios.create({
-        baseURL: "https://uu7jn6wcdh.execute-api.us-east-2.amazonaws.com/",
+        baseURL: API_BASE_URL,
       });
 
       const config = {
@@ -102,7 +103,7 @@ export function BillSplit() {
       };
 
       const response = await client.post(
-        "test/split_bill",
+        API_ENDPOINTS.SPLIT_BILL,
         {
           doc_number: invoiceNumber,
           locations: selectedLocations,

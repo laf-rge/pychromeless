@@ -1,6 +1,18 @@
-import { InteractionRequiredAuthError } from "@azure/msal-browser";
+import {
+  InteractionRequiredAuthError,
+  type IPublicClientApplication,
+} from "@azure/msal-browser";
 import { logger } from "../utils/logger";
 import { OperationType } from "./WebSocketService";
+import { API_BASE_URL } from "../config/api";
+
+export interface TaskResult {
+  success: boolean;
+  message: string;
+  failed_stores?: string[];
+  successful_stores?: string[];
+  [key: string]: unknown;
+}
 
 export interface TaskStatus {
   task_id: string;
@@ -11,7 +23,7 @@ export interface TaskStatus {
     total: number;
     message: string;
   };
-  result?: any;
+  result?: TaskResult;
   error?: string;
   created_at: number;
   updated_at: number;
@@ -27,15 +39,14 @@ export type TaskStatusType =
 
 class TaskStatusService {
   private static instance: TaskStatusService;
-  private msalInstance: any;
-  private readonly API_ENDPOINT =
-    "https://ozj082t179.execute-api.us-east-2.amazonaws.com/production";
+  private msalInstance: IPublicClientApplication;
+  private readonly API_ENDPOINT = API_BASE_URL;
 
-  private constructor(msalInstance: any) {
+  private constructor(msalInstance: IPublicClientApplication) {
     this.msalInstance = msalInstance;
   }
 
-  static getInstance(msalInstance: any): TaskStatusService {
+  static getInstance(msalInstance: IPublicClientApplication): TaskStatusService {
     if (!TaskStatusService.instance) {
       TaskStatusService.instance = new TaskStatusService(msalInstance);
     }
@@ -138,6 +149,24 @@ class TaskStatusService {
       return await response.json();
     } catch (error) {
       logger.error("Failed to fetch all tasks:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get recent tasks within the specified time window
+   * @param hours Number of hours to look back (default: 24)
+   * @param limit Maximum number of tasks to return (default: 50)
+   * @returns Array of recent task statuses
+   */
+  async getRecentTasks(hours: number = 24, limit: number = 50): Promise<TaskStatus[]> {
+    try {
+      const response = await this.fetchWithAuth(
+        `/task-status?recent=true&hours=${hours}&limit=${limit}`
+      );
+      return await response.json();
+    } catch (error) {
+      logger.error("Failed to fetch recent tasks:", error);
       throw error;
     }
   }

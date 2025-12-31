@@ -226,7 +226,6 @@ resource "aws_api_gateway_method" "method_email_tips_options" {
   resource_id   = aws_api_gateway_resource.email_tips_resource.id
   http_method   = "OPTIONS"
   authorization = "NONE"
-  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
 }
 
 resource "aws_api_gateway_integration" "integration_email_tips_OPTIONS" {
@@ -305,7 +304,6 @@ resource "aws_api_gateway_method" "method_transform_tips_options" {
   resource_id   = aws_api_gateway_resource.transform_tips_resource.id
   http_method   = "OPTIONS"
   authorization = "NONE"
-  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
 }
 
 resource "aws_api_gateway_integration" "integration_transform_tips_OPTIONS" {
@@ -381,7 +379,6 @@ resource "aws_api_gateway_method" "method_get_mpvs_options" {
   resource_id   = aws_api_gateway_resource.get_mpvs_resource.id
   http_method   = "OPTIONS"
   authorization = "NONE"
-  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
 }
 
 resource "aws_api_gateway_integration" "integration_get_mpvs_OPTIONS" {
@@ -502,7 +499,6 @@ resource "aws_api_gateway_method" "method_invoice_sync_options" {
   resource_id   = aws_api_gateway_resource.invoice_sync_resource.id
   http_method   = "OPTIONS"
   authorization = "NONE"
-  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
 }
 
 resource "aws_api_gateway_integration" "integration_invoice_sync_OPTIONS" {
@@ -598,9 +594,9 @@ resource "aws_api_gateway_stage" "test" {
   ]
   deployment_id = aws_api_gateway_deployment.josiah.id
   rest_api_id   = aws_api_gateway_rest_api.josiah.id
-  stage_name    = "test"
+  stage_name    = "production"
 
-  description = "Test stage for Josiah API"
+  description = "Production stage for Josiah API"
 
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gateway_logs.arn
@@ -1006,7 +1002,7 @@ resource "aws_api_gateway_integration" "get_task_status_by_id_integration" {
   uri                     = aws_lambda_function.task_status.invoke_arn
 }
 
-# Method for getting tasks by operation type
+# Method for getting tasks by operation type or recent tasks
 resource "aws_api_gateway_method" "get_task_status_by_operation" {
   rest_api_id   = aws_api_gateway_rest_api.josiah.id
   resource_id   = aws_api_gateway_resource.task_status_resource.id
@@ -1014,7 +1010,10 @@ resource "aws_api_gateway_method" "get_task_status_by_operation" {
   authorization = "CUSTOM"
   authorizer_id = aws_api_gateway_authorizer.azure_auth.id
   request_parameters = {
-    "method.request.querystring.operation" = true
+    "method.request.querystring.operation" = false
+    "method.request.querystring.recent"    = false
+    "method.request.querystring.hours"     = false
+    "method.request.querystring.limit"     = false
   }
 }
 
@@ -1075,6 +1074,10 @@ resource "aws_api_gateway_integration" "task_status_options_integration" {
   request_templates = {
     "application/json" = "{\"statusCode\": 200}"
   }
+
+  depends_on = [
+    aws_api_gateway_method.task_status_options
+  ]
 }
 
 # OPTIONS method response for task status endpoints
@@ -1102,4 +1105,9 @@ resource "aws_api_gateway_integration_response" "task_status_options_response" {
     "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS'"
     "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
   }
+
+  depends_on = [
+    aws_api_gateway_integration.task_status_options_integration,
+    aws_api_gateway_method_response.task_status_options_response
+  ]
 }

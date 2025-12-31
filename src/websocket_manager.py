@@ -34,7 +34,8 @@ class DynamoDBTable(Protocol):
 class WebSocketManager:
     apigateway: ApiGatewayManagementApiClient
     dynamodb: DynamoDBServiceResource
-    table: Any  # DynamoDB Table type
+    table: Any  # DynamoDB Table type for connections
+    task_states_table: Any  # DynamoDB Table type for task states
 
     def __init__(self):
         self.apigateway = cast(
@@ -49,6 +50,7 @@ class WebSocketManager:
         )
         self.dynamodb = cast(DynamoDBServiceResource, boto3.resource("dynamodb"))
         self.table = self.dynamodb.Table(os.environ["CONNECTIONS_TABLE"])
+        self.task_states_table = self.dynamodb.Table(os.environ["TASK_STATES_TABLE"])
 
     def broadcast_status(
         self,
@@ -96,6 +98,39 @@ class WebSocketManager:
                 "updated_at": current_time,
             },
         }
+
+        # Persist task state to DynamoDB
+        # Check if task already exists to preserve created_at
+        try:
+            existing_task = self.task_states_table.get_item(Key={"task_id": task_id})
+            created_at = existing_task.get("Item", {}).get("created_at", current_time)
+        except Exception as e:
+            logger.warning(f"Error fetching existing task, using current time: {e}")
+            created_at = current_time
+
+        # Prepare task item for DynamoDB with TTL (24 hours)
+        ttl = current_time + (24 * 60 * 60)
+        task_item = {
+            "task_id": task_id,
+            "operation": operation,
+            "status": status,
+            "progress": progress,
+            "result": standardized_result,
+            "error": error,
+            "created_at": created_at,
+            "updated_at": current_time,
+            "ttl": ttl,
+        }
+
+        # Persist to DynamoDB
+        try:
+            self.task_states_table.put_item(Item=task_item)
+            logger.debug(f"Persisted task {task_id} to DynamoDB")
+        except Exception as e:
+            logger.error(f"Failed to persist task {task_id} to DynamoDB: {e}")
+
+        # Update message payload with correct created_at
+        message["payload"]["created_at"] = created_at
 
         # Get all active connections
         response = self.table.scan()

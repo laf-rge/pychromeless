@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { SubmitHandler } from "react-hook-form";
 import {
   FormControl,
@@ -11,8 +12,22 @@ import { logger } from "../../utils/logger";
 import { JosiahAlert } from "../../components/features/JosiahAlert";
 import { MonthPicker } from "../../components/ui/month-picker";
 import { Alert, AlertDescription } from "../../components/ui/alert";
+import { useTaskStore } from "../../stores/taskStore";
+import { OperationType } from "../../services/WebSocketService";
+import { API_BASE_URL, API_ENDPOINTS } from "../../config/api";
 
 export function InvoiceSync() {
+  // Access global task store to show operation-specific status
+  const { activeTasks } = useTaskStore();
+
+  // Get the latest Invoice Sync task from global store
+  const invoiceSyncTask = useMemo(() => {
+    const tasks = Array.from(activeTasks.values()).filter(
+      (task) => task.operation === OperationType.INVOICE_SYNC
+    );
+    // Return the most recent task
+    return tasks.sort((a, b) => b.updated_at - a.updated_at)[0];
+  }, [activeTasks]);
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     logger.debug(values);
   };
@@ -32,8 +47,8 @@ export function InvoiceSync() {
     setValue,
     watch,
   } = useFormHandler(onSubmit, {
-    baseURL: "https://uu7jn6wcdh.execute-api.us-east-2.amazonaws.com/",
-    endpoint: "/test/invoice_sync",
+    baseURL: API_BASE_URL,
+    endpoint: API_ENDPOINTS.INVOICE_SYNC,
     formDataSubmission: false,
     defaultValues: {
       mp: currentMonth,
@@ -61,6 +76,7 @@ export function InvoiceSync() {
           error={error}
           isSuccess={isSubmitSuccessful}
           successMessage="Invoice sync is in progress. Check Quickbooks in a few minutes."
+          taskStatus={invoiceSyncTask}
         />
         <FormControl isInvalid={!!errors.mp}>
           <FormLabel htmlFor="date">Month</FormLabel>

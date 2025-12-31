@@ -10,10 +10,8 @@ export default defineConfig({
     setupFiles: ["./src/test-utils/setup.ts"],
     css: true,
     pool: "vmThreads",
-    poolOptions: {
-      vmThreads: {
-        memoryLimit: "1G",
-      },
+    poolVmThreads: {
+      memoryLimit: "1G",
     },
     exclude: [
       "**/node_modules/**",

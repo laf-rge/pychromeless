@@ -110,7 +110,7 @@ export const useFormHandler = <T extends FormValues>(
           config
         );
       } else {
-        const params: Record<string, any> = {
+        const params: Record<string, string | undefined> = {
           month: values.date
             ? (values.date.getUTCMonth() + 1).toString()
             : values.mp
@@ -135,11 +135,17 @@ export const useFormHandler = <T extends FormValues>(
         if (apiConfig.params) {
           Object.assign(params, apiConfig.params);
         }
+
+        // Filter out undefined values for URLSearchParams
+        const filteredParams = Object.fromEntries(
+          Object.entries(params).filter(([_, value]) => value !== undefined)
+        ) as Record<string, string>;
+
         console.log("Making request with config:", config);
-        console.log("Request params:", params);
-        logger.debug(new URLSearchParams(params).toString());
+        console.log("Request params:", filteredParams);
+        logger.debug(new URLSearchParams(filteredParams).toString());
         response = await client.post(
-          `${apiConfig.endpoint}?${new URLSearchParams(params)}`,
+          `${apiConfig.endpoint}?${new URLSearchParams(filteredParams)}`,
           "",
           config
         );

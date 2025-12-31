@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { SubmitHandler } from "react-hook-form";
 import { Feature } from "../../components/features/Feature";
 import { useFormHandler } from "../../components/features/useFormHandler";
@@ -6,8 +7,22 @@ import { logger } from "../../utils/logger";
 import { JosiahAlert } from "../../components/features/JosiahAlert";
 import { DateAndPayPeriodControl } from "../../components/features/DateAndPayPeriodControl";
 import { Alert, AlertDescription } from "../../components/ui/alert";
+import { useTaskStore } from "../../stores/taskStore";
+import { OperationType } from "../../services/WebSocketService";
+import { API_BASE_URL, API_ENDPOINTS } from "../../config/api";
 
 export function EmailTips() {
+  // Access global task store to show operation-specific status
+  const { activeTasks } = useTaskStore();
+
+  // Get the latest Email Tips task from global store
+  const emailTipsTask = useMemo(() => {
+    const tasks = Array.from(activeTasks.values()).filter(
+      (task) => task.operation === OperationType.EMAIL_TIPS
+    );
+    // Return the most recent task
+    return tasks.sort((a, b) => b.updated_at - a.updated_at)[0];
+  }, [activeTasks]);
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     logger.debug(values);
   };
@@ -28,8 +43,8 @@ export function EmailTips() {
     setValue,
     watch,
   } = useFormHandler(onSubmit, {
-    baseURL: "https://uu7jn6wcdh.execute-api.us-east-2.amazonaws.com/",
-    endpoint: "/test/email_tips",
+    baseURL: API_BASE_URL,
+    endpoint: API_ENDPOINTS.EMAIL_TIPS,
     formDataSubmission: false,
     defaultValues: {
       mp: currentMonth,
@@ -65,6 +80,7 @@ export function EmailTips() {
           error={error}
           isSuccess={isSubmitSuccessful}
           successMessage="Processing can take 2-5 minutes to appear in your email."
+          taskStatus={emailTipsTask}
         />
         <DateAndPayPeriodControl
           register={register}

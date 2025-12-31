@@ -1,4 +1,4 @@
-import React from "react";
+import { useMemo } from "react";
 import { SubmitHandler } from "react-hook-form";
 import {
   FormControl,
@@ -12,37 +12,27 @@ import { FormValues } from "../../components/features/types";
 import { logger } from "../../utils/logger";
 import { JosiahAlert } from "../../components/features/JosiahAlert";
 import { HARD_CUTOFF_DATE } from "../../components/features/constants";
-import WebSocketService from "../../services/WebSocketService";
-import { useMsal } from "@azure/msal-react";
 import { Alert, AlertDescription } from "../../components/ui/alert";
-
-type TaskStatus = {
-  status?:
-    | "started"
-    | "processing"
-    | "completed"
-    | "completed_with_errors"
-    | "failed";
-  progress?: {
-    current: number;
-    total: number;
-    message: string;
-  };
-  error?: string;
-  result?: {
-    success: boolean;
-    message: string;
-    failed_stores?: string[];
-  };
-};
+import { useTaskStore } from "../../stores/taskStore";
+import { OperationType } from "../../services/WebSocketService";
+import { API_BASE_URL, API_ENDPOINTS } from "../../config/api";
 
 export function DailySales() {
-  const [taskStatus, setTaskStatus] = React.useState<TaskStatus>({});
-  const { instance } = useMsal();
+  // Access global task store to show operation-specific status
+  const { activeTasks } = useTaskStore();
+
+  // Get the latest Daily Sales task from global store
+  const dailySalesTask = useMemo(() => {
+    const tasks = Array.from(activeTasks.values()).filter(
+      (task) => task.operation === OperationType.DAILY_SALES
+    );
+    // Return the most recent task
+    return tasks.sort((a, b) => b.updated_at - a.updated_at)[0];
+  }, [activeTasks]);
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     logger.debug(values);
-    setTaskStatus({});
+    // No need to manage local state - global WebSocket subscription handles it
   };
 
   const today = new Date();
@@ -60,32 +50,13 @@ export function DailySales() {
     error,
     watch,
   } = useFormHandler(onSubmit, {
-    baseURL: "https://uu7jn6wcdh.execute-api.us-east-2.amazonaws.com/",
-    endpoint: "/test",
+    baseURL: API_BASE_URL,
+    endpoint: API_ENDPOINTS.DAILY_SALES,
     formDataSubmission: false,
     defaultValues: {
       date: yesterday,
     },
-    onResponse: (response) => {
-      console.log("Full API response:", response);
-      const taskId = response.data.task_id;
-      console.log("Received API response with task ID:", taskId);
-      if (taskId) {
-        const wsService = WebSocketService.getInstance(instance);
-        console.log("Setting up WebSocket subscription for task:", taskId);
-        wsService.subscribe(taskId, (payload) => {
-          console.log("Received WebSocket update for task:", taskId, payload);
-          setTaskStatus({
-            status: payload.status === "error" ? "failed" : payload.status,
-            progress: payload.progress,
-            error: payload.error,
-            result: payload.result,
-          });
-        });
-      } else {
-        console.warn("No task ID received in API response");
-      }
-    },
+    // No onResponse needed - global WebSocket subscription handles all task updates
   });
 
   const selectedDate = watch("date");
@@ -120,7 +91,7 @@ export function DailySales() {
             error={error}
             isSuccess={isSubmitSuccessful}
             successMessage="Processing can take 2-5 minutes to appear in Quickbooks."
-            taskStatus={taskStatus}
+            taskStatus={dailySalesTask}
           />
           <FormControl isInvalid={!!errors.date}>
             <FormLabel htmlFor="date">Date</FormLabel>

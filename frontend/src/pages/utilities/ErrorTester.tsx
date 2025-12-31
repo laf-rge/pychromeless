@@ -11,6 +11,7 @@ export function ErrorTester() {
     return new AxiosError(
       message,
       "TEST_ERROR",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { headers: {} } as any,
       {},
       {
