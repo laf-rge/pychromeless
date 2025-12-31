@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { SubmitHandler } from "react-hook-form";
 import {
   FormControl,
@@ -13,26 +12,11 @@ import { logger } from "../../utils/logger";
 import { JosiahAlert } from "../../components/features/JosiahAlert";
 import { HARD_CUTOFF_DATE } from "../../components/features/constants";
 import { Alert, AlertDescription } from "../../components/ui/alert";
-import { useTaskStore } from "../../stores/taskStore";
-import { OperationType } from "../../services/WebSocketService";
 import { API_BASE_URL, API_ENDPOINTS } from "../../config/api";
 
 export function DailySales() {
-  // Access global task store to show operation-specific status
-  const { activeTasks } = useTaskStore();
-
-  // Get the latest Daily Sales task from global store
-  const dailySalesTask = useMemo(() => {
-    const tasks = Array.from(activeTasks.values()).filter(
-      (task) => task.operation === OperationType.DAILY_SALES
-    );
-    // Return the most recent task
-    return tasks.sort((a, b) => b.updated_at - a.updated_at)[0];
-  }, [activeTasks]);
-
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     logger.debug(values);
-    // No need to manage local state - global WebSocket subscription handles it
   };
 
   const today = new Date();
@@ -91,7 +75,6 @@ export function DailySales() {
             error={error}
             isSuccess={isSubmitSuccessful}
             successMessage="Processing can take 2-5 minutes to appear in Quickbooks."
-            taskStatus={dailySalesTask}
           />
           <FormControl isInvalid={!!errors.date}>
             <FormLabel htmlFor="date">Date</FormLabel>

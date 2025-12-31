@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { SubmitHandler } from "react-hook-form";
 import { Feature } from "../../components/features/Feature";
 import { useFormHandler } from "../../components/features/useFormHandler";
@@ -7,22 +6,9 @@ import { logger } from "../../utils/logger";
 import { JosiahAlert } from "../../components/features/JosiahAlert";
 import { DateAndPayPeriodControl } from "../../components/features/DateAndPayPeriodControl";
 import { Alert, AlertDescription } from "../../components/ui/alert";
-import { useTaskStore } from "../../stores/taskStore";
-import { OperationType } from "../../services/WebSocketService";
 import { API_BASE_URL, API_ENDPOINTS } from "../../config/api";
 
 export function MPVs() {
-  // Access global task store to show operation-specific status
-  const { activeTasks } = useTaskStore();
-
-  // Get the latest MPVs task from global store
-  const mpvsTask = useMemo(() => {
-    const tasks = Array.from(activeTasks.values()).filter(
-      (task) => task.operation === OperationType.GET_MPVS
-    );
-    // Return the most recent task
-    return tasks.sort((a, b) => b.updated_at - a.updated_at)[0];
-  }, [activeTasks]);
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     logger.debug(values);
   };
@@ -80,7 +66,6 @@ export function MPVs() {
           error={error}
           isSuccess={isSubmitSuccessful}
           successMessage="Download is in progress. Check your downloads folder."
-          taskStatus={mpvsTask}
         />
         <DateAndPayPeriodControl
           register={register}
