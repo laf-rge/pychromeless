@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
 import { useTaskStore } from "../stores/taskStore";
 import { TaskHistoryCard } from "../components/dashboard/TaskHistoryCard";
@@ -18,6 +18,11 @@ export function DashboardPage() {
 
   const [filterOperation, setFilterOperation] = useState<OperationType | "all">("all");
   const [filterStatus, setFilterStatus] = useState<TaskStatusType | "all">("all");
+
+  // Load task history when dashboard mounts
+  useEffect(() => {
+    loadTaskHistory();
+  }, [loadTaskHistory]);
 
   // Combine all tasks
   const allTasks = useMemo(() => {

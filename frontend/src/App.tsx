@@ -23,7 +23,7 @@ function App() {
  * Separated to ensure it runs within MsalProvider context
  */
 function WebSocketInitializer() {
-  const { setMsalInstance, handleTaskUpdate, setConnectionStatus, loadTaskHistory } =
+  const { setMsalInstance, handleTaskUpdate, setConnectionStatus } =
     useTaskStore();
 
   useEffect(() => {
@@ -47,8 +47,7 @@ function WebSocketInitializer() {
       handleTaskUpdate(payload);
     });
 
-    // Load task history from backend on mount
-    loadTaskHistory();
+    // Task history is loaded by Dashboard when user navigates to it
 
     // Cleanup on unmount
     return () => {
@@ -56,7 +55,7 @@ function WebSocketInitializer() {
       unsubscribeConnection();
       unsubscribeGlobal();
     };
-  }, [setMsalInstance, handleTaskUpdate, setConnectionStatus, loadTaskHistory]);
+  }, [setMsalInstance, handleTaskUpdate, setConnectionStatus]);
 
   return null;
 }

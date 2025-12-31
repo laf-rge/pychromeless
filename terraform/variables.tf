@@ -103,6 +103,7 @@ locals {
     CONNECTIONS_TABLE          = aws_dynamodb_table.websocket_connections.name
     WEBSOCKET_ENDPOINT         = replace(aws_apigatewayv2_stage.websocket.invoke_url, "wss://", "https://")
     DAILY_SALES_PROGRESS_TABLE = aws_dynamodb_table.daily_sales_progress.name
+    TASK_STATES_TABLE          = aws_dynamodb_table.task_states.name
   }
 
   # Service environments using the base configuration

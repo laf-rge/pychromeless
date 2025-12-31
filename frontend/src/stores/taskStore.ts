@@ -161,6 +161,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       // Route to appropriate map based on status
       if (status === "completed" || status === "completed_with_errors") {
         completedTasks.set(taskId, taskInfo);
+        visibleNotifications.add(taskId); // Show completion notification
 
         // Limit completed tasks
         if (completedTasks.size > MAX_COMPLETED_TASKS) {
@@ -178,6 +179,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         get().scheduleAutoDismiss(taskId);
       } else if (status === "failed" || status === "error") {
         failedTasks.set(taskId, taskInfo);
+        visibleNotifications.add(taskId); // Show failure notification
 
         // Limit failed tasks
         if (failedTasks.size > MAX_FAILED_TASKS) {
@@ -249,6 +251,14 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     if (!msalInstance) {
       logger.error("Cannot load task history: MSAL instance not set");
       set({ historyError: "Authentication not initialized" });
+      return;
+    }
+
+    // Check if user is authenticated
+    const activeAccount = msalInstance.getActiveAccount();
+    if (!activeAccount) {
+      logger.debug("No active account, skipping task history load");
+      set({ historyError: null }); // Clear error, user just not logged in yet
       return;
     }
 
