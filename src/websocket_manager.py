@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 
 class DynamoDBTable(Protocol):
     def put_item(self, Item: Dict[str, Any]) -> Dict[str, Any]: ...
+
     def get_item(self, Key: Dict[str, Any]) -> Dict[str, Any]: ...
+
     def update_item(
         self,
         Key: Dict[str, Any],
@@ -23,7 +25,9 @@ class DynamoDBTable(Protocol):
         ExpressionAttributeNames: Dict[str, str],
         ExpressionAttributeValues: Dict[str, Any],
     ) -> Dict[str, Any]: ...
+
     def delete_item(self, Key: Dict[str, Any]) -> Dict[str, Any]: ...
+
     def scan(
         self,
         FilterExpression: Optional[str] = None,

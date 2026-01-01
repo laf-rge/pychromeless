@@ -93,7 +93,7 @@ def main():
         gh = Grubhub()
         results = gh.get_payments_from_csv(str(csv_path), start_date, end_date)
         logger.info("Parsed CSV file", extra={"deposit_count": len(results)})
-    except Exception as e:
+    except Exception:
         logger.exception("Error parsing CSV file: %s", str(csv_path))
         sys.exit(1)
 
@@ -157,4 +157,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-

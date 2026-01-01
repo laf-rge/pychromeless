@@ -537,7 +537,7 @@ class Flexepos:
                 for row in rows[1:-1]:
                     r = [ele.text.strip() for ele in row.find_all("td")]
                     sales_data[store][r[0]] = r[6]
-            except (TimeoutError, Exception):
+            except Exception:
                 logger.warning(
                     "No third party transactions found",
                     extra={"store": store, "date": tx_date_str},

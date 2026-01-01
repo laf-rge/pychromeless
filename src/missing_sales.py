@@ -35,7 +35,9 @@ def find_missing_sales_entries(
     missing = []
 
     # Get all store refs from QuickBooks
-    store_refs = {x.Name: x.to_ref() for x in Department.all(qb=qb_session)}
+    _store_refs = {  # noqa: F841
+        x.Name: x.to_ref() for x in Department.all(qb=qb_session)
+    }
 
     for day_offset in range(1, days_back + 1):  # Start at 1 to skip today
         txdate = today - timedelta(days=day_offset)

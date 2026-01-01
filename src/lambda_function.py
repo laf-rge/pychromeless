@@ -303,7 +303,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
             # pylint: disable=import-outside-toplevel
             from concurrent.futures import ThreadPoolExecutor, as_completed
 
-            def invoke_store_lambda(store):
+            def invoke_store_lambda(store, txdate=txdate):
                 """Helper function for AWS Lambda invocation"""
                 try:
                     assert lambda_client is not None  # Type hint for linter
@@ -1001,7 +1001,7 @@ def process_store_sales_internal_handler(
             try:
                 journal_data = dj.getDailySales(store, txdate)
                 retry = 0
-            except (ConnectionError, TimeoutError, Exception) as e:
+            except Exception as e:
                 logger.exception(f"error {txdate.isoformat()}: {str(e)}")
                 retry -= 1
                 if retry == 0:

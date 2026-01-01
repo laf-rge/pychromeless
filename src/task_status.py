@@ -93,8 +93,7 @@ def get_task_status_handler(event: Dict[str, Any], context: Any) -> Dict[str, An
                 # Filter by timestamp (last H hours)
                 cutoff_time = int(time.time()) - (hours * 3600)
                 recent_items = [
-                    item for item in items
-                    if item.get("updated_at", 0) >= cutoff_time
+                    item for item in items if item.get("updated_at", 0) >= cutoff_time
                 ]
 
                 # Sort by updated_at descending (newest first)
@@ -141,7 +140,7 @@ def get_task_status_handler(event: Dict[str, Any], context: Any) -> Dict[str, An
 
         return create_response(200, items, request_id)
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error processing task status request")
         return create_response(500, {"message": "Internal server error"}, request_id)
 

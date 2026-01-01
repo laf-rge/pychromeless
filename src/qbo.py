@@ -28,7 +28,6 @@ def fdms_reconcile():
     # Keep track of processed rows to avoid duplicates
     processed_rows = set()
 
-    last_height = 0
     while True:
         # Scroll down a bit
         current_height = driver.execute_script(
@@ -148,5 +147,3 @@ def fdms_reconcile():
         )
         if new_scroll_position == scroll_position:
             break
-
-        last_height = current_height

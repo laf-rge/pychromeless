@@ -283,7 +283,7 @@ class Tips:
         client = boto3.client("ses")
         client.send_raw_email(
             Source=msg["From"],
-            Destinations=receiver_email,  ## passed in an array
+            Destinations=receiver_email,  # passed in an array
             RawMessage={
                 "Data": msg.as_string(),
             },
