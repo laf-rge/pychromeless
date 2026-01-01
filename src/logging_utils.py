@@ -44,7 +44,9 @@ def setup_json_logger():
             """JSON formatter that adds syntax highlighting to the output."""
 
             def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs, json_default=CustomJsonEncoder().default)
+                super().__init__(
+                    *args, **kwargs, json_default=CustomJsonEncoder().default
+                )
 
             def format(self, record: Any) -> str:
                 json_str = super().format(record)
