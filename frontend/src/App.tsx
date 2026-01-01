@@ -3,11 +3,26 @@ import { BrowserRouter } from "react-router-dom";
 import { MsalProvider } from "@azure/msal-react";
 import { msalInstance } from "./msal";
 import { AppRoutes } from "./routes";
+import { TestModeRoutes } from "./routes.test";
 import WebSocketService from "./services/WebSocketService";
 import { useTaskStore } from "./stores/taskStore";
 import { logger } from "./utils/logger";
+import { MockMsalProvider } from "./test-utils/MockMsalProvider";
+
+// Check if we're in E2E test mode
+const isE2ETestMode = import.meta.env.VITE_E2E_MODE === "true";
 
 function App() {
+  if (isE2ETestMode) {
+    return (
+      <MockMsalProvider>
+        <BrowserRouter>
+          <TestModeRoutes />
+        </BrowserRouter>
+      </MockMsalProvider>
+    );
+  }
+
   return (
     <MsalProvider instance={msalInstance}>
       <BrowserRouter>

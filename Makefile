@@ -127,8 +127,33 @@ frontend-test: frontend-install
 frontend-lint: frontend-install
 	cd frontend && bun run lint
 
-frontend-deploy:
-	cd terraform && terraform apply -target=null_resource.frontend_deploy
+frontend-e2e: frontend-install
+	cd frontend && bun run test:e2e
+
+frontend-e2e-ui: frontend-install
+	cd frontend && bun run test:e2e:ui
+
+frontend-e2e-headed: frontend-install
+	cd frontend && bun run test:e2e:headed
+
+# Default environment for frontend deployment (matches Terraform workspace)
+DEPLOY_ENV ?= prod
+
+frontend-deploy: frontend-build
+	@echo "Deploying frontend to Namecheap..."
+	@HOST=$$(aws ssm get-parameter --name "/$(DEPLOY_ENV)/frontend/namecheap/host" --query "Parameter.Value" --output text) && \
+	REMOTE_USER=$$(aws ssm get-parameter --name "/$(DEPLOY_ENV)/frontend/namecheap/user" --query "Parameter.Value" --output text) && \
+	REMOTE_PATH=$$(aws ssm get-parameter --name "/$(DEPLOY_ENV)/frontend/namecheap/path" --query "Parameter.Value" --output text) && \
+	PORT=$$(aws ssm get-parameter --name "/$(DEPLOY_ENV)/frontend/namecheap/port" --query "Parameter.Value" --output text) && \
+	KEY_FILE=$$(mktemp) && \
+	aws ssm get-parameter --name "/$(DEPLOY_ENV)/frontend/namecheap/ssh_key" --with-decryption --query "Parameter.Value" --output text > $$KEY_FILE && \
+	chmod 600 $$KEY_FILE && \
+	rsync -avz --delete \
+		-e "ssh -i $$KEY_FILE -p $$PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+		frontend/dist/ \
+		"$$REMOTE_USER@$$HOST:$$REMOTE_PATH/" && \
+	rm -f $$KEY_FILE && \
+	echo "Deployed to $$HOST:$$REMOTE_PATH"
 
 frontend-clean:
 	cd frontend && rm -rf node_modules dist
@@ -164,6 +189,9 @@ help:
 	@echo "  frontend-build    - Build frontend for production"
 	@echo "  frontend-test     - Run frontend tests"
 	@echo "  frontend-lint     - Run frontend linting"
+	@echo "  frontend-e2e      - Run frontend E2E tests (Playwright)"
+	@echo "  frontend-e2e-ui   - Run frontend E2E tests with Playwright UI"
+	@echo "  frontend-e2e-headed - Run frontend E2E tests in headed browser"
 	@echo "  frontend-deploy   - Deploy frontend to Namecheap server"
 	@echo "  frontend-clean    - Clean frontend build artifacts"
 	@echo "  clean             - Clean build artifacts and test outputs"
