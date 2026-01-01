@@ -5,7 +5,7 @@ import logging
 import os
 import re
 from time import sleep
-from typing import cast
+from typing import Any, cast
 
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class Crunchtime:
     """"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._driver = initialise_driver(download_location="/tmp")
         self._parameters = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["crunchtime"]
@@ -34,7 +34,7 @@ class Crunchtime:
     """
     """
 
-    def _login(self, store):
+    def _login(self, store: str) -> None:
         driver = self._driver
         driver.implicitly_wait(25)
 
@@ -88,7 +88,7 @@ class Crunchtime:
         ].click()
         return
 
-    def get_inventory_report(self, store, year, month):
+    def get_inventory_report(self, store: str, year: int, month: int) -> None:
         self._login(store)
         driver = self._driver
         driver.get(
@@ -108,10 +108,10 @@ class Crunchtime:
         loop_detection = 0
         while (
             loop_detection < 30
-            and driver.find_element(By.NAME, "endDateCombo").get_attribute("value")[:2]  # type: ignore
+            and driver.find_element(By.NAME, "endDateCombo").get_attribute("value")[:2]
             != str(month).zfill(2)
-            and driver.find_element(By.NAME, "endDateCombo").get_attribute("value")[6:]  # type: ignore
-            != year  # type: ignore
+            and driver.find_element(By.NAME, "endDateCombo").get_attribute("value")[6:]
+            != str(year)
         ):
             ActionChains(driver).move_to_element(element).click().send_keys(
                 Keys.ARROW_DOWN
@@ -125,7 +125,7 @@ class Crunchtime:
             return
         self._export(driver, False)
 
-    def get_gl_report(self, store):
+    def get_gl_report(self, store: str) -> None:
         self._login(store)
         driver = self._driver
         driver.get(
@@ -134,7 +134,7 @@ class Crunchtime:
         sleep(20)
         self._export(driver, True)
 
-    def _export(self, driver, export_combo):
+    def _export(self, driver: Any, export_combo: bool) -> None:
         elem = driver.find_element(
             By.CSS_SELECTOR, "[ces-selenium-id='toolbar_filtersBar']"
         ).find_element(By.CSS_SELECTOR, "[ces-selenium-id='button']")
@@ -169,7 +169,9 @@ class Crunchtime:
         element.find_element(By.ID, element_id).send_keys(Keys.ENTER)
         sleep(5)
 
-    def process_inventory_report(self, stores, year, month):
+    def process_inventory_report(
+        self, stores: list[str], year: int, month: int
+    ) -> None:
         for store in stores:
             self.get_inventory_report(store, year, month)
             filenames = glob.glob("/tmp/ActualVSTheoretical_LocationDetails_*.csv")
@@ -184,8 +186,8 @@ class Crunchtime:
                         header[2], header[0]
                     )
                 )
-                items = []
-                total = 0
+                items: list[list[Any]] = []
+                total = ""
                 for row in inventory_reader:
                     if row[0] == "Total Cost of Goods Sold":
                         total = row[2]
@@ -208,7 +210,7 @@ class Crunchtime:
                 qb.sync_inventory(year, month, items, notes_header, total, store)
             os.remove(filename)
 
-    def process_gl_report(self, stores):
+    def process_gl_report(self, stores: list[str]) -> None:
         for store in stores:
             self.get_gl_report(store)
             filenames = glob.glob("/tmp/PurchasesByGL_LocationDetails_*.csv")
@@ -227,9 +229,9 @@ class Crunchtime:
                     )
                 )
                 next(gl_reader)  # skip header line
-                items = []
+                items: list[list[Any]] = []
                 vendor = None
-                invoice_num = 0
+                invoice_num = ""
                 invoice_date = None
                 notes = ""
                 for row in gl_reader:

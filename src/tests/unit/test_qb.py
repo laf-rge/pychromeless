@@ -5,7 +5,7 @@ from qb import calculate_bill_splits
 
 
 class TestQuickBooks(unittest.TestCase):
-    def test_equal_bill_split(self):
+    def test_equal_bill_split(self) -> None:
         """Test splitting a bill equally between 5 locations."""
         # Test case: $256.36 split over 5 locations
         total = Decimal("256.36")
@@ -37,7 +37,7 @@ class TestQuickBooks(unittest.TestCase):
             splits["20368"][0], Decimal("51.28")
         )  # Last location gets extra penny
 
-    def test_custom_ratio_split(self):
+    def test_custom_ratio_split(self) -> None:
         """Test splitting a bill with custom ratios."""
         total = Decimal("100.00")
         line_amounts = [Decimal("100.00")]
@@ -59,7 +59,7 @@ class TestQuickBooks(unittest.TestCase):
         self.assertEqual(splits["20358"][0], Decimal("30.00"))
         self.assertEqual(splits["20366"][0], Decimal("20.00"))
 
-    def test_multiple_line_items(self):
+    def test_multiple_line_items(self) -> None:
         """Test splitting a bill with multiple line items."""
         total = Decimal("150.00")
         line_amounts = [Decimal("100.00"), Decimal("50.00")]
@@ -79,7 +79,7 @@ class TestQuickBooks(unittest.TestCase):
         for amounts in splits.values():
             self.assertLess(abs(sum(amounts) - Decimal("50.00")), Decimal("0.01"))
 
-    def test_invalid_inputs(self):
+    def test_invalid_inputs(self) -> None:
         """Test error handling for invalid inputs."""
         total = Decimal("100.00")
         line_amounts = [Decimal("100.00")]

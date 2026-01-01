@@ -3,7 +3,7 @@ import json
 import logging
 import re
 from collections import defaultdict
-from typing import cast
+from typing import Any, cast
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class WMCGdrive:
-    def __init__(self):
+    def __init__(self) -> None:
         self._parameters = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["gcp"]
         )
@@ -36,7 +36,7 @@ class WMCGdrive:
         self._public_folder_id = cast(str, self._parameters["public_folder"])
         self._service = build("drive", "v3", credentials=self._credentials)
 
-    def upload(self, filename, content, mime_type):
+    def upload(self, filename: str, content: bytes, mime_type: str) -> None:
         file_metadata = {
             "name": filename,
             "parents": [self._journal_folder_id],
@@ -68,7 +68,9 @@ class WMCGdrive:
         logger.info("Upload Complete!")
         logger.info(request)
 
-    def retrieve_all_files(self, filename_to_search, folder_id=None):
+    def retrieve_all_files(
+        self, filename_to_search: str, folder_id: str | None = None
+    ) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
         results = []
         if folder_id is None:
             folder_id = self._journal_folder_id
@@ -91,7 +93,7 @@ class WMCGdrive:
 
         return results, None
 
-    def get_employee_folder_ids(self):
+    def get_employee_folder_ids(self) -> dict[str, str]:
         employee_folder_ids = {}
         page_token = None
 
@@ -124,7 +126,9 @@ class WMCGdrive:
 
         return employee_folder_ids
 
-    def get_employee_food_handler_cards(self):
+    def get_employee_food_handler_cards(
+        self,
+    ) -> dict[str, list[dict[str, str]]]:
         employee_folder_ids = self.get_employee_folder_ids()
         food_handler_cards = defaultdict(list)
 
@@ -189,7 +193,9 @@ class WMCGdrive:
 
         return food_handler_cards
 
-    def _paginated_file_list(self, query_params):
+    def _paginated_file_list(
+        self, query_params: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         results = []
         page_token = None
 
@@ -284,7 +290,7 @@ class WMCGdrive:
 
         return store_pdf_ids
 
-    def get_public_share_links(self, file_ids):
+    def get_public_share_links(self, file_ids: dict[str, str]) -> dict[str, str]:
         share_links = {}
         for store_number, file_id in file_ids.items():
             try:

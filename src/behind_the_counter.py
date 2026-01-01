@@ -12,7 +12,7 @@ from ssm_parameter_store import SSMParameterStore
 
 
 class BehindTheCounter:
-    def __init__(self):
+    def __init__(self) -> None:
         self.url = "https://franchisee.jerseymikes.com/"
         self._parameters = cast(
             Dict[str, str], SSMParameterStore(prefix="/prod")["btc"]
@@ -22,7 +22,7 @@ class BehindTheCounter:
         self.driver: Optional[webdriver.Chrome] = None
         self.store_id = "20407"  # Store ID from the export URL
 
-    def setup_driver(self):
+    def setup_driver(self) -> None:
         """Setup Chrome driver with necessary options"""
         chrome_options = webdriver.ChromeOptions()
         # Add options for headless mode if needed
@@ -46,7 +46,7 @@ class BehindTheCounter:
         self.driver = webdriver.Chrome(options=chrome_options)
         self.driver.implicitly_wait(10)
 
-    def login(self):
+    def login(self) -> bool:
         """Login to the website"""
         if not self.driver:
             raise RuntimeError("Driver not initialized. Call setup_driver() first.")
@@ -81,7 +81,7 @@ class BehindTheCounter:
             print(f"Login failed: {str(e)}")
             return False
 
-    def download_csv(self):
+    def download_csv(self) -> bool:
         """Navigate to export page and download CSV"""
         if not self.driver:
             raise RuntimeError("Driver not initialized. Call setup_driver() first.")
@@ -113,7 +113,7 @@ class BehindTheCounter:
             print(f"CSV download failed: {str(e)}")
             return False
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Close the browser and cleanup"""
         if self.driver:
             self.driver.quit()

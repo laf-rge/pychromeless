@@ -1,7 +1,7 @@
 import datetime
 import logging
 from time import sleep
-from typing import cast
+from typing import Any, cast
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 driver = initialise_driver()
 
 
-def fdms_reconcile():
+def fdms_reconcile() -> None:
     driver.switch_to.window(driver.window_handles[0])
 
     # Get the scrollable container - the div inside mainTableContainer
@@ -23,7 +23,7 @@ def fdms_reconcile():
     )
 
     # Create a dictionary to store amounts and their corresponding rows
-    amount_rows = {}
+    amount_rows: dict[str, list[Any]] = {}
 
     # Keep track of processed rows to avoid duplicates
     processed_rows = set()

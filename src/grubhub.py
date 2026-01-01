@@ -4,7 +4,7 @@ import logging
 import re
 from decimal import Decimal
 from time import sleep
-from typing import cast
+from typing import Any, cast
 
 from selenium.common.exceptions import (
     ElementNotInteractableException,
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class Grubhub:
     """"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._parameters = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["grubhub"]
         )
@@ -32,7 +32,7 @@ class Grubhub:
     """
     """
 
-    def _login(self):
+    def _login(self) -> None:
         self._driver = initialise_driver()
         driver = self._driver
         # driver.implicitly_wait(25)
@@ -52,7 +52,11 @@ class Grubhub:
         sleep(4)
         return
 
-    def get_payments(self, start_date=None, end_date=None):
+    def get_payments(
+        self,
+        start_date: datetime.date | None = None,
+        end_date: datetime.date | None = None,
+    ) -> list[list[Any]]:
         if isinstance(start_date, type(None)):
             start_date = datetime.date.today() - datetime.timedelta(
                 days=(datetime.date.today().weekday() + 7)
@@ -91,7 +95,7 @@ class Grubhub:
                 logger.warning("Payment period dropdowns not found on page.")
             except WebDriverException as e:
                 logger.exception(f"WebDriver error during payment scraping: {e}")
-                return
+                return []
 
             sleep(15)
 
@@ -175,12 +179,15 @@ class Grubhub:
                     pass
             raise e
 
-    def convert_num(self, number):
+    def convert_num(self, number: str) -> str:
         return number.replace("$", "")
 
     def get_payments_from_csv(
-        self, filename: str, start_date=None, end_date=None
-    ) -> list:
+        self,
+        filename: str,
+        start_date: datetime.date | None = None,
+        end_date: datetime.date | None = None,
+    ) -> list[list[Any]]:
         """Parse Grubhub deposit CSV export and return payments in same format as get_payments.
 
         Args:
@@ -202,7 +209,7 @@ class Grubhub:
             )
 
         # Helper function to parse numeric values, handling "n/a" and empty strings
-        def parse_decimal(value):
+        def parse_decimal(value: Any) -> Decimal:
             if value in ("n/a", "", None):
                 return Decimal("0")
             try:

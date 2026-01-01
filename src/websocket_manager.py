@@ -41,7 +41,7 @@ class WebSocketManager:
     table: Any  # DynamoDB Table type for connections
     task_states_table: Any  # DynamoDB Table type for task states
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.apigateway = cast(
             ApiGatewayManagementApiClient,
             boto3.client(
@@ -89,18 +89,19 @@ class WebSocketManager:
             standardized_result = self._standardize_result_format(result, status)
 
         # Construct the message to match API format
-        message = {
+        payload: Dict[str, Any] = {
+            "task_id": task_id,
+            "operation": operation,
+            "status": status,
+            "progress": progress,
+            "result": standardized_result,
+            "error": error,
+            "created_at": current_time,
+            "updated_at": current_time,
+        }
+        message: Dict[str, Any] = {
             "type": "task_status",
-            "payload": {
-                "task_id": task_id,
-                "operation": operation,
-                "status": status,
-                "progress": progress,
-                "result": standardized_result,
-                "error": error,
-                "created_at": current_time,
-                "updated_at": current_time,
-            },
+            "payload": payload,
         }
 
         # Persist task state to DynamoDB
@@ -134,7 +135,7 @@ class WebSocketManager:
             logger.error(f"Failed to persist task {task_id} to DynamoDB: {e}")
 
         # Update message payload with correct created_at
-        message["payload"]["created_at"] = created_at
+        payload["created_at"] = created_at
 
         # Get all active connections
         response = self.table.scan()
@@ -361,10 +362,11 @@ class TaskManager:
 
         self._broadcast_status(task)
 
-    def get_task_status(self, task_id: str) -> Optional[Dict]:
+    def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
         """Get current task status"""
         response = self.table.get_item(Key={"task_id": task_id})
-        return response.get("Item")
+        item: Optional[Dict[str, Any]] = response.get("Item")
+        return item
 
     def _broadcast_status(self, task: Dict) -> None:
         """Broadcast task status to all connected clients"""

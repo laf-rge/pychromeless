@@ -1,3 +1,5 @@
+from typing import Any
+
 from _typeshed import Incomplete
 
 from ..client import QuickBooks as QuickBooks
@@ -25,11 +27,11 @@ class Attachable(DeleteMixin, QuickbooksManagedObject, QuickbooksTransactionEnti
     ThumbnailFileAccessUri: Incomplete
     ThumbnailTempDownloadUri: Incomplete
     def __init__(self) -> None: ...
-    def to_ref(self): ...
+    def to_ref(self) -> Ref: ...
     Id: Incomplete
     def save(
         self,
         qb: Incomplete | None = None,
         request_id: Incomplete | None = None,
         params: Incomplete | None = None,
-    ): ...
+    ) -> Any: ...

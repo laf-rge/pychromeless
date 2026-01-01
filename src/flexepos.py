@@ -3,7 +3,7 @@ import datetime
 import logging
 from functools import partial
 from time import sleep
-from typing import Optional, cast
+from typing import Any, Optional, cast
 
 from bs4 import BeautifulSoup, Tag
 from selenium.common.exceptions import (
@@ -102,14 +102,14 @@ TAG_IDS = {
 }
 
 
-def onDay(weekdate, weekday):
+def onDay(weekdate: datetime.date, weekday: int) -> datetime.date:
     return weekdate + datetime.timedelta(days=(weekday - weekdate.weekday()) % 7)
 
 
 class Flexepos:
     """"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._parameters = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["flexepos"]
         )
@@ -117,7 +117,7 @@ class Flexepos:
     """
     """
 
-    def _login(self):
+    def _login(self) -> None:
         self._driver = initialise_driver()
         driver = self._driver
         driver.set_page_load_timeout(45)
@@ -137,7 +137,9 @@ class Flexepos:
         )
         return
 
-    def getThirdPartyTransactions(self, stores, year, month):
+    def getThirdPartyTransactions(
+        self, stores: list[str], year: int, month: int
+    ) -> dict[str, dict[str, str]]:
         span_dates = [
             datetime.date(year, month, 1),
             datetime.date(year, month, calendar.monthrange(year, month)[1]),
@@ -148,7 +150,7 @@ class Flexepos:
         self._login()
         driver = self._driver
 
-        payment_data = {}
+        payment_data: dict[str, dict[str, str]] = {}
 
         try:
             sleep(2)
@@ -197,7 +199,9 @@ class Flexepos:
     """
     """
 
-    def getOnlinePayments(self, stores, year, month):
+    def getOnlinePayments(
+        self, stores: list[str], year: int, month: int
+    ) -> dict[str, dict[str, str | None]]:
         span_dates = [
             datetime.date(year, month, 1),
             datetime.date(year, month, calendar.monthrange(year, month)[1]),
@@ -208,7 +212,7 @@ class Flexepos:
         self._login()
         driver = self._driver
 
-        payment_data = {}
+        payment_data: dict[str, dict[str, str | None]] = {}
 
         try:
             sleep(2)
@@ -268,10 +272,12 @@ class Flexepos:
     """
     """
 
-    def getDailySales(self, store, tx_date):
+    def getDailySales(
+        self, store: str, tx_date: datetime.date
+    ) -> dict[str, dict[str, Any]]:
         self._login()
         driver = self._driver
-        sales_data = {}
+        sales_data: dict[str, dict[str, Any]] = {}
         tx_date_str = tx_date.strftime("%m%d%Y")
         try:
             logger.info("getting sales", extra={"store": store, "date": tx_date_str})
@@ -534,8 +540,8 @@ class Flexepos:
                 if not online_table or not isinstance(online_table, Tag):
                     raise Exception("Failed to find online table")
                 rows = online_table.find_all("tr")
-                for row in rows[1:-1]:
-                    r = [ele.text.strip() for ele in row.find_all("td")]
+                for table_row in rows[1:-1]:
+                    r = [ele.text.strip() for ele in table_row.find_all("td")]
                     sales_data[store][r[0]] = r[6]
             except Exception:
                 logger.warning(
@@ -556,7 +562,9 @@ class Flexepos:
                 sleep(5)
         return sales_data
 
-    def setDateRange(self, driver, tx_date_str, tx_end_date_str: Optional[str] = None):
+    def setDateRange(
+        self, driver: Any, tx_date_str: str, tx_end_date_str: Optional[str] = None
+    ) -> None:
         sleep(2)
         driver.find_element(By.ID, TAG_IDS["start_date"]).click()
         driver.find_element(By.ID, TAG_IDS["start_date"]).clear()
@@ -570,7 +578,7 @@ class Flexepos:
     """
     """
 
-    def getDailyJournal(self, stores, qdate):
+    def getDailyJournal(self, stores: list[str], qdate: str) -> dict[str, str]:
         drawer_opens = {}
         driver = None
         try:
@@ -617,7 +625,9 @@ class Flexepos:
     """
     """
 
-    def getTips(self, stores, start_date, end_date):
+    def getTips(
+        self, stores: list[str], start_date: datetime.date, end_date: datetime.date
+    ) -> dict[str, list[list[Any]]]:
         rv = {}
         driver = None
         try:
@@ -656,7 +666,9 @@ class Flexepos:
     """
     """
 
-    def getRoyaltyReport(self, group, start_date, end_date):
+    def getRoyaltyReport(
+        self, group: str, start_date: datetime.date, end_date: datetime.date
+    ) -> dict[str, dict[str, str]]:
         royalty_data = {}
         driver = None
         try:
@@ -702,7 +714,7 @@ class Flexepos:
                     pass
                 self._driver.quit()
 
-    def toggleMealDeal(self, stores):
+    def toggleMealDeal(self, stores: list[str]) -> dict[str, bool]:
         driver = None
         rv = {}
         try:
@@ -764,7 +776,9 @@ class Flexepos:
     [ store, txdate, sold, instore, online]
     """
 
-    def getGiftCardACH(self, stores, start_date, end_date):
+    def getGiftCardACH(
+        self, stores: list[str], start_date: datetime.date, end_date: datetime.date
+    ) -> list[list[Any]]:
         if end_date <= start_date:
             raise Exception("End date cannot be before start date.")
         driver = None
@@ -814,7 +828,7 @@ class Flexepos:
                                 "1330",
                                 "sold",
                                 "-"
-                                + giftcardsales.find_all("tr")[4]  # type: ignore
+                                + giftcardsales.find_all("tr")[4]
                                 .find_all("td")[2]
                                 .text.strip(),
                             ]
@@ -828,7 +842,7 @@ class Flexepos:
                             [
                                 "1330",
                                 "instore",
-                                giftcardredeemed.find_all("tr")[1]  # type: ignore
+                                giftcardredeemed.find_all("tr")[1]
                                 .find_all("td")[-3]
                                 .text.strip(),
                             ]
@@ -853,7 +867,9 @@ class Flexepos:
                     pass
                 self._driver.quit()
 
-    def getDailyJournalExport(self, stores, start_date, end_date):
+    def getDailyJournalExport(
+        self, stores: list[str], start_date: datetime.date, end_date: datetime.date
+    ) -> None:
         """Export daily journal entries for stores between start_date and end_date.
 
         Args:

@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from typing import Any
 
 import boto3
 import boto3.resources
@@ -10,7 +11,7 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 
 
-def handle_connect(user_name, table, connection_id):
+def handle_connect(user_name: str, table: Any, connection_id: str) -> int:
     """
     Handles new connections by adding the connection ID and user name to the
     DynamoDB table.
@@ -33,7 +34,7 @@ def handle_connect(user_name, table, connection_id):
     return status_code
 
 
-def handle_disconnect(table, connection_id):
+def handle_disconnect(table: Any, connection_id: str) -> int:
     """
     Handles disconnections by removing the connection record from the DynamoDB table.
 
@@ -52,7 +53,12 @@ def handle_disconnect(table, connection_id):
     return status_code
 
 
-def handle_message(table, connection_id, event_body, apig_management_client):
+def handle_message(
+    table: Any,
+    connection_id: str,
+    event_body: dict[str, Any],
+    apig_management_client: Any,
+) -> int:
     """
     Handles messages sent by a participant in the chat. Looks up all connections
     currently tracked in the DynamoDB table, and uses the API Gateway Management API
@@ -114,7 +120,7 @@ def handle_message(table, connection_id, event_body, apig_management_client):
     return status_code
 
 
-def lambda_handler(event, context):
+def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     An AWS Lambda handler that receives events from an API Gateway websocket API
     and dispatches them to various handler functions.

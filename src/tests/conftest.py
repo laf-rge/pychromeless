@@ -9,7 +9,7 @@ import os
 import sys
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Dict
+from typing import Any, Dict, Generator, List
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
 @pytest.fixture
-def mock_aws_credentials():
+def mock_aws_credentials() -> Generator[None, None, None]:
     """Mock AWS credentials to avoid actual AWS calls during testing."""
     with patch.dict(
         os.environ,
@@ -35,7 +35,7 @@ def mock_aws_credentials():
 
 
 @pytest.fixture
-def mock_ssm_parameter_store():
+def mock_ssm_parameter_store() -> Generator[MagicMock, None, None]:
     """Mock SSM Parameter Store to avoid AWS dependencies."""
     with patch("ssm_parameter_store.SSMParameterStore") as mock_ssm_class:
         mock_ssm_instance = MagicMock()
@@ -58,7 +58,7 @@ def mock_ssm_parameter_store():
 
 
 @pytest.fixture
-def mock_boto3_clients():
+def mock_boto3_clients() -> Generator[Dict[str, Any], None, None]:
     """Mock all boto3 clients used in the application."""
     with patch("boto3.client") as mock_client, patch("boto3.resource") as mock_resource:
         # Mock SES client
@@ -70,12 +70,12 @@ def mock_boto3_clients():
         mock_table = Mock()
         mock_dynamodb.Table.return_value = mock_table
 
-        def client_side_effect(service_name, **kwargs):
+        def client_side_effect(service_name: str, **kwargs: Any) -> Mock:
             if service_name == "ses":
                 return mock_ses
             return Mock()
 
-        def resource_side_effect(service_name, **kwargs):
+        def resource_side_effect(service_name: str, **kwargs: Any) -> Mock:
             if service_name == "dynamodb":
                 return mock_dynamodb
             return Mock()
@@ -87,13 +87,13 @@ def mock_boto3_clients():
 
 
 @pytest.fixture
-def sample_lambda_event():
+def sample_lambda_event() -> Dict[str, str]:
     """Sample Lambda event for testing handlers."""
     return {"year": "2024", "month": "01", "day": "15"}
 
 
 @pytest.fixture
-def sample_store_data():
+def sample_store_data() -> Dict[str, Dict[str, Any]]:
     """Sample store configuration data."""
     return {
         "20400": {"name": "Store 20400", "open_date": date(2024, 1, 31)},
@@ -102,7 +102,7 @@ def sample_store_data():
 
 
 @pytest.fixture
-def sample_tips_data():
+def sample_tips_data() -> List[Dict[str, Any]]:
     """Sample tips data for testing."""
     return [
         {
@@ -127,7 +127,7 @@ def sample_tips_data():
 
 
 @pytest.fixture
-def sample_bill_data():
+def sample_bill_data() -> Dict[str, Any]:
     """Sample QuickBooks bill data for testing."""
     return {
         "total_amount": Decimal("256.36"),
@@ -139,7 +139,7 @@ def sample_bill_data():
 
 
 @pytest.fixture
-def mock_webdriver():
+def mock_webdriver() -> Generator[Mock, None, None]:
     """Mock Selenium WebDriver to avoid actual browser automation."""
     with patch("selenium.webdriver.Chrome") as mock_chrome:
         mock_driver = Mock()
@@ -155,7 +155,7 @@ def mock_webdriver():
 
 
 @pytest.fixture
-def mock_external_apis():
+def mock_external_apis() -> Generator[Dict[str, Any], None, None]:
     """Mock external API calls (requests, etc.)."""
     with patch("requests.get") as mock_get, patch("requests.post") as mock_post:
         # Default successful responses
@@ -171,7 +171,7 @@ def mock_external_apis():
 
 
 @pytest.fixture
-def freeze_time():
+def freeze_time() -> Generator[datetime, None, None]:
     """Fixture to freeze time for testing date/time dependent code."""
     from freezegun import freeze_time as _freeze_time
 
@@ -180,7 +180,7 @@ def freeze_time():
 
 
 @pytest.fixture(autouse=True)
-def setup_test_environment():
+def setup_test_environment() -> Generator[None, None, None]:
     """Auto-use fixture to set up test environment variables."""
     test_env_vars = {
         "CONNECTIONS_TABLE": "test-connections-table",
@@ -193,10 +193,10 @@ def setup_test_environment():
 
 
 # Pytest markers for different test categories
-pytest_plugins = []
+pytest_plugins: List[str] = []
 
 
-def pytest_configure(config):
+def pytest_configure(config: Any) -> None:
     """Configure pytest markers."""
     config.addinivalue_line(
         "markers", "unit: Fast unit tests with no external dependencies"
@@ -212,7 +212,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "auth: Authentication and authorization tests")
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(config: Any, items: List[Any]) -> None:
     """Automatically mark tests based on their location."""
     for item in items:
         # Add markers based on test file location

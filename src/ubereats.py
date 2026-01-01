@@ -2,7 +2,7 @@ import calendar
 import datetime
 import logging
 from time import sleep
-from typing import cast
+from typing import Any, cast
 
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
@@ -38,12 +38,12 @@ class UberEats:
             23: "rd",
             31: "st",
         }
-        self._driver = None
+        self._driver: Any = None
 
     """
     """
 
-    def _login(self):
+    def _login(self) -> None:
         self._driver = initialise_driver()
         driver = self._driver
         driver.implicitly_wait(25)
@@ -69,9 +69,9 @@ class UberEats:
         input("pause...")
         return
 
-    def __get_month_year(self):
+    def __get_month_year(self) -> tuple[int, int]:
         if not self._driver:
-            raise
+            raise RuntimeError("Driver not initialized")
         driver = self._driver
         sleep(2)
         month = driver.find_element(
@@ -86,15 +86,15 @@ class UberEats:
         year = int(year)
         return month, year
 
-    def _click_date(self, qdate):
+    def _click_date(self, qdate: datetime.date) -> None:
         if not self._driver:
-            raise
+            raise RuntimeError("Driver not initialized")
         driver = self._driver
         ActionChains(driver).send_keys(Keys.RETURN).perform()
         start_date = (
             driver.find_element(By.XPATH, '//input[@aria-label="Select a date range."]')
             .get_attribute("value")
-            .split()[0]  # type: ignore
+            .split()[0]
         )
         driver.find_element(By.XPATH, '//input[@aria-label="Select a date range."]')
         while start_date != str(qdate).replace("-", "/"):
@@ -158,11 +158,18 @@ class UberEats:
             return
         return
 
-    def get_payments(self, stores, start_date, end_date):
-        if isinstance(start_date, type(None)):
+    def get_payments(
+        self,
+        stores: list[str],
+        start_date: datetime.date | None,
+        end_date: datetime.date | None,
+    ) -> list[list[Any]]:
+        if start_date is None:
             start_date = datetime.date.today() - datetime.timedelta(
                 days=(datetime.date.today().weekday() + 14)
             )
+            end_date = datetime.date.today()
+        if end_date is None:
             end_date = datetime.date.today()
         end_date = end_date - datetime.timedelta(days=end_date.weekday())
         results = []
@@ -182,7 +189,9 @@ class UberEats:
                 pass
         return results
 
-    def extract_deposit(self, driver, store, qdate):
+    def extract_deposit(
+        self, driver: Any, store: str, qdate: datetime.date
+    ) -> list[Any]:
         notes = ""
         lines = []
         # see what dates we are examining
@@ -251,7 +260,7 @@ class UberEats:
         )
         return result
 
-    def get_payment(self, store, qdate=None):
+    def get_payment(self, store: str, qdate: datetime.date | None = None) -> list[Any]:
         if isinstance(qdate, type(None)):
             qdate = datetime.date.today() - datetime.timedelta(
                 days=(datetime.date.today().weekday() + 7)
@@ -263,7 +272,7 @@ class UberEats:
         if not self._driver:
             self._login()
         if not self._driver:
-            raise
+            raise RuntimeError("Driver not initialized")
         driver = self._driver
         driver.get(
             "https://restaurant.uber.com/v2/payments?restaurantUUID={}".format(
@@ -284,7 +293,7 @@ class UberEats:
         result = self.extract_deposit(driver, store, qdate)
         return result
 
-    def convert_num(self, number):
+    def convert_num(self, number: str) -> str:
         if ")" in number:
             return "-" + number[2:-1]
         else:

@@ -34,7 +34,10 @@ setlocale(LC_NUMERIC, "")
 class Tips:
     """ """
 
-    def __init__(self):
+    _times: dict[str, Any] | None
+    _shifts: dict[str, Any] | None
+
+    def __init__(self) -> None:
         self._parameters: SSMParameterStore = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["wheniwork"]
         )
@@ -46,6 +49,8 @@ class Tips:
         )
         self._locations: dict[int, Any] = {}
         self._stores: dict[str, Any] = {}
+        self._times = None
+        self._shifts = None
         locations_dict: dict[str, Any] | None = self._a.get("/locations")
         if locations_dict:
             for location in locations_dict["locations"]:
@@ -53,7 +58,9 @@ class Tips:
                 self._stores[location["name"]] = location
         return
 
-    def payperiod_dates(self, pay_period, year_month_date):
+    def payperiod_dates(
+        self, pay_period: int, year_month_date: datetime.date
+    ) -> list[datetime.date]:
         if pay_period == 0:
             span_dates = [
                 datetime.date(year_month_date.year, year_month_date.month, 1),
@@ -85,9 +92,11 @@ class Tips:
             )
         return span_dates
 
-    def getTimes(self, stores, year_month_date, pay_period=0):
+    def getTimes(
+        self, stores: list[str], year_month_date: datetime.date, pay_period: int = 0
+    ) -> dict[str, dict[int, list[Any]]]:
         span_dates = self.payperiod_dates(pay_period, year_month_date)
-        self._times: dict[str, Any] | None = self._a.get(
+        self._times = self._a.get(
             "/times",
             params={
                 "start": span_dates[0].isoformat(),
@@ -102,7 +111,7 @@ class Tips:
             },
         )
 
-        rv = {}
+        rv: dict[str, dict[int, list[Any]]] = {}
         if self._times:
             for store in stores:
                 rv[store] = {}
@@ -118,8 +127,10 @@ class Tips:
 
         return rv
 
-    def attendanceReport(self, stores, start_date, end_date):
-        self._shifts: dict[str, Any] | None = self._a.get(
+    def attendanceReport(
+        self, stores: list[str], start_date: datetime.date, end_date: datetime.date
+    ) -> list[list[str]]:
+        self._shifts = self._a.get(
             "/shifts",
             params={
                 "start": start_date.isoformat(),
@@ -134,7 +145,7 @@ class Tips:
             },
         )
 
-        self._times: dict[str, Any] | None = self._a.get(
+        self._times = self._a.get(
             "/times",
             params={
                 "start": start_date.isoformat(),
@@ -149,7 +160,7 @@ class Tips:
             },
         )
 
-        text_csv = []
+        text_csv: list[list[str]] = []
 
         text_csv.append(
             "Store,Name,Shift Time,Clock-in Time,Late/Early,Type".split(",")
@@ -158,7 +169,7 @@ class Tips:
         if self._times and self._shifts:
             shift_lookup = {entry["id"]: entry for entry in self._shifts["shifts"]}
             users_lookup = {entry["id"]: entry for entry in self._shifts["users"]}
-            done = defaultdict(list)
+            done: defaultdict[str, list[Any]] = defaultdict(list)
 
             for time in self._times["times"]:
                 if time["shift_id"] in shift_lookup:
@@ -209,7 +220,9 @@ class Tips:
                 )
         return text_csv
 
-    def emailTips(self, stores, tip_date, pay_period=0):
+    def emailTips(
+        self, stores: list[str], tip_date: datetime.date, pay_period: int = 0
+    ) -> None:
         span_dates = self.payperiod_dates(pay_period, tip_date)
         parameters = cast(SSMParameterStore, SSMParameterStore(prefix="/prod")["email"])
         receiver_email = ["info@wagonermanagement.com"]
@@ -274,11 +287,13 @@ class Tips:
         msg["Subject"] = subject
         msg["From"] = from_email
         msg["To"] = ", ".join(receiver_email)
-        part = MIMEText("Attached is the spreadsheet\n\n")
-        msg.attach(part)
-        part = MIMEApplication(output.getvalue())
-        part.add_header("Content-Disposition", "attachment", filename="tips.xlsx")
-        msg.attach(part)
+        text_part = MIMEText("Attached is the spreadsheet\n\n")
+        msg.attach(text_part)
+        attachment_part = MIMEApplication(output.getvalue())
+        attachment_part.add_header(
+            "Content-Disposition", "attachment", filename="tips.xlsx"
+        )
+        msg.attach(attachment_part)
 
         client = boto3.client("ses")
         client.send_raw_email(
@@ -307,7 +322,9 @@ class Tips:
         else:
             return []
 
-    def getMealPeriodViolations(self, stores, year_month_date, pay_period=0):
+    def getMealPeriodViolations(
+        self, stores: list[str], year_month_date: datetime.date, pay_period: int = 0
+    ) -> list[dict[str, Any]]:
         times = self.getTimes(stores, year_month_date, pay_period)
         mpvs = []
         for store in stores:
@@ -359,7 +376,9 @@ class Tips:
 
         return sorted(mpvs, key=itemgetter("last_name", "first_name"))
 
-    def exportMealPeriodViolations(self, stores, year_month_date, pay_period=0):
+    def exportMealPeriodViolations(
+        self, stores: list[str], year_month_date: datetime.date, pay_period: int = 0
+    ) -> str:
         text_csv = []
         mpvs = self.getMealPeriodViolations(stores, year_month_date, pay_period)
         grouped = defaultdict(list)
@@ -382,7 +401,7 @@ class Tips:
             text_csv.append(t)
         return "\n".join(text_csv)
 
-    def exportTipsTransform(self, tips_stream):
+    def exportTipsTransform(self, tips_stream: BytesIO) -> str:
         text_csv = []
         workbook = openpyxl.load_workbook(tips_stream, data_only=True)
         text_csv.append("last_name,first_name,title,paycheck_tips")
@@ -417,4 +436,5 @@ class Tips:
         if user_response is None:
             return None
         else:
-            return user_response["user"]
+            result: dict[str, Any] = user_response["user"]
+            return result

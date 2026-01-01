@@ -25,7 +25,7 @@ if "AWS_LAMBDA_FUNCTION_NAME" not in sys.modules:
 logger = logging.getLogger(__name__)
 
 
-def main():
+def main() -> int:
     """Main function to import Grubhub deposits from CSV."""
     parser = argparse.ArgumentParser(
         description="Import Grubhub deposits from CSV export into QuickBooks"

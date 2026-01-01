@@ -76,7 +76,10 @@ class SSMParameterStore:
         abs_key = f"{self._prefix}{name}"
         if name not in self._keys:
             if "default" in kwargs:
-                return kwargs["default"]
+                default_val: Union[str, List[str], SSMParameterStore] = kwargs[
+                    "default"
+                ]
+                return default_val
 
             raise KeyError(name)
         elif self._keys[name]["type"] == "prefix":
@@ -87,7 +90,8 @@ class SSMParameterStore:
                 store._keys = self._keys[name]["children"]
                 self._substores[abs_key] = store
 
-            return self._substores[abs_key]
+            substore: SSMParameterStore = self._substores[abs_key]
+            return substore
         else:
             value = self._get_value(name, abs_key)
             if value is None:
@@ -185,7 +189,8 @@ class SSMParameterStore:
             else:
                 entry["expire"] = None
 
-        return entry["value"]
+        result: Union[str, List[str]] = entry["value"]
+        return result
 
     def __contains__(self, name: str) -> bool:
         """

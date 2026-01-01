@@ -94,7 +94,7 @@ def create_response(
     }
 
 
-def third_party_deposit_handler(*args, **kwargs) -> dict:
+def third_party_deposit_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     """
     Process third-party deposits from various services.
 
@@ -140,7 +140,7 @@ def third_party_deposit_handler(*args, **kwargs) -> dict:
     return create_response(200, {"message": "Success"})
 
 
-def invoice_sync_handler(*args, **kwargs) -> dict:
+def invoice_sync_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     """
     Process invoice and inventory data from Crunchtime into Quickbooks.
 
@@ -196,7 +196,7 @@ def invoice_sync_handler(*args, **kwargs) -> dict:
         return create_response(500, {"message": "Error processing invoice sync"})
 
 
-def daily_sales_handler(*args, **kwargs) -> dict:
+def daily_sales_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     """
     Process daily sales data and create related financial entries.
 
@@ -273,9 +273,9 @@ def daily_sales_handler(*args, **kwargs) -> dict:
             internal_function_name = None
 
         success = False
-        stores = []
-        all_journal_data = {}
-        failed_stores = []
+        stores: list[str] = []
+        all_journal_data: dict[str, dict[str, Any]] = {}
+        failed_stores: list[str] = []
 
         for txdate in txdates:
             stores = store_config.get_active_stores(txdate)
@@ -303,7 +303,9 @@ def daily_sales_handler(*args, **kwargs) -> dict:
             # pylint: disable=import-outside-toplevel
             from concurrent.futures import ThreadPoolExecutor, as_completed
 
-            def invoke_store_lambda(store, txdate=txdate):
+            def invoke_store_lambda(
+                store: str, txdate: date = txdate
+            ) -> tuple[str, dict[str, Any]]:
                 """Helper function for AWS Lambda invocation"""
                 try:
                     assert lambda_client is not None  # Type hint for linter
@@ -720,7 +722,7 @@ def daily_sales_handler(*args, **kwargs) -> dict:
         return create_response(500, {"message": str(e)}, request_id=request_id)
 
 
-def online_cc_fee(*args, **kwargs) -> dict:
+def online_cc_fee(*args: Any, **kwargs: Any) -> dict[str, Any]:
     txdate = date.today() - timedelta(days=1)
 
     dj = Flexepos()
@@ -731,7 +733,7 @@ def online_cc_fee(*args, **kwargs) -> dict:
     return create_response(200, {"message": "Success"})
 
 
-def daily_journal_handler(*args, **kwargs) -> dict:
+def daily_journal_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     """
     Generate and email daily journal reports.
 
@@ -803,7 +805,7 @@ def daily_journal_handler(*args, **kwargs) -> dict:
     return create_response(200, response)
 
 
-def email_tips_handler(*args, **kwargs) -> dict:
+def email_tips_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     year = date.today().year
     month = date.today().month
     pay_period = 0
@@ -821,7 +823,7 @@ def email_tips_handler(*args, **kwargs) -> dict:
     return create_response(200, {"message": "Email Sent!"})
 
 
-def update_food_handler_pdfs_handler(*args, **kwargs) -> dict:
+def update_food_handler_pdfs_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     """
     Asynchronously update the combined food handler PDFs for each store.
 
@@ -842,7 +844,7 @@ def update_food_handler_pdfs_handler(*args, **kwargs) -> dict:
         return create_response(500, {"message": "Error starting PDF update"})
 
 
-def get_food_handler_links_handler(*args, **kwargs) -> dict:
+def get_food_handler_links_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     """
     Get current public links to combined food handler PDFs for each store.
 
@@ -862,7 +864,7 @@ def get_food_handler_links_handler(*args, **kwargs) -> dict:
         return create_response(500, {"message": "Error getting food handler PDF links"})
 
 
-def split_bill_handler(*args, **kwargs) -> dict:
+def split_bill_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     """
     Split a QuickBooks bill between multiple locations.
 
@@ -1110,20 +1112,22 @@ def process_store_sales_internal_handler(
 # =============================================================================
 
 
-def transform_tips_handler(*args, **kwargs) -> dict:
+def transform_tips_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     """Wrapper for tips_processing.transform_tips_handler (required by Terraform)"""
     # pylint: disable=import-outside-toplevel
     from tips_processing import transform_tips_handler as _impl
 
-    return _impl(*args, **kwargs)
+    result: dict[str, Any] = _impl(*args, **kwargs)
+    return result
 
 
-def get_mpvs_handler(*args, **kwargs) -> dict:
+def get_mpvs_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     """Wrapper for tips_processing.get_mpvs_handler (required by Terraform)"""
     # pylint: disable=import-outside-toplevel
     from tips_processing import get_mpvs_handler as _impl
 
-    return _impl(*args, **kwargs)
+    result: dict[str, Any] = _impl(*args, **kwargs)
+    return result
 
 
 def connect_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -1131,7 +1135,8 @@ def connect_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     # pylint: disable=import-outside-toplevel
     from websocket_handlers import connect_handler as _impl
 
-    return _impl(event, context)
+    result: dict[str, Any] = _impl(event, context)
+    return result
 
 
 def disconnect_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -1139,7 +1144,8 @@ def disconnect_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     # pylint: disable=import-outside-toplevel
     from websocket_handlers import disconnect_handler as _impl
 
-    return _impl(event, context)
+    result: dict[str, Any] = _impl(event, context)
+    return result
 
 
 def default_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -1147,7 +1153,8 @@ def default_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     # pylint: disable=import-outside-toplevel
     from websocket_handlers import default_handler as _impl
 
-    return _impl(event, context)
+    result: dict[str, Any] = _impl(event, context)
+    return result
 
 
 def cleanup_connections_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -1155,4 +1162,5 @@ def cleanup_connections_handler(event: dict[str, Any], context: Any) -> dict[str
     # pylint: disable=import-outside-toplevel
     from websocket_handlers import cleanup_connections_handler as _impl
 
-    return _impl(event, context)
+    result: dict[str, Any] = _impl(event, context)
+    return result

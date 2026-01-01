@@ -147,7 +147,7 @@ def get_task_status_handler(event: Dict[str, Any], context: Any) -> Dict[str, An
 
 def create_response(
     status_code: int,
-    body: Dict[str, Any],
+    body: Any,
     request_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Create a standardized API response
@@ -160,18 +160,20 @@ def create_response(
     Returns:
         Dict containing the response
     """
-    response = {
-        "statusCode": status_code,
-        "headers": {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-            "Access-Control-Allow-Methods": "OPTIONS,GET,POST,PUT,DELETE",
-        },
-        "body": json.dumps(body),
+    headers: Dict[str, str] = {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+        "Access-Control-Allow-Methods": "OPTIONS,GET,POST,PUT,DELETE",
     }
 
     if request_id:
-        response["headers"]["X-Request-ID"] = request_id
+        headers["X-Request-ID"] = request_id
+
+    response: Dict[str, Any] = {
+        "statusCode": status_code,
+        "headers": headers,
+        "body": json.dumps(body),
+    }
 
     return response

@@ -44,4 +44,5 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     authResponse["context"] = context
 
-    return authResponse
+    result: Dict[str, Any] = authResponse
+    return result

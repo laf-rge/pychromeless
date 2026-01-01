@@ -2,7 +2,7 @@ import datetime
 import json
 import logging
 from time import sleep
-from typing import cast
+from typing import Any, cast
 
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 class EZCater:
-    def __init__(self):
+    def __init__(self) -> None:
         self._parameters = cast(
             SSMParameterStore, SSMParameterStore(prefix="/prod")["ezcater"]
         )
 
-    def _login(self):
+    def _login(self) -> None:
         self._driver = initialise_driver()
         driver = self._driver
         driver.implicitly_wait(5)
@@ -44,9 +44,11 @@ class EZCater:
 
         WebDriverWait(driver, 45)
 
-    def get_payments(self, stores, start_date, end_date):
+    def get_payments(
+        self, stores: list[str], start_date: datetime.date, end_date: datetime.date
+    ) -> list[list[Any]]:
         self._login()
-        results = []
+        results: list[list[Any]] = []
         driver = self._driver
         sleep(5)
 
@@ -179,7 +181,7 @@ class EZCater:
 
         return results
 
-    def extract_deposit(self, data):
+    def extract_deposit(self, data: dict[str, Any]) -> list[Any]:
         notes = str(data)
         lines = []
         deposit_date = datetime.datetime.strptime(data["sentOn"], "%Y-%m-%d").date()

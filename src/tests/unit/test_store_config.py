@@ -11,7 +11,7 @@ from store_config import StoreConfig
 
 
 class TestStoreConfig(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures with mocked SSM to avoid actual AWS calls"""
         # Mock the SSMParameterStore to raise an exception during refresh()
         with patch("store_config.SSMParameterStore") as mock_ssm_class:
@@ -23,7 +23,7 @@ class TestStoreConfig(unittest.TestCase):
 
             self.store_config = StoreConfig()
 
-    def test_get_inventory_processing_month_january_scenarios(self):
+    def test_get_inventory_processing_month_january_scenarios(self) -> None:
         """Test various January scenarios where we should process December of previous year"""
 
         # January 1st (Monday) - should process December 2023
@@ -46,7 +46,7 @@ class TestStoreConfig(unittest.TestCase):
         result = self.store_config.get_inventory_processing_month(date(2024, 1, 10))
         self.assertEqual(result, (2024, 1))
 
-    def test_get_inventory_processing_month_february_scenarios(self):
+    def test_get_inventory_processing_month_february_scenarios(self) -> None:
         """Test February scenarios with different starting day of week"""
 
         # February 1st 2024 (Thursday) - should process January 2024
@@ -65,7 +65,7 @@ class TestStoreConfig(unittest.TestCase):
         result = self.store_config.get_inventory_processing_month(date(2024, 2, 14))
         self.assertEqual(result, (2024, 2))
 
-    def test_get_inventory_processing_month_march_scenarios(self):
+    def test_get_inventory_processing_month_march_scenarios(self) -> None:
         """Test March scenarios where first day is different"""
 
         # March 1st 2024 (Friday) - should process February 2024
@@ -80,7 +80,7 @@ class TestStoreConfig(unittest.TestCase):
         result = self.store_config.get_inventory_processing_month(date(2024, 3, 12))
         self.assertEqual(result, (2024, 3))
 
-    def test_get_inventory_processing_month_edge_cases(self):
+    def test_get_inventory_processing_month_edge_cases(self) -> None:
         """Test edge cases like leap years and months starting on Tuesday"""
 
         # Test a month that starts on Tuesday (May 2024 starts on Wednesday, let's use April 2024)
@@ -101,7 +101,7 @@ class TestStoreConfig(unittest.TestCase):
         result = self.store_config.get_inventory_processing_month(date(2024, 2, 29))
         self.assertEqual(result, (2024, 2))
 
-    def test_get_inventory_processing_month_year_boundary(self):
+    def test_get_inventory_processing_month_year_boundary(self) -> None:
         """Test December to January year boundary"""
 
         # December 1st 2023 - should process November 2023
@@ -112,7 +112,7 @@ class TestStoreConfig(unittest.TestCase):
         result = self.store_config.get_inventory_processing_month(date(2023, 12, 31))
         self.assertEqual(result, (2023, 12))
 
-    def test_get_inventory_processing_month_month_starting_tuesday(self):
+    def test_get_inventory_processing_month_month_starting_tuesday(self) -> None:
         """Test a month that starts on Tuesday (October 2024)"""
 
         # October 1st 2024 (Tuesday) - first Tuesday, should process September 2024
@@ -127,7 +127,7 @@ class TestStoreConfig(unittest.TestCase):
 class TestStoreConfigExistingMethods(unittest.TestCase):
     """Test existing store config methods to ensure we didn't break anything"""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures with mocked SSM to avoid actual AWS calls"""
         # Mock the SSMParameterStore to raise an exception during refresh()
         with patch("store_config.SSMParameterStore") as mock_ssm_class:
@@ -139,7 +139,7 @@ class TestStoreConfigExistingMethods(unittest.TestCase):
 
             self.store_config = StoreConfig()
 
-    def test_get_active_stores(self):
+    def test_get_active_stores(self) -> None:
         """Test that get_active_stores works with the fallback configuration"""
         # Test with a date after both stores opened
         active_stores = self.store_config.get_active_stores(date(2024, 4, 1))
@@ -153,7 +153,7 @@ class TestStoreConfigExistingMethods(unittest.TestCase):
         active_stores = self.store_config.get_active_stores(date(2024, 1, 1))
         self.assertEqual(active_stores, [])
 
-    def test_is_store_active(self):
+    def test_is_store_active(self) -> None:
         """Test is_store_active method"""
         # Test store 20400 (opened 2024-01-31)
         self.assertFalse(self.store_config.is_store_active("20400", date(2024, 1, 30)))
@@ -167,7 +167,7 @@ class TestStoreConfigExistingMethods(unittest.TestCase):
         # Test non-existent store
         self.assertFalse(self.store_config.is_store_active("99999", date(2024, 4, 1)))
 
-    def test_all_stores_property(self):
+    def test_all_stores_property(self) -> None:
         """Test all_stores property returns sorted list"""
         all_stores = self.store_config.all_stores
         self.assertEqual(all_stores, ["20400", "20407"])

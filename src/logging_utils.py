@@ -17,7 +17,7 @@ from typing import Any
 class CustomJsonEncoder(json.JSONEncoder):
     """Custom JSON encoder that handles datetime, date, and Decimal objects."""
 
-    def default(self, o):
+    def default(self, o: Any) -> Any:
         if isinstance(o, (datetime, date)):
             return o.isoformat()
         elif isinstance(o, Decimal):
@@ -27,7 +27,7 @@ class CustomJsonEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def setup_json_logger():
+def setup_json_logger() -> None:
     """Configure the root logger with JSON formatting and syntax highlighting.
 
     Only imports pygments and pythonjsonlogger when needed (local development).
@@ -43,14 +43,15 @@ def setup_json_logger():
         class ColorizedJsonFormatter(JsonFormatter):
             """JSON formatter that adds syntax highlighting to the output."""
 
-            def __init__(self, *args, **kwargs):
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
                 super().__init__(
                     *args, **kwargs, json_default=CustomJsonEncoder().default
                 )
 
             def format(self, record: Any) -> str:
                 json_str = super().format(record)
-                return highlight(json_str, JsonLexer(), TerminalFormatter())
+                result: str = highlight(json_str, JsonLexer(), TerminalFormatter())
+                return result
 
         json_handler = logging.StreamHandler(sys.stdout)
         json_formatter = ColorizedJsonFormatter(

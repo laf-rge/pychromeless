@@ -9,11 +9,11 @@ from tips import Tips
 
 
 class TestTips(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.tips = Tips()
         self.tips._a = Mock()
 
-    def create_test_workbook(self):
+    def create_test_workbook(self) -> BytesIO:
         workbook = Workbook()
         sheet = workbook.active
         if sheet:
@@ -37,7 +37,7 @@ class TestTips(unittest.TestCase):
         bytes_io.seek(0)
         return bytes_io
 
-    def test_exportTipsTransform(self):
+    def test_exportTipsTransform(self) -> None:
         tips_stream = self.create_test_workbook()
         _result = self.tips.exportTipsTransform(tips_stream)  # noqa: F841
 
@@ -50,8 +50,8 @@ class TestTips(unittest.TestCase):
         # TODO: Enable assertion once output format is finalized
         # self.assertEqual(_result, _expected_output)
 
-    def test_getMissingPunches(self):
-        self.tips._a.get.return_value = {  # type:ignore
+    def test_getMissingPunches(self) -> None:
+        self.tips._a.get.return_value = {
             "users": [{"id": 1}, {"id": 2}],
             "times": [{"end_time": None}, {"end_time": "2021-02-20T08:00:00Z"}],
         }

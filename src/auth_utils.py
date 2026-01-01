@@ -41,13 +41,14 @@ class OAuth2TokenValidation:
             rsa_key = self.find_rsa_key(self.jwks, unverified_header)
             public_key = self.rsa_pem_from_jwk(rsa_key)
 
-            return jwt.decode(
+            result: Dict[str, Any] = jwt.decode(
                 token,
                 public_key,
                 algorithms=["RS256"],
                 audience=self.audience,
                 issuer=self.issuer_url,
             )
+            return result
         except jwt.ExpiredSignatureError:
             raise Exception("Token has expired")
         except jwt.InvalidTokenError:
@@ -204,17 +205,14 @@ class AuthPolicy:
         if not self.allowMethods and not self.denyMethods:
             raise NameError("No statements defined for the policy")
 
-        policy = {
-            "principalId": self.principalId,
-            "policyDocument": {"Version": "2012-10-17", "Statement": []},
-        }
+        statements: List[Dict[str, Any]] = []
+        statements.extend(self._getStatementForEffect("Allow", self.allowMethods))
+        statements.extend(self._getStatementForEffect("Deny", self.denyMethods))
 
-        policy["policyDocument"]["Statement"].extend(
-            self._getStatementForEffect("Allow", self.allowMethods)
-        )
-        policy["policyDocument"]["Statement"].extend(
-            self._getStatementForEffect("Deny", self.denyMethods)
-        )
+        policy: Dict[str, Any] = {
+            "principalId": self.principalId,
+            "policyDocument": {"Version": "2012-10-17", "Statement": statements},
+        }
 
         return policy
 
@@ -253,4 +251,5 @@ def extract_token(event: Dict[str, Any], source: str) -> str:
     if not auth_param.startswith("Bearer "):
         raise Exception("Invalid Authorization format. Must start with 'Bearer '")
 
-    return auth_param[7:]  # Remove "Bearer " prefix
+    token: str = auth_param[7:]  # Remove "Bearer " prefix
+    return token

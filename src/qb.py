@@ -8,6 +8,7 @@ from collections import OrderedDict
 from decimal import Decimal
 from functools import reduce
 from locale import LC_NUMERIC, atof, setlocale
+from typing import Any, cast
 
 from boto3.session import Session
 from botocore.exceptions import ClientError
@@ -136,12 +137,12 @@ inv_account_ref = None
 vendor = None
 
 
-def lambda_handler(event, context):
+def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     refresh_session()
     return {"statusCode": 200, "body": get_secret()}
 
 
-def update_royalty(year, month, payment_data):
+def update_royalty(year: int, month: int, payment_data: dict[str, Any]) -> None:
     refresh_session()
 
     supplier = Vendor.where("DisplayName like 'A Sub Above'", qb=CLIENT)[0]
@@ -178,7 +179,9 @@ def update_royalty(year, month, payment_data):
     return
 
 
-def create_daily_sales(txdate, daily_reports, overwrite=True):
+def create_daily_sales(
+    txdate: datetime.date, daily_reports: dict[str, Any], overwrite: bool = True
+) -> None:
     refresh_session()
 
     pattern = re.compile(r"\d+\.\d\d")
@@ -311,7 +314,7 @@ def create_daily_sales(txdate, daily_reports, overwrite=True):
     return
 
 
-def enter_online_cc_fee(year, month, payment_data):
+def enter_online_cc_fee(year: int, month: int, payment_data: dict[str, Any]) -> None:
     refresh_session()
 
     supplier = Vendor.where("DisplayName like 'Jersey Mike%'", qb=CLIENT)[0]
@@ -329,7 +332,13 @@ def enter_online_cc_fee(year, month, payment_data):
     return
 
 
-def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=None):
+def sync_third_party_deposit(
+    supplier: Any,
+    deposit_date: datetime.date,
+    notes: str,
+    lines: list[list[Any]],
+    department: str | None = None,
+) -> None:
     refresh_session()
 
     store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
@@ -381,7 +390,14 @@ def sync_third_party_deposit(supplier, deposit_date, notes, lines, department=No
         logger.exception("Failed to save deposit", extra={"deposit": deposit.to_json()})
 
 
-def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None):
+def sync_bill(
+    supplier: Any,
+    invoice_num: str,
+    invoice_date: datetime.date,
+    notes: str,
+    lines: list[list[Any]],
+    department: str | None = None,
+) -> None:
     refresh_session()
 
     store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
@@ -440,7 +456,9 @@ def sync_bill(supplier, invoice_num, invoice_date, notes, lines, department=None
         logger.exception("Failed to save bill", extra={"bill": bill.to_json()})
 
 
-def sync_third_party_transactions(year, month, payment_data):
+def sync_third_party_transactions(
+    year: int, month: int, payment_data: dict[str, Any]
+) -> None:
     refresh_session()
 
     store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
@@ -495,7 +513,14 @@ def sync_third_party_transactions(year, month, payment_data):
             )
 
 
-def sync_inventory(year, month, lines, notes, total, department):
+def sync_inventory(
+    year: int,
+    month: int,
+    lines: list[list[Any]],
+    notes: str,
+    total: str,
+    department: str,
+) -> None:
     refresh_session()
 
     store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
@@ -562,7 +587,7 @@ def sync_inventory(year, month, lines, notes, total, department):
         )
 
 
-def wmc_account_ref(acctNum):
+def wmc_account_ref(acctNum: int | str) -> Any:
     global account_ref
     if account_ref is None:
         refresh_session()
@@ -575,7 +600,7 @@ def wmc_account_ref(acctNum):
     return account_ref[str(acctNum)]
 
 
-def account_ref_lookup(gl_account_code):
+def account_ref_lookup(gl_account_code: str) -> Any:
     global account_ref
     if account_ref is None:
         refresh_session()
@@ -589,7 +614,7 @@ def account_ref_lookup(gl_account_code):
     return account_ref[gl_code_map[gl_account_code]]
 
 
-def inventory_ref_lookup(inv_account_code):
+def inventory_ref_lookup(inv_account_code: str) -> Any:
     global inv_account_ref
     if inv_account_ref is None:
         refresh_session()
@@ -603,7 +628,7 @@ def inventory_ref_lookup(inv_account_code):
     return inv_account_ref[gl_code_map_to_cogs[inv_account_code]]
 
 
-def vendor_lookup(gl_vendor_name):
+def vendor_lookup(gl_vendor_name: str) -> Any:
     global vendor
     if vendor is None:
         refresh_session()
@@ -620,7 +645,7 @@ def vendor_lookup(gl_vendor_name):
     return vendor[gl_vendor_name]
 
 
-def refresh_session():
+def refresh_session() -> Any:
     global AUTH_CLIENT
     global CLIENT
     s = json.loads(get_secret())
@@ -696,21 +721,21 @@ def get_secret() -> bytes | str:
     # Depending on whether the secret is a string or binary, one of these fields will be populated.
     if get_secret_value_response:
         if "SecretString" in get_secret_value_response:
-            return get_secret_value_response["SecretString"]
+            return cast(str, get_secret_value_response["SecretString"])
         else:
             return base64.b64decode(get_secret_value_response["SecretBinary"])
     else:
         raise Exception("Secrets issue.")
 
 
-def put_secret(secret_string):
+def put_secret(secret_string: str) -> dict[str, Any]:
     put_secret_value_response = client.put_secret_value(
         SecretId=secret_name, SecretString=secret_string
     )
-    return put_secret_value_response
+    return cast(dict[str, Any], put_secret_value_response)
 
 
-def bill_export():
+def bill_export() -> None:
     refresh_session()
     # store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
     for qb_data_type in [VendorCredit, Bill, SalesReceipt, Deposit, JournalEntry]:
@@ -743,7 +768,7 @@ def bill_export():
             fileout.write("]")
 
 
-def fix_deposit():
+def fix_deposit() -> None:
     refresh_session()
     store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
     qb_data_type = Deposit
@@ -792,7 +817,7 @@ def fix_deposit():
             # bill.save(qb=CLIENT)
 
 
-def find_unmatched_deposits():
+def find_unmatched_deposits() -> None:
     refresh_session()
     where_clause = "TxnDate >= '2025-01-01' AND TxnDate < '2025-10-01'"
     qb_data_type = SalesReceipt
@@ -820,7 +845,7 @@ def find_unmatched_deposits():
             r_count += 1
 
 
-def fix_wld_online_tips():
+def fix_wld_online_tips() -> None:
     refresh_session()
     where_clause = "TxnDate >= '2024-01-04'"
     qb_data_type = SalesReceipt
@@ -897,7 +922,12 @@ def fix_wld_online_tips():
                         )
 
 
-def calculate_bill_splits(total_amount, line_amounts, locations, split_ratios=None):
+def calculate_bill_splits(
+    total_amount: Decimal,
+    line_amounts: list[Decimal],
+    locations: list[str],
+    split_ratios: dict[str, Decimal] | None = None,
+) -> dict[str, list[Decimal]]:
     """Calculate how a bill should be split between locations.
 
     Args:
@@ -935,7 +965,7 @@ def calculate_bill_splits(total_amount, line_amounts, locations, split_ratios=No
             raise ValueError(f"Split ratios must sum to 1.0, got {ratio_sum}")
 
     # Initialize results dictionary
-    results = {loc: [] for loc in locations}
+    results: dict[str, list[Decimal]] = {loc: [] for loc in locations}
 
     # Track running totals for each location
     location_totals = {loc: Decimal("0") for loc in locations}
@@ -971,7 +1001,7 @@ def calculate_bill_splits(total_amount, line_amounts, locations, split_ratios=No
     return results
 
 
-def test_bill_split():
+def test_bill_split() -> bool:
     """Test the bill splitting calculation with a specific test case."""
     # Test case: $256.36 split over 5 locations
     total = Decimal("256.36")
@@ -1009,12 +1039,18 @@ def test_bill_split():
         return False
 
 
-def split_bill(original_bill, locations, split_ratios=None):
+def split_bill(
+    original_bill: Any,
+    locations: list[str],
+    split_ratios: dict[str, Decimal] | None = None,
+) -> list[Any] | None:
     """Split a QuickBooks bill between multiple locations."""
     refresh_session()
 
     # Calculate the splits first
-    total_amount = sum(Decimal(line.Amount) for line in original_bill.Line)
+    total_amount = sum(
+        (Decimal(line.Amount) for line in original_bill.Line), Decimal(0)
+    )
     line_amounts = [Decimal(line.Amount) for line in original_bill.Line]
 
     try:

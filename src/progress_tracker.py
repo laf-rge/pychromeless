@@ -23,7 +23,7 @@ dynamodb = cast(DynamoDBServiceResource, boto3.resource("dynamodb"))
 class DailySalesProgressTracker:
     """Helper class for tracking daily sales progress across parallel store processing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.table_name = os.environ.get("DAILY_SALES_PROGRESS_TABLE")
         if self.table_name:
             self.table = cast(Any, dynamodb.Table(self.table_name))

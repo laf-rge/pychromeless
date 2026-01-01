@@ -98,11 +98,14 @@ def decode_upload(event: dict[str, Any]) -> dict[str, bytes]:
                 )
                 name_param = part.get_param("name", header="content-disposition")
                 if name_param:
-                    multipart_content[name_param] = part.get_payload(decode=True)
-    return multipart_content
+                    payload = part.get_payload(decode=True)
+                    if isinstance(payload, bytes):
+                        multipart_content[str(name_param)] = payload
+    result: dict[str, bytes] = multipart_content
+    return result
 
 
-def transform_tips_handler(*args, **kwargs) -> dict:
+def transform_tips_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     """
     Transform tips data from Excel format to Gusto CSV format.
 
@@ -134,8 +137,8 @@ def transform_tips_handler(*args, **kwargs) -> dict:
         if args is not None and len(args) == 2:
             event = args[0]
             # context = args[1]
-        tips_stream = None
 
+        tips_stream: io.BufferedIOBase
         if "excel" in kwargs:
             tips_stream = open("tips-aug.xlsx", "rb")
         else:
@@ -183,7 +186,7 @@ def transform_tips_handler(*args, **kwargs) -> dict:
     return create_response(200, csv, content_type="text/csv", filename="gusto_tips.csv")
 
 
-def get_mpvs_handler(*args, **kwargs) -> dict:
+def get_mpvs_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     """
     Generate meal period violations (MPV) report for payroll processing.
 

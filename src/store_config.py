@@ -61,7 +61,8 @@ class StoreConfig:
 
     def get_store_name(self, store_id: str) -> Optional[str]:
         """Get the name of a store."""
-        return self._store_config.get(store_id, {}).get("name")
+        name: Optional[str] = self._store_config.get(store_id, {}).get("name")
+        return name
 
     def get_store_open_date(self, store_id: str) -> date:
         """Get the open date of a store."""
@@ -69,7 +70,8 @@ class StoreConfig:
 
     def get_store_ubereats_uuid(self, store_id: str) -> Optional[str]:
         """Get the Uber Eats UUID of a store."""
-        return self._store_config.get(store_id, {}).get("ubereats_uuid")
+        uuid: Optional[str] = self._store_config.get(store_id, {}).get("ubereats_uuid")
+        return uuid
 
     def get_inventory_processing_month(self, processing_date: date) -> Tuple[int, int]:
         """

@@ -1,7 +1,7 @@
 import logging
 import os
 from tempfile import mkdtemp
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from selenium import webdriver
 from selenium.common.exceptions import (
@@ -19,7 +19,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 # Only import webdriver_manager if not running in AWS Lambda
-def _get_chromedriver_service_local():
+def _get_chromedriver_service_local() -> Service:
     try:
         from webdriver_manager.chrome import ChromeDriverManager
 
@@ -181,7 +181,9 @@ def cleanup_safari_driver() -> None:
             _safari_driver = None
 
 
-def wait_for_element(driver, locator, timeout=15) -> Optional[WebElement]:
+def wait_for_element(
+    driver: Any, locator: tuple[str, str], timeout: int = 15
+) -> Optional[WebElement]:
     try:
         element = WebDriverWait(
             driver,

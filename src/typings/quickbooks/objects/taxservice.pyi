@@ -1,3 +1,5 @@
+from typing import Any
+
 from _typeshed import Incomplete
 
 from ..client import QuickBooks as QuickBooks
@@ -26,4 +28,4 @@ class TaxService(QuickbooksBaseObject, UpdateMixin):
         qb: Incomplete | None = None,
         request_id: Incomplete | None = None,
         params: Incomplete | None = None,
-    ): ...
+    ) -> Any: ...
