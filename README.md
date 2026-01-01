@@ -117,6 +117,18 @@ The frontend is a React 19 application located in the `frontend/` directory. It 
 - **Vite 7** for building and development
 - **Tailwind CSS 4** for styling
 - **Headless UI + Radix UI** for accessible components
+- **Vitest** for unit testing
+- **Playwright** for E2E testing
+
+### Frontend Commands
+
+```bash
+make frontend-install    # Install dependencies
+make frontend-build      # Build for production
+make frontend-test       # Run unit tests
+make frontend-e2e        # Run E2E tests (Playwright)
+make frontend-deploy     # Deploy to Namecheap server
+```
 
 See `frontend/README.md` for frontend-specific setup and development instructions.
 

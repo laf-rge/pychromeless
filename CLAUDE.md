@@ -16,11 +16,18 @@ make install-prod     # Install production dependencies only
 
 ### Testing
 ```bash
+# Backend (Python)
 make test                  # Run all tests
 make test-unit            # Run unit tests only
 make test-integration     # Run integration tests only
 make test-coverage        # Run tests with HTML coverage report
 make test-parallel        # Run tests in parallel (faster)
+
+# Frontend (React)
+make frontend-test        # Run frontend unit tests (Vitest)
+make frontend-e2e         # Run E2E tests (Playwright, headless)
+make frontend-e2e-ui      # Run E2E tests with Playwright UI
+make frontend-e2e-headed  # Run E2E tests with visible browser
 ```
 
 ### Code Quality
@@ -44,9 +51,9 @@ make task_status         # Build task status handler
 # Frontend (React 19 + Vite 7 + Tailwind CSS 4)
 make frontend-install    # Install frontend dependencies (uses Bun)
 make frontend-build      # Build frontend for production
-make frontend-test       # Run frontend tests
+make frontend-test       # Run frontend unit tests (Vitest)
 make frontend-lint       # Lint frontend code
-make frontend-deploy     # Deploy frontend to Namecheap server
+make frontend-deploy     # Build and deploy frontend to Namecheap (direct rsync)
 ```
 
 ### Terraform
@@ -114,9 +121,12 @@ Third-party Services (FlexePOS, DoorDash, etc.)
 - **UI Components**: Headless UI + Radix UI for accessibility
 - **Authentication**: Azure MSAL (Microsoft Authentication Library)
 - **Package Manager**: Bun (NOT npm/yarn)
+- **Testing**: Vitest (unit) + Playwright (E2E)
 - **Deployment**: Namecheap server via rsync (credentials in SSM)
 
 Location: `frontend/` directory with own package.json and configuration
+
+**E2E Test Mode**: When `VITE_E2E_MODE=true`, the app uses mock authentication (`MockMsalProvider`) and test routes (`routes.test.tsx`) to bypass real MSAL auth. Playwright config sets this automatically.
 
 ## Financial Data Handling
 
@@ -211,7 +221,7 @@ Lambda functions receive environment variables from Terraform:
 
 ## Terraform Infrastructure
 
-Located in `terraform/` directory with 13+ .tf files:
+Located in `terraform/` directory with 12 .tf files:
 
 - `main.tf`: Provider and backend configuration (S3 state in us-east-2)
 - `lambda.tf`: Lambda function definitions (containerized + zip-based)
@@ -219,9 +229,10 @@ Located in `terraform/` directory with 13+ .tf files:
 - `api_gateway.tf`: REST API Gateway configuration
 - `dynamodb.tf`: State management tables
 - `iam.tf`: IAM roles and policies
-- `ssm.tf`: Parameter Store resources
+- `ssm.tf`: Parameter Store resources (includes Namecheap deployment credentials)
 - `monitoring.tf`: CloudWatch alarms and metrics
-- `frontend.tf`: Frontend deployment configuration (Namecheap)
+
+**Frontend deployment**: Handled directly via `make frontend-deploy` (rsync), not Terraform. Credentials stored in SSM under `/${workspace}/frontend/namecheap/*`.
 
 **Required variables**: Copy `terraform.tfvars.template` to `terraform.tfvars` and fill in values
 

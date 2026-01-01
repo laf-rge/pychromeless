@@ -32,7 +32,13 @@ bun run build
 ### Test
 
 ```bash
+# Unit tests (Vitest)
 bun run test
+
+# E2E tests (Playwright)
+bun run test:e2e           # Headless
+bun run test:e2e:ui        # With Playwright UI
+bun run test:e2e:headed    # With visible browser
 ```
 
 ### Lint
@@ -51,7 +57,8 @@ bun run lint
 - **Radix UI** - Accessible component primitives
 - **React Router** - Client-side routing
 - **MSAL (Microsoft Authentication Library)** - Azure AD authentication
-- **Vitest** - Testing framework
+- **Vitest** - Unit testing framework
+- **Playwright** - E2E testing framework
 - **Bun** - Package manager and runtime
 
 ## Project Structure
@@ -64,16 +71,32 @@ frontend/
 │   │   ├── layout/     # Layout components
 │   │   └── features/   # Feature-specific components
 │   ├── pages/          # Page components
-│   ├── services/        # API and service integrations
+│   ├── services/       # API and service integrations
+│   ├── stores/         # Zustand state stores
 │   ├── utils/          # Utility functions
-│   └── test-utils/     # Testing utilities
+│   └── test-utils/     # Testing utilities (mock providers, helpers)
+├── e2e/                # Playwright E2E tests
 ├── public/             # Static assets
-└── dist/              # Build output
+└── dist/               # Build output
 ```
+
+## E2E Testing
+
+E2E tests use Playwright and run with mocked authentication:
+
+- **Test mode**: Set via `VITE_E2E_MODE=true` (Playwright config does this automatically)
+- **Mock auth**: `src/test-utils/MockMsalProvider.tsx` provides mock MSAL context
+- **Test routes**: `src/routes.test.tsx` provides auth-free routes for testing
+- **Test files**: Located in `e2e/` directory
+
+When `VITE_E2E_MODE=true`:
+1. App uses `MockMsalProvider` instead of real MSAL
+2. All routes are accessible without authentication
+3. API calls can be mocked via Playwright's `page.route()`
 
 ## Deployment
 
-The frontend is deployed to a Namecheap server via Terraform. See the main project README for deployment instructions.
+The frontend is deployed to a Namecheap server via `make frontend-deploy` (direct rsync). Credentials are stored in AWS SSM Parameter Store.
 
 ## Notes
 

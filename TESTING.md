@@ -26,6 +26,8 @@ make test             # Run tests (same commands work)
 
 ## Test Organization
 
+### Backend (Python)
+
 ```
 src/tests/
 ├── unit/              # Fast, isolated unit tests
@@ -33,6 +35,71 @@ src/tests/
 ├── e2e/              # End-to-end workflow tests
 ├── fixtures/         # Test data and fixtures
 └── conftest.py       # Pytest configuration
+```
+
+### Frontend (React/TypeScript)
+
+```
+frontend/
+├── src/
+│   ├── stores/__tests__/     # Zustand store tests
+│   ├── services/__tests__/   # Service tests
+│   └── test-utils/           # Mock providers and helpers
+├── e2e/                      # Playwright E2E tests
+│   ├── auth.spec.ts          # Authentication flow tests
+│   ├── daily-sales.spec.ts   # Daily sales page tests
+│   └── task-history.spec.ts  # Dashboard/task history tests
+├── vitest.config.ts          # Vitest configuration
+└── playwright.config.ts      # Playwright configuration
+```
+
+## Frontend Testing
+
+### Unit Tests (Vitest)
+
+```bash
+make frontend-test           # Run all unit tests
+cd frontend && bun run test:watch   # Watch mode
+cd frontend && bun run test:coverage # With coverage
+```
+
+### E2E Tests (Playwright)
+
+```bash
+make frontend-e2e            # Run headless
+make frontend-e2e-ui         # Run with Playwright UI
+make frontend-e2e-headed     # Run with visible browser
+```
+
+### E2E Test Mode
+
+E2E tests run with mocked authentication:
+
+- **Environment**: `VITE_E2E_MODE=true` (set automatically by Playwright)
+- **Mock Provider**: `src/test-utils/MockMsalProvider.tsx`
+- **Test Routes**: `src/routes.test.tsx` (auth-free routes)
+
+When `VITE_E2E_MODE=true`:
+1. App uses `MockMsalProvider` instead of real MSAL
+2. All routes are accessible without authentication
+3. API calls can be mocked via `page.route()`
+
+### Mocking API Responses in E2E Tests
+
+```typescript
+test('should display tasks', async ({ page }) => {
+  // Mock the API response
+  await page.route('**/api/task-status/recent**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ tasks: [...] }),
+    });
+  });
+
+  await page.goto('/dashboard');
+  // Assert on page content
+});
 ```
 
 ## Test Categories & Markers
