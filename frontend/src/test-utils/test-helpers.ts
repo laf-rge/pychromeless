@@ -21,7 +21,7 @@ export const createMockMsalInstance = (): PublicClientApplication => {
         expiresOn: new Date(Date.now() + 3600000),
       })
     ),
-  } as any;
+  } as unknown as PublicClientApplication;
 };
 
 // Mock WebSocket
@@ -48,7 +48,7 @@ export class MockWebSocket {
     }
   }
 
-  triggerMessage(data: any) {
+  triggerMessage(data: unknown) {
     if (this.onmessage) {
       this.onmessage({ data: JSON.stringify(data) } as MessageEvent);
     }
@@ -71,7 +71,7 @@ export class MockWebSocket {
 }
 
 // Mock fetch
-export const createMockFetch = (responses: Record<string, any> = {}) => {
+export const createMockFetch = (responses: Record<string, unknown> = {}) => {
   return vi.fn((url: string) => {
     const response = responses[url] || { data: [] };
     return Promise.resolve({

@@ -6,7 +6,7 @@ import { MockWebSocket, createMockMsalInstance } from '../../test-utils/test-hel
 // Mock the WebSocket constructor globally
 beforeEach(() => {
   MockWebSocket.reset();
-  globalThis.WebSocket = MockWebSocket as any;
+  globalThis.WebSocket = MockWebSocket as unknown as typeof WebSocket;
 });
 
 describe('WebSocketService', () => {
@@ -22,7 +22,7 @@ describe('WebSocketService', () => {
     vi.restoreAllMocks();
     vi.useRealTimers();
     // Reset singleton instance
-    (WebSocketService as any).instance = null;
+    (WebSocketService as unknown as { instance: null }).instance = null;
   });
 
   describe('connection management', () => {

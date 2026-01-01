@@ -1,12 +1,14 @@
+/* eslint-disable react-refresh/only-export-components */
 import { ReactNode } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { render } from '@testing-library/react';
 import { MsalProvider } from '@azure/msal-react';
+import type { IPublicClientApplication } from '@azure/msal-browser';
 import { createMockMsalInstance } from './test-helpers';
 
 interface TestProvidersProps {
   children: ReactNode;
-  msalInstance?: any;
+  msalInstance?: IPublicClientApplication;
   initialRoute?: string;
 }
 

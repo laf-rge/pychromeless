@@ -13,6 +13,11 @@ export default defineConfig({
     poolVmThreads: {
       memoryLimit: "1G",
     },
+    server: {
+      deps: {
+        inline: ["react-router", "react-router-dom"],
+      },
+    },
     exclude: [
       "**/node_modules/**",
       "**/dist/**",

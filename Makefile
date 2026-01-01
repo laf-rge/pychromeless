@@ -59,7 +59,7 @@ lint: install-dev
 	mypy src/ --ignore-missing-imports
 
 # New target that runs both linting and tests
-test-all: lint test
+test-all: lint test frontend-lint frontend-test
 
 # CI target that includes linting
 ci-test-all: lint ci-test

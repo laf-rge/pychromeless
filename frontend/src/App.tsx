@@ -3,7 +3,7 @@ import { BrowserRouter } from "react-router-dom";
 import { MsalProvider } from "@azure/msal-react";
 import { msalInstance } from "./msal";
 import { AppRoutes } from "./routes";
-import { TestModeRoutes } from "./routes.test";
+import { TestModeRoutes } from "./routes.e2e";
 import WebSocketService from "./services/WebSocketService";
 import { useTaskStore } from "./stores/taskStore";
 import { logger } from "./utils/logger";

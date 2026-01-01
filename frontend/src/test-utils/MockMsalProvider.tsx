@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { ReactNode, createContext, useContext } from "react";
 import type { AccountInfo, IPublicClientApplication } from "@azure/msal-browser";
 
