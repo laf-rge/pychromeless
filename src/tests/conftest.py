@@ -9,7 +9,8 @@ import os
 import sys
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Dict, Generator, List
+from collections.abc import Generator
+from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -58,7 +59,7 @@ def mock_ssm_parameter_store() -> Generator[MagicMock, None, None]:
 
 
 @pytest.fixture
-def mock_boto3_clients() -> Generator[Dict[str, Any], None, None]:
+def mock_boto3_clients() -> Generator[dict[str, Any], None, None]:
     """Mock all boto3 clients used in the application."""
     with patch("boto3.client") as mock_client, patch("boto3.resource") as mock_resource:
         # Mock SES client
@@ -87,13 +88,13 @@ def mock_boto3_clients() -> Generator[Dict[str, Any], None, None]:
 
 
 @pytest.fixture
-def sample_lambda_event() -> Dict[str, str]:
+def sample_lambda_event() -> dict[str, str]:
     """Sample Lambda event for testing handlers."""
     return {"year": "2024", "month": "01", "day": "15"}
 
 
 @pytest.fixture
-def sample_store_data() -> Dict[str, Dict[str, Any]]:
+def sample_store_data() -> Dict[str, dict[str, Any]]:
     """Sample store configuration data."""
     return {
         "20400": {"name": "Store 20400", "open_date": date(2024, 1, 31)},
@@ -102,7 +103,7 @@ def sample_store_data() -> Dict[str, Dict[str, Any]]:
 
 
 @pytest.fixture
-def sample_tips_data() -> List[Dict[str, Any]]:
+def sample_tips_data() -> list[dict[str, Any]]:
     """Sample tips data for testing."""
     return [
         {
@@ -127,7 +128,7 @@ def sample_tips_data() -> List[Dict[str, Any]]:
 
 
 @pytest.fixture
-def sample_bill_data() -> Dict[str, Any]:
+def sample_bill_data() -> dict[str, Any]:
     """Sample QuickBooks bill data for testing."""
     return {
         "total_amount": Decimal("256.36"),
@@ -155,7 +156,7 @@ def mock_webdriver() -> Generator[Mock, None, None]:
 
 
 @pytest.fixture
-def mock_external_apis() -> Generator[Dict[str, Any], None, None]:
+def mock_external_apis() -> Generator[dict[str, Any], None, None]:
     """Mock external API calls (requests, etc.)."""
     with patch("requests.get") as mock_get, patch("requests.post") as mock_post:
         # Default successful responses
@@ -193,7 +194,7 @@ def setup_test_environment() -> Generator[None, None, None]:
 
 
 # Pytest markers for different test categories
-pytest_plugins: List[str] = []
+pytest_plugins: list[str] = []
 
 
 def pytest_configure(config: Any) -> None:
@@ -212,7 +213,7 @@ def pytest_configure(config: Any) -> None:
     config.addinivalue_line("markers", "auth: Authentication and authorization tests")
 
 
-def pytest_collection_modifyitems(config: Any, items: List[Any]) -> None:
+def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
     """Automatically mark tests based on their location."""
     for item in items:
         # Add markers based on test file location
