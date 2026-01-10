@@ -52,7 +52,7 @@ resource "aws_lambda_function" "ws_functions" {
   role             = aws_iam_role.flexepos_lambda_role.arn
   filename         = "../deploy/websocket.zip"
   handler          = each.value.handler
-  runtime          = "python3.13"
+  runtime          = "python3.14"
   timeout          = each.value.timeout
   memory_size      = each.value.memory
   source_code_hash = filebase64sha256("../deploy/websocket.zip")

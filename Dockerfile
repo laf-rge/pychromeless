@@ -1,4 +1,4 @@
-FROM amazon/aws-lambda-python:3.13
+FROM public.ecr.aws/lambda/python:3.14
 LABEL MAINTAINER=william@wagonermanagement.com
 ARG TARGETARCH
 

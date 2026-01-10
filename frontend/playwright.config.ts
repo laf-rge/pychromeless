@@ -23,12 +23,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'bun run dev',
+    command: 'VITE_E2E_MODE=true bun run dev',
     url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false, // Always start fresh server with E2E mode
     timeout: 120 * 1000,
-    env: {
-      VITE_E2E_MODE: 'true',
-    },
   },
 });

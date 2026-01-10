@@ -20,7 +20,7 @@ resource "aws_lambda_function" "authorizer" {
   role        = aws_iam_role.flexepos_lambda_role.arn
   filename    = "../deploy/validate_token.zip"
   handler     = "validate_token.lambda_handler"
-  runtime     = "python3.13"
+  runtime     = "python3.14"
   timeout     = 30
   memory_size = 128
 
@@ -161,7 +161,7 @@ resource "aws_lambda_function" "task_status" {
   role        = aws_iam_role.flexepos_lambda_role.arn
   filename    = "../deploy/task_status.zip"
   handler     = "task_status.get_task_status_handler"
-  runtime     = "python3.13"
+  runtime     = "python3.14"
   timeout     = 30
   memory_size = 256
 

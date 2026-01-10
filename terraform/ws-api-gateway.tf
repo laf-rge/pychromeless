@@ -12,7 +12,7 @@ resource "aws_lambda_function" "ws_authorizer" {
   function_name    = "ws-validate-token"
   role             = aws_iam_role.flexepos_lambda_role.arn
   handler          = "ws_validate_token.lambda_handler"
-  runtime          = "python3.13"
+  runtime          = "python3.14"
   timeout          = 10
   source_code_hash = filebase64sha256("../deploy/ws_validate_token.zip")
 

@@ -2,19 +2,15 @@
 import { ReactNode } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { render } from '@testing-library/react';
-import { MsalProvider } from '@azure/msal-react';
-import type { IPublicClientApplication } from '@azure/msal-browser';
-import { createMockMsalInstance } from './test-helpers';
+import { MockMsalProvider } from './MockMsalProvider';
 
 interface TestProvidersProps {
   children: ReactNode;
-  msalInstance?: IPublicClientApplication;
   initialRoute?: string;
 }
 
 export function TestProviders({
   children,
-  msalInstance = createMockMsalInstance(),
   initialRoute = '/',
 }: TestProvidersProps) {
   // Set initial route if provided
@@ -23,11 +19,11 @@ export function TestProviders({
   }
 
   return (
-    <MsalProvider instance={msalInstance}>
+    <MockMsalProvider>
       <BrowserRouter>
         {children}
       </BrowserRouter>
-    </MsalProvider>
+    </MockMsalProvider>
   );
 }
 

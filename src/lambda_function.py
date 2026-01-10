@@ -923,7 +923,7 @@ def split_bill_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                     )
 
                 # Convert split_ratios values to float for calculation
-                split_ratios = {k: float(v) for k, v in split_ratios.items()}
+                split_ratios = {k: Decimal(v) for k, v in split_ratios.items()}
 
         except json.JSONDecodeError:
             return create_response(400, {"message": "Invalid JSON in request body"})
@@ -944,15 +944,20 @@ def split_bill_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
         # Call the split_bill function
         try:
             new_bills = qb.split_bill(original_bill, locations, split_ratios)
-            split_doc_numbers = [bill.DocNumber for bill in new_bills]
-
-            return create_response(
-                200,
-                {
-                    "message": "Bill split successfully",
-                    "split_doc_numbers": split_doc_numbers,
-                },
-            )
+            if new_bills:
+                split_doc_numbers = [bill.DocNumber for bill in new_bills]
+                return create_response(
+                    200,
+                    {
+                        "message": "Bill split successfully",
+                        "split_doc_numbers": split_doc_numbers,
+                    },
+                )
+            else:
+                logger.error(
+                    "Error splitting bill", extra={"error": "No new bills created"}
+                )
+                return create_response(500, {"message": "Error splitting bill"})
 
         except ValueError as ve:
             logger.warning("Invalid split parameters", extra={"error": str(ve)})

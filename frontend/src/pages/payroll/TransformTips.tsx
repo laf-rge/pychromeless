@@ -4,7 +4,7 @@ import {
   FormControl,
   FormLabel,
   FormMessage,
-  Input,
+  FileInput,
 } from "../../components/ui";
 import { Feature } from "../../components/features/Feature";
 import { useFormHandler } from "../../components/features/useFormHandler";
@@ -35,6 +35,8 @@ export function TransformTips() {
     error,
     setValue,
     watch,
+    setError,
+    clearErrors,
   } = useFormHandler(onSubmit, {
     baseURL: API_BASE_URL,
     endpoint: API_ENDPOINTS.TRANSFORM_TIPS,
@@ -46,6 +48,18 @@ export function TransformTips() {
   });
 
   const selectedMonth = watch("mp");
+  const selectedFile = watch("file") as File | undefined;
+
+  // Custom submit handler that validates file
+  const onFormSubmit = (e: React.FormEvent) => {
+    // Validate file before letting react-hook-form handle the rest
+    if (!selectedFile) {
+      e.preventDefault();
+      setError("file", { type: "manual", message: "Please select a file" });
+      return;
+    }
+    // Let react-hook-form handle the submission
+  };
 
   const elevenMonthsAgo = new Date();
   elevenMonthsAgo.setMonth(today.getMonth() - 11);
@@ -62,7 +76,7 @@ export function TransformTips() {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={(e) => { onFormSubmit(e); if (selectedFile) handleSubmit(e); }}>
       <Feature
         title="Gusto Tips Transform"
         desc="Upload a modified tips spreadsheet from above and this will return the CSV file you can use to upload."
@@ -104,26 +118,19 @@ export function TransformTips() {
           )}
         <FormControl isInvalid={!!errors.file}>
           <FormLabel htmlFor="file">Select File:</FormLabel>
-          <Input
-            type="file"
+          <FileInput
             id="file"
-            {...register("file", {
-              required: "Please select a file",
-              validate: {
-                hasFile: (value: File | undefined) => {
-                  if (!value) {
-                    return "Please select a file";
-                  }
-                  return true;
-                },
-              },
-              onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  setValue("file", file);
-                }
-              },
-            })}
+            name="file"
+            selectedFile={selectedFile}
+            onFileChange={(file) => {
+              if (file) {
+                setValue("file", file);
+                clearErrors("file");
+              } else {
+                setValue("file", undefined);
+              }
+            }}
+            accept=".xlsx,.xls,.csv"
           />
           <FormMessage>{errors.file && errors.file.message}</FormMessage>
         </FormControl>

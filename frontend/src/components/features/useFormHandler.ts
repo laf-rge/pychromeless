@@ -21,10 +21,12 @@ export const useFormHandler = <T extends FormValues>(
     formState: { errors, isSubmitting, isSubmitSuccessful },
     setValue,
     watch,
+    setError,
+    clearErrors,
   } = useForm<T>({
     defaultValues: apiConfig.defaultValues as DefaultValues<T>,
   });
-  const [error, setError] = useState<AxiosError>();
+  const [error, setAxiosError] = useState<AxiosError>();
   const { instance } = useMsal();
   const activeAccount = instance.getActiveAccount();
 
@@ -82,7 +84,7 @@ export const useFormHandler = <T extends FormValues>(
     };
 
     try {
-      setError(undefined);
+      setAxiosError(undefined);
       let response: AxiosResponse;
 
       if (apiConfig.formDataSubmission) {
@@ -95,7 +97,7 @@ export const useFormHandler = <T extends FormValues>(
           formData.append("pay_period", values.pay_period);
         }
         if (values.file) {
-          formData.append("file", values.file);
+          formData.append("file[]", values.file);
         }
         logger.debug({
           year: values.mp?.year,
@@ -173,7 +175,7 @@ export const useFormHandler = <T extends FormValues>(
       apiConfig.onResponse?.(response);
     } catch (err) {
       const e = err as AxiosError;
-      setError(e);
+      setAxiosError(e);
       logger.debug(values);
       throw e;
     }
@@ -185,7 +187,7 @@ export const useFormHandler = <T extends FormValues>(
       await onSubmit(values);
     } catch (error) {
       if (error instanceof AxiosError) {
-        setError(error);
+        setAxiosError(error);
       }
       throw error;
     }
@@ -200,5 +202,7 @@ export const useFormHandler = <T extends FormValues>(
     error,
     setValue,
     watch,
+    setError,
+    clearErrors,
   };
 };

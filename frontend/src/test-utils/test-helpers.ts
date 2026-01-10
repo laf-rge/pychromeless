@@ -3,12 +3,25 @@ import type { PublicClientApplication } from '@azure/msal-browser';
 
 // Mock MSAL instance
 export const createMockMsalInstance = (): PublicClientApplication => {
+  const mockLogger = {
+    error: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
+    verbose: vi.fn(),
+    trace: vi.fn(),
+    clone: vi.fn(),
+  };
+
   return {
     getActiveAccount: vi.fn(() => ({
       username: 'test@example.com',
       name: 'Test User',
       localAccountId: 'test-account-id',
+      homeAccountId: 'test-home-id',
+      environment: 'login.windows.net',
+      tenantId: 'test-tenant-id',
     })),
+    getAllAccounts: vi.fn(() => []),
     acquireTokenSilent: vi.fn(() =>
       Promise.resolve({
         accessToken: 'mock-access-token',
@@ -21,6 +34,11 @@ export const createMockMsalInstance = (): PublicClientApplication => {
         expiresOn: new Date(Date.now() + 3600000),
       })
     ),
+    getLogger: vi.fn(() => mockLogger),
+    setLogger: vi.fn(),
+    setActiveAccount: vi.fn(),
+    initialize: vi.fn(() => Promise.resolve()),
+    handleRedirectPromise: vi.fn(() => Promise.resolve(null)),
   } as unknown as PublicClientApplication;
 };
 

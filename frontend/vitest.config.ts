@@ -9,14 +9,9 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test-utils/setup.ts"],
     css: true,
-    pool: "vmThreads",
-    poolVmThreads: {
-      memoryLimit: "1G",
-    },
-    server: {
-      deps: {
-        inline: ["react-router", "react-router-dom"],
-      },
+    pool: "forks",
+    deps: {
+      inline: ["react-router", "react-router-dom"],
     },
     exclude: [
       "**/node_modules/**",
