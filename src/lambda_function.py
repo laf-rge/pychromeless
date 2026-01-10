@@ -72,7 +72,7 @@ def create_response(
     body: object,
     content_type: str = "application/json",
     filename: str | None = None,
-    _request_id: str | None = None,
+    request_id: str | None = None,
 ) -> dict:
     """Create a standardized API response with request ID tracking"""
     headers = {
@@ -86,6 +86,9 @@ def create_response(
 
     if filename is not None:
         headers["Content-Disposition"] = f"attachment; filename={filename}"
+
+    if request_id is not None:
+        headers["X-Request-ID"] = request_id
 
     return {
         "statusCode": status_code,
