@@ -14,6 +14,8 @@ export enum OperationType {
   TRANSFORM_TIPS = "transform_tips",
   GET_MPVS = "get_mpvs",
   GET_FOOD_HANDLER_LINKS = "get_food_handler_links",
+  DAILY_JOURNAL = "daily_journal",
+  THIRD_PARTY_DEPOSIT = "third_party_deposit",
 }
 
 export const OperationDisplayNames: Record<OperationType, string> = {
@@ -24,6 +26,8 @@ export const OperationDisplayNames: Record<OperationType, string> = {
   [OperationType.TRANSFORM_TIPS]: "Tips Transformation",
   [OperationType.GET_MPVS]: "Meal Period Violations",
   [OperationType.GET_FOOD_HANDLER_LINKS]: "Food Handler PDF Links",
+  [OperationType.DAILY_JOURNAL]: "Daily Journal Processing",
+  [OperationType.THIRD_PARTY_DEPOSIT]: "Third Party Deposits",
 };
 
 interface EnrichedTaskStatus extends TaskStatus {

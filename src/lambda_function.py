@@ -109,6 +109,18 @@ def third_party_deposit_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         >>> from lambda_function import third_party_deposit_handler
         >>> third_party_deposit_handler()
     """
+    context = _args[1] if _args and len(_args) > 1 else None
+    task_id = (
+        (context.aws_request_id if context else None) or f"local-{str(uuid.uuid4())}"
+    )
+    ws_manager = WebSocketManager()
+
+    ws_manager.broadcast_status(
+        task_id=task_id,
+        operation=OperationType.THIRD_PARTY_DEPOSIT,
+        status="started",
+    )
+
     start_date = date.today() - timedelta(days=14)
     end_date = date.today()
 
@@ -126,7 +138,11 @@ def third_party_deposit_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         (EZCater(), "get_payments", store_config.all_stores, start_date, end_date),
     ]
 
+    failed_services: list[str] = []
+    successful_services: list[str] = []
+
     for service, method, *service_args in services:
+        service_name = service.__class__.__name__
         try:
             results = getattr(service, method)(*service_args)
             for result in results:
@@ -134,11 +150,35 @@ def third_party_deposit_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
                     qb.sync_third_party_deposit(*result)
                 except Exception:
                     logger.exception(
-                        f"Exception in sync_third_party_deposit for {service.__class__.__name__}"
+                        f"Exception in sync_third_party_deposit for {service_name}"
                     )
                     logger.info(result)
+            successful_services.append(service_name)
         except Exception:
-            logger.exception(f"Exception in {service.__class__.__name__}")
+            logger.exception(f"Exception in {service_name}")
+            failed_services.append(service_name)
+
+    if failed_services:
+        ws_manager.broadcast_status(
+            task_id=task_id,
+            operation=OperationType.THIRD_PARTY_DEPOSIT,
+            status="completed_with_errors",
+            result={
+                "summary": f"Processed {len(successful_services)} services, {len(failed_services)} failed",
+                "successful_services": successful_services,
+                "failed_services": failed_services,
+            },
+        )
+    else:
+        ws_manager.broadcast_status(
+            task_id=task_id,
+            operation=OperationType.THIRD_PARTY_DEPOSIT,
+            status="completed",
+            result={
+                "summary": f"Successfully processed {len(successful_services)} services",
+                "successful_services": successful_services,
+            },
+        )
 
     return create_response(200, {"message": "Success"})
 
@@ -160,6 +200,18 @@ def invoice_sync_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         >>> invoice_sync_handler()  # Process current month
         >>> invoice_sync_handler({"year": "2024", "month": "03"})  # Process specific month
     """
+    context = _args[1] if _args and len(_args) > 1 else None
+    task_id = (
+        (context.aws_request_id if context else None) or f"local-{str(uuid.uuid4())}"
+    )
+    ws_manager = WebSocketManager()
+
+    ws_manager.broadcast_status(
+        task_id=task_id,
+        operation=OperationType.INVOICE_SYNC,
+        status="started",
+    )
+
     try:
         event = _args[0] if _args and len(_args) > 0 else {}
         today = date.today()
@@ -193,9 +245,27 @@ def invoice_sync_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
             },
         )
 
+        ws_manager.broadcast_status(
+            task_id=task_id,
+            operation=OperationType.INVOICE_SYNC,
+            status="completed",
+            result={
+                "summary": f"Processed GL and inventory for {inventory_year}-{inventory_month:02d}",
+                "inventory_year": inventory_year,
+                "inventory_month": inventory_month,
+                "stores": store_config.all_stores,
+            },
+        )
+
         return create_response(200, {"message": "Success"})
-    except Exception:
+    except Exception as e:
         logger.exception("Error processing invoice sync")
+        ws_manager.broadcast_status(
+            task_id=task_id,
+            operation=OperationType.INVOICE_SYNC,
+            status="failed",
+            error=str(e),
+        )
         return create_response(500, {"message": "Error processing invoice sync"})
 
 
@@ -748,82 +818,156 @@ def daily_journal_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         >>> from lambda_function import daily_journal_handler
         >>> daily_journal_handler()
     """
-    yesterday = date.today() - timedelta(days=1)
+    context = _args[1] if _args and len(_args) > 1 else None
+    task_id = (
+        (context.aws_request_id if context else None) or f"local-{str(uuid.uuid4())}"
+    )
+    ws_manager = WebSocketManager()
 
-    subject = "Daily Journal Report {}".format(yesterday.strftime("%m/%d/%Y"))
-
-    dj = Flexepos()
-    drawer_opens = dict()
-    drawer_opens = dj.getDailyJournal(
-        store_config.all_stores, yesterday.strftime("%m%d%Y")
+    ws_manager.broadcast_status(
+        task_id=task_id,
+        operation=OperationType.DAILY_JOURNAL,
+        status="started",
     )
 
-    gdrive = WMCGdrive()
-    for store in store_config.all_stores:
-        gdrive.upload(
-            "{0}-{1}_daily_journal.txt".format(str(yesterday), store),
-            drawer_opens[store].encode("utf-8"),
-            "text/plain",
-        )
-
-    message = "<h1>Wagoner Management Corp.</h1>\n\n<h2>Cash Drawer Opens:</h2>\n<pre>"
-
-    for store, journal in drawer_opens.items():
-        message = "{}{}: {}\n".format(message, store, journal.count("Cash Drawer Open"))
-
-    message += "</pre>\n\n<h2>Missing Punches:</h2>\n<pre>"
-
-    t = Tips()
-    for time_record in t.getMissingPunches():
-        user = t._users[time_record["user_id"]]
-        message = "{}{}, {} : {} - {}\n".format(
-            message,
-            user["last_name"],
-            user["first_name"],
-            t._locations[time_record["location_id"]]["name"],
-            time_record["start_time"],
-        )
-    message += "</pre>\n\n<h2>Meal Period Violations:</h2>\n<pre>"
-    for item in sorted(
-        t.getMealPeriodViolations(store_config.all_stores, yesterday),
-        key=itemgetter("store", "start_time"),
-    ):
-        message += f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n"
-
-    message += "</pre><h2>Attendance Report:</h2><div>"
-    message += email_service.create_attendance_table(yesterday, date.today())
-
-    message += "</div>\n\n<div><pre>Thanks!\nJosiah (aka The Robot)</pre></div>"
-
-    response = None
     try:
-        response = email_service.send_email(subject, message)
-    except ClientError as e:
-        error_message = e.response.get("Error", {}).get(
-            "Message", "Unknown error occurred"
-        )
-        logger.exception(error_message)
-        return create_response(400, {"message": f"Email Failed: {error_message}"})
+        yesterday = date.today() - timedelta(days=1)
 
-    return create_response(200, response)
+        subject = "Daily Journal Report {}".format(yesterday.strftime("%m/%d/%Y"))
+
+        dj = Flexepos()
+        drawer_opens = dict()
+        drawer_opens = dj.getDailyJournal(
+            store_config.all_stores, yesterday.strftime("%m%d%Y")
+        )
+
+        gdrive = WMCGdrive()
+        for store in store_config.all_stores:
+            gdrive.upload(
+                "{0}-{1}_daily_journal.txt".format(str(yesterday), store),
+                drawer_opens[store].encode("utf-8"),
+                "text/plain",
+            )
+
+        message = "<h1>Wagoner Management Corp.</h1>\n\n<h2>Cash Drawer Opens:</h2>\n<pre>"
+
+        for store, journal in drawer_opens.items():
+            message = "{}{}: {}\n".format(message, store, journal.count("Cash Drawer Open"))
+
+        message += "</pre>\n\n<h2>Missing Punches:</h2>\n<pre>"
+
+        t = Tips()
+        for time_record in t.getMissingPunches():
+            user = t._users[time_record["user_id"]]
+            message = "{}{}, {} : {} - {}\n".format(
+                message,
+                user["last_name"],
+                user["first_name"],
+                t._locations[time_record["location_id"]]["name"],
+                time_record["start_time"],
+            )
+        message += "</pre>\n\n<h2>Meal Period Violations:</h2>\n<pre>"
+        for item in sorted(
+            t.getMealPeriodViolations(store_config.all_stores, yesterday),
+            key=itemgetter("store", "start_time"),
+        ):
+            message += f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n"
+
+        message += "</pre><h2>Attendance Report:</h2><div>"
+        message += email_service.create_attendance_table(yesterday, date.today())
+
+        message += "</div>\n\n<div><pre>Thanks!\nJosiah (aka The Robot)</pre></div>"
+
+        response = None
+        try:
+            response = email_service.send_email(subject, message)
+        except ClientError as e:
+            error_message = e.response.get("Error", {}).get(
+                "Message", "Unknown error occurred"
+            )
+            logger.exception(error_message)
+            ws_manager.broadcast_status(
+                task_id=task_id,
+                operation=OperationType.DAILY_JOURNAL,
+                status="failed",
+                error=f"Email Failed: {error_message}",
+            )
+            return create_response(400, {"message": f"Email Failed: {error_message}"})
+
+        ws_manager.broadcast_status(
+            task_id=task_id,
+            operation=OperationType.DAILY_JOURNAL,
+            status="completed",
+            result={
+                "summary": f"Daily journal report for {yesterday.strftime('%m/%d/%Y')} sent",
+                "report_date": yesterday.isoformat(),
+                "stores": store_config.all_stores,
+            },
+        )
+
+        return create_response(200, response)
+    except Exception as e:
+        logger.exception("Error processing daily journal")
+        ws_manager.broadcast_status(
+            task_id=task_id,
+            operation=OperationType.DAILY_JOURNAL,
+            status="failed",
+            error=str(e),
+        )
+        raise
 
 
 def email_tips_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
-    year = date.today().year
-    month = date.today().month
-    pay_period = 0
+    context = args[1] if args and len(args) > 1 else None
+    task_id = (
+        (context.aws_request_id if context else None) or f"local-{str(uuid.uuid4())}"
+    )
+    ws_manager = WebSocketManager()
 
-    event = {}
-    if args is not None and len(args) > 0:
-        event = args[0]
-    if "year" in event:
-        year = int(event["year"])
-        month = int(event["month"])
-        pay_period = int(event["day"])
-    logger.info(f"year: {year}, month: {month}, pay_period: {pay_period}")
-    t = Tips()
-    t.emailTips(store_config.all_stores, date(year, month, 5), pay_period)
-    return create_response(200, {"message": "Email Sent!"})
+    ws_manager.broadcast_status(
+        task_id=task_id,
+        operation=OperationType.EMAIL_TIPS,
+        status="started",
+    )
+
+    try:
+        year = date.today().year
+        month = date.today().month
+        pay_period = 0
+
+        event = {}
+        if args is not None and len(args) > 0:
+            event = args[0]
+        if "year" in event:
+            year = int(event["year"])
+            month = int(event["month"])
+            pay_period = int(event["day"])
+        logger.info(f"year: {year}, month: {month}, pay_period: {pay_period}")
+        t = Tips()
+        t.emailTips(store_config.all_stores, date(year, month, 5), pay_period)
+
+        ws_manager.broadcast_status(
+            task_id=task_id,
+            operation=OperationType.EMAIL_TIPS,
+            status="completed",
+            result={
+                "summary": f"Tips email sent for {year}-{month:02d} pay period {pay_period}",
+                "year": year,
+                "month": month,
+                "pay_period": pay_period,
+            },
+        )
+
+        return create_response(200, {"message": "Email Sent!"})
+    except Exception as e:
+        logger.exception("Error processing email tips")
+        ws_manager.broadcast_status(
+            task_id=task_id,
+            operation=OperationType.EMAIL_TIPS,
+            status="failed",
+            error=str(e),
+        )
+        raise
 
 
 def update_food_handler_pdfs_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
