@@ -61,9 +61,9 @@ class WebSocketManager:
         task_id: str,
         operation: str,
         status: str,  # Now supports: "started", "processing", "error", "completed", "completed_with_errors", "failed"
-        progress: Optional[Dict] = None,
-        result: Optional[Dict] = None,
-        error: Optional[str] = None,
+        progress: dict[str, Any] | None = None,
+        result: dict[str, Any] | None = None,
+        error: str | None = None,
     ) -> None:
         """Broadcast status update to all connected clients
 
@@ -166,7 +166,7 @@ class WebSocketManager:
                     },
                 )
 
-    def _standardize_result_format(self, result: Dict, status: str) -> Dict:
+    def _standardize_result_format(self, result: dict[str, Any], status: str) -> dict[str, Any]:
         """Standardize result format to ensure consistent structure with success boolean
 
         Args:
@@ -222,9 +222,9 @@ class TaskManager:
         task_id: str,
         operation: OperationType,
         status: str = "started",
-        progress: Optional[Dict] = None,
-        result: Optional[Dict] = None,
-        error: Optional[str] = None,
+        progress: dict[str, Any] | None = None,
+        result: dict[str, Any] | None = None,
+        error: str | None = None,
     ) -> None:
         """Create a new task with TTL"""
         current_time = int(time.time())
@@ -249,7 +249,7 @@ class TaskManager:
         self,
         task_id: str,
         operation: OperationType,
-        progress: Dict,
+        progress: dict[str, Any],
         status: str = "processing",
     ) -> None:
         """Update task progress"""
@@ -288,7 +288,7 @@ class TaskManager:
         self,
         task_id: str,
         operation: OperationType,
-        result: Dict,
+        result: dict[str, Any],
         status: str = "completed",
     ) -> None:
         """Mark task as completed with results"""
@@ -362,13 +362,13 @@ class TaskManager:
 
         self._broadcast_status(task)
 
-    def get_task_status(self, task_id: str) -> Optional[dict[str, Any]]:
+    def get_task_status(self, task_id: str) -> dict[str, Any] | None:
         """Get current task status"""
         response = self.table.get_item(Key={"task_id": task_id})
-        item: Optional[dict[str, Any]] = response.get("Item")
+        item: dict[str, Any] | None = response.get("Item")
         return item
 
-    def _broadcast_status(self, task: Dict) -> None:
+    def _broadcast_status(self, task: dict[str, Any]) -> None:
         """Broadcast task status to all connected clients"""
         try:
             # Get all active connections

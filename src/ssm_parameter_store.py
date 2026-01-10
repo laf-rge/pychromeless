@@ -51,7 +51,7 @@ class SSMParameterStore:
         """
         self._prefix: str = (prefix or "").rstrip("/") + "/"
         self._client: Any = ssm_client or boto3.client("ssm")
-        self._keys: Optional[dict[str, dict[str, Any]]] = None
+        self._keys: dict[str, dict[str, Any]] | None = None
         self._substores: dict[str, SSMParameterStore] = {}
         self._ttl: int | None = ttl
 
@@ -150,7 +150,7 @@ class SSMParameterStore:
                 raise KeyError("Keys are not available after refresh")
         return list(self._keys.keys())
 
-    def _get_value(self, name: str, abs_key: str) -> Optional[str | list[str]]:
+    def _get_value(self, name: str, abs_key: str) -> str | list[str] | None:
         """
         Get the value of a parameter.
 

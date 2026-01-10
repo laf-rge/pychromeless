@@ -158,7 +158,7 @@ def invoice_sync_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         >>> invoice_sync_handler({"year": "2024", "month": "03"})  # Process specific month
     """
     try:
-        event = args[0] if args and len(args) > 0 else {}
+        event = _args[0] if _args and len(_args) > 0 else {}
         today = date.today()
 
         ct = crunchtime.Crunchtime()
@@ -214,8 +214,8 @@ def daily_sales_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         >>> daily_sales_handler()  # Process yesterday's sales
         >>> daily_sales_handler({"year": "2024", "month": "01", "day": "15"})
     """
-    event = args[0] if args and len(args) > 0 else {}
-    context = args[1] if args and len(args) > 1 else None
+    event = _args[0] if _args and len(_args) > 0 else {}
+    context = _args[1] if _args and len(_args) > 1 else None
     request_id = (
         event.get("requestContext", {}).get("requestId")
         or (context.aws_request_id if context else None)
