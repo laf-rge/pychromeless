@@ -3,7 +3,7 @@ import json
 import logging
 import re
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from urllib.request import urlopen
 
 import jwt
@@ -14,6 +14,43 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicNumbers
 logger = logging.getLogger(__name__)
 
 
+# Custom exceptions for authentication and token validation
+class TokenValidationError(Exception):
+    """Base exception for token validation errors."""
+
+    pass
+
+
+class TokenDecodeError(TokenValidationError):
+    """Raised when unable to decode token headers."""
+
+    pass
+
+
+class TokenExpiredError(TokenValidationError):
+    """Raised when the token has expired."""
+
+    pass
+
+
+class InvalidTokenError(TokenValidationError):
+    """Raised when the token is invalid."""
+
+    pass
+
+
+class RSAKeyNotFoundError(TokenValidationError):
+    """Raised when the RSA key is not found in JWKS."""
+
+    pass
+
+
+class AuthorizationError(Exception):
+    """Raised when authorization token is missing or invalid."""
+
+    pass
+
+
 class OAuth2TokenValidation:
     def __init__(self, tenant_id: str, client_id: str):
         self.jwks_url: str = (
@@ -22,10 +59,10 @@ class OAuth2TokenValidation:
         self.issuer_url: str = f"https://sts.windows.net/{tenant_id}/"
         self.audience: str = f"api://{client_id}"
 
-        self.jwks: Dict[str, Any] = json.loads(urlopen(self.jwks_url).read())
+        self.jwks: dict[str, Any] = json.loads(urlopen(self.jwks_url).read())
         self.last_jwks_public_key_update: float = time.time()
 
-    def validate_token_and_decode_it(self, token: str) -> Dict[str, Any]:
+    def validate_token_and_decode_it(self, token: str) -> dict[str, Any]:
         """
         Validate the JWT token and decode it.
 
@@ -35,13 +72,13 @@ class OAuth2TokenValidation:
         try:
             unverified_header = jwt.get_unverified_header(token)
         except Exception as e:
-            raise Exception(f"Unable to decode authorization token headers: {e}")
+            raise TokenDecodeError(f"Unable to decode authorization token headers: {e}") from e
 
         try:
             rsa_key = self.find_rsa_key(self.jwks, unverified_header)
             public_key = self.rsa_pem_from_jwk(rsa_key)
 
-            result: Dict[str, Any] = jwt.decode(
+            result: dict[str, Any] = jwt.decode(
                 token,
                 public_key,
                 algorithms=["RS256"],
@@ -49,10 +86,10 @@ class OAuth2TokenValidation:
                 issuer=self.issuer_url,
             )
             return result
-        except jwt.ExpiredSignatureError:
-            raise Exception("Token has expired")
-        except jwt.InvalidTokenError:
-            raise Exception("Invalid token")
+        except jwt.ExpiredSignatureError as e:
+            raise TokenExpiredError("Token has expired") from e
+        except jwt.InvalidTokenError as e:
+            raise InvalidTokenError("Invalid token") from e
         except Exception as e:
             # Update the public key if not fresh and try again
             if int(time.time() - self.last_jwks_public_key_update) > 60:
@@ -60,12 +97,12 @@ class OAuth2TokenValidation:
                 self.last_jwks_public_key_update = time.time()
                 return self.validate_token_and_decode_it(token)
             else:
-                raise Exception(f"Error validating token: {e}")
+                raise TokenValidationError(f"Error validating token: {e}") from e
 
     @staticmethod
     def find_rsa_key(
-        jwks: Dict[str, Any], unverified_header: Dict[str, Any]
-    ) -> Dict[str, str]:
+        jwks: dict[str, Any], unverified_header: dict[str, Any]
+    ) -> dict[str, str]:
         for key in jwks["keys"]:
             if key["kid"] == unverified_header["kid"]:
                 return {
@@ -75,23 +112,23 @@ class OAuth2TokenValidation:
                     "n": key["n"],
                     "e": key["e"],
                 }
-        raise Exception("RSA key not found")
+        raise RSAKeyNotFoundError("RSA key not found")
 
     @staticmethod
-    def ensure_bytes(key: Union[str, bytes]) -> bytes:
+    def ensure_bytes(key: str | bytes) -> bytes:
         if isinstance(key, str):
             key = key.encode("utf-8")
         return key
 
     @staticmethod
-    def decode_value(val: Union[str, bytes]) -> int:
+    def decode_value(val: str | bytes) -> int:
         decoded = base64.urlsafe_b64decode(
             OAuth2TokenValidation.ensure_bytes(val) + b"=="
         )
         return int.from_bytes(decoded, "big")
 
     @staticmethod
-    def rsa_pem_from_jwk(jwk: Dict[str, str]) -> bytes:
+    def rsa_pem_from_jwk(jwk: dict[str, str]) -> bytes:
         return (
             RSAPublicNumbers(
                 n=OAuth2TokenValidation.decode_value(jwk["n"]),
@@ -113,8 +150,8 @@ class AuthPolicy:
     def __init__(self, principal: str, awsAccountId: str):
         self.awsAccountId = awsAccountId
         self.principalId = principal
-        self.allowMethods: List[Dict[str, Any]] = []
-        self.denyMethods: List[Dict[str, Any]] = []
+        self.allowMethods: list[dict[str, Any]] = []
+        self.denyMethods: list[dict[str, Any]] = []
         self.restApiId = "uu7jn6wcdh"
         self.region = "us-east-2"
         self.stage = "test"
@@ -124,7 +161,7 @@ class AuthPolicy:
         effect: str,
         verb: str,
         resource: str,
-        conditions: Optional[Dict[str, Any]] = None,
+        conditions: dict[str, Any] | None = None,
     ) -> None:
         if verb != "*" and not hasattr(HttpVerb, verb):
             raise NameError(
@@ -150,7 +187,7 @@ class AuthPolicy:
                 {"resourceArn": resourceArn, "conditions": conditions}
             )
 
-    def _getEmptyStatement(self, effect: str) -> Dict[str, Any]:
+    def _getEmptyStatement(self, effect: str) -> dict[str, Any]:
         return {
             "Action": "execute-api:Invoke",
             "Effect": effect.capitalize(),
@@ -158,8 +195,8 @@ class AuthPolicy:
         }
 
     def _getStatementForEffect(
-        self, effect: str, methods: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+        self, effect: str, methods: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         statements = []
 
         if methods:
@@ -192,24 +229,24 @@ class AuthPolicy:
         self._addMethod("Deny", verb, resource)
 
     def allowMethodWithConditions(
-        self, verb: str, resource: str, conditions: Dict[str, Any]
+        self, verb: str, resource: str, conditions: dict[str, Any]
     ) -> None:
         self._addMethod("Allow", verb, resource, conditions)
 
     def denyMethodWithConditions(
-        self, verb: str, resource: str, conditions: Dict[str, Any]
+        self, verb: str, resource: str, conditions: dict[str, Any]
     ) -> None:
         self._addMethod("Deny", verb, resource, conditions)
 
-    def build(self) -> Dict[str, Any]:
+    def build(self) -> dict[str, Any]:
         if not self.allowMethods and not self.denyMethods:
             raise NameError("No statements defined for the policy")
 
-        statements: List[Dict[str, Any]] = []
+        statements: list[dict[str, Any]] = []
         statements.extend(self._getStatementForEffect("Allow", self.allowMethods))
         statements.extend(self._getStatementForEffect("Deny", self.denyMethods))
 
-        policy: Dict[str, Any] = {
+        policy: dict[str, Any] = {
             "principalId": self.principalId,
             "policyDocument": {"Version": "2012-10-17", "Statement": statements},
         }
@@ -228,7 +265,7 @@ class HttpVerb:
     ALL = "*"
 
 
-def extract_token(event: Dict[str, Any], source: str) -> str:
+def extract_token(event: dict[str, Any], source: str) -> str:
     """
     Extract Bearer token from event based on source.
 
@@ -240,16 +277,16 @@ def extract_token(event: Dict[str, Any], source: str) -> str:
     if source == "rest":
         auth_param = event.get("authorizationToken", "")
         if not auth_param:
-            raise Exception("No Authorization token found in authorizationToken")
+            raise AuthorizationError("No Authorization token found in authorizationToken")
     elif source == "websocket":
         auth_param = event.get("queryStringParameters", {}).get("Authorization", "")
         if not auth_param:
-            raise Exception("No Authorization token found in query parameters")
+            raise AuthorizationError("No Authorization token found in query parameters")
     else:
         raise ValueError("Invalid source. Must be 'rest' or 'websocket'")
 
     if not auth_param.startswith("Bearer "):
-        raise Exception("Invalid Authorization format. Must start with 'Bearer '")
+        raise AuthorizationError("Invalid Authorization format. Must start with 'Bearer '")
 
     token: str = auth_param[7:]  # Remove "Bearer " prefix
     return token
