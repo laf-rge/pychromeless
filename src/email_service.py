@@ -10,7 +10,7 @@ This module handles all email communications including:
 
 from datetime import date
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, cast
 
 import boto3
 
@@ -40,8 +40,8 @@ class EmailService:
 """
 
     def send_email(
-        self, subject: str, message: str, recipients: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        self, subject: str, message: str, recipients: list[str] | None = None
+    ) -> dict[str, Any]:
         """
         Send an HTML email using AWS SES.
 
@@ -61,7 +61,7 @@ class EmailService:
             recipients if recipients is not None else self.default_recipients
         )
 
-        result: Dict[str, Any] = self.client.send_email(
+        result: dict[str, Any] = self.client.send_email(
             Destination={
                 "ToAddresses": receiver_emails,
             },

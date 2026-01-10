@@ -30,7 +30,7 @@ def create_response(
     body: object,
     content_type: str = "application/json",
     filename: str | None = None,
-    request_id: str | None = None,
+    _request_id: str | None = None,
 ) -> dict:
     """Create a standardized API response with request ID tracking"""
     headers = {
@@ -186,7 +186,7 @@ def transform_tips_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     return create_response(200, csv, content_type="text/csv", filename="gusto_tips.csv")
 
 
-def get_mpvs_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
+def get_mpvs_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
     """
     Generate meal period violations (MPV) report for payroll processing.
 

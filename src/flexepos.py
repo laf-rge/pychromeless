@@ -135,7 +135,6 @@ class Flexepos:
         driver.find_element(By.ID, TAG_IDS["login_password"]).send_keys(
             str(self._parameters["password"]) + Keys.ENTER
         )
-        return
 
     def getThirdPartyTransactions(
         self, stores: list[str], year: int, month: int
@@ -898,7 +897,7 @@ class Flexepos:
             for store in stores:
                 output_file = f"{output_dir}/{qdate}-{store}_daily_journal.txt"
                 try:
-                    with open(output_file, "w") as fileout:
+                    with open(output_file, "w", encoding="utf-8") as fileout:
                         fileout.write(daily_journal[store])
                 except IOError as e:
                     logging.error(

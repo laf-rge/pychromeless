@@ -72,7 +72,7 @@ def create_response(
     body: object,
     content_type: str = "application/json",
     filename: str | None = None,
-    request_id: str | None = None,
+    _request_id: str | None = None,
 ) -> dict:
     """Create a standardized API response with request ID tracking"""
     headers = {
@@ -94,7 +94,7 @@ def create_response(
     }
 
 
-def third_party_deposit_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
+def third_party_deposit_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
     """
     Process third-party deposits from various services.
 
@@ -140,7 +140,7 @@ def third_party_deposit_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     return create_response(200, {"message": "Success"})
 
 
-def invoice_sync_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
+def invoice_sync_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
     """
     Process invoice and inventory data from Crunchtime into Quickbooks.
 
@@ -196,7 +196,7 @@ def invoice_sync_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
         return create_response(500, {"message": "Error processing invoice sync"})
 
 
-def daily_sales_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
+def daily_sales_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
     """
     Process daily sales data and create related financial entries.
 
@@ -722,7 +722,7 @@ def daily_sales_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
         return create_response(500, {"message": str(e)}, request_id=request_id)
 
 
-def online_cc_fee(*args: Any, **kwargs: Any) -> dict[str, Any]:
+def online_cc_fee(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
     txdate = date.today() - timedelta(days=1)
 
     dj = Flexepos()
@@ -733,7 +733,7 @@ def online_cc_fee(*args: Any, **kwargs: Any) -> dict[str, Any]:
     return create_response(200, {"message": "Success"})
 
 
-def daily_journal_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
+def daily_journal_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
     """
     Generate and email daily journal reports.
 
@@ -805,7 +805,7 @@ def daily_journal_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     return create_response(200, response)
 
 
-def email_tips_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
+def email_tips_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
     year = date.today().year
     month = date.today().month
     pay_period = 0
@@ -823,7 +823,7 @@ def email_tips_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     return create_response(200, {"message": "Email Sent!"})
 
 
-def update_food_handler_pdfs_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
+def update_food_handler_pdfs_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
     """
     Asynchronously update the combined food handler PDFs for each store.
 

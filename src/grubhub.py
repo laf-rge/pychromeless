@@ -50,7 +50,6 @@ class Grubhub:
             str(self._parameters["password"]) + Keys.ENTER
         )
         sleep(4)
-        return
 
     def get_payments(
         self,

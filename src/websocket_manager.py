@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import time
-from typing import Any, Dict, Optional, Protocol, cast
+from typing import Any, Protocol, cast
 
 import boto3
 from mypy_boto3_apigatewaymanagementapi.client import ApiGatewayManagementApiClient
@@ -14,25 +14,25 @@ logger = logging.getLogger(__name__)
 
 
 class DynamoDBTable(Protocol):
-    def put_item(self, Item: Dict[str, Any]) -> Dict[str, Any]: ...
+    def put_item(self, Item: dict[str, Any]) -> dict[str, Any]: ...
 
-    def get_item(self, Key: Dict[str, Any]) -> Dict[str, Any]: ...
+    def get_item(self, Key: dict[str, Any]) -> dict[str, Any]: ...
 
     def update_item(
         self,
-        Key: Dict[str, Any],
+        Key: dict[str, Any],
         UpdateExpression: str,
-        ExpressionAttributeNames: Dict[str, str],
-        ExpressionAttributeValues: Dict[str, Any],
-    ) -> Dict[str, Any]: ...
+        ExpressionAttributeNames: dict[str, str],
+        ExpressionAttributeValues: dict[str, Any],
+    ) -> dict[str, Any]: ...
 
-    def delete_item(self, Key: Dict[str, Any]) -> Dict[str, Any]: ...
+    def delete_item(self, Key: dict[str, Any]) -> dict[str, Any]: ...
 
     def scan(
         self,
-        FilterExpression: Optional[str] = None,
-        ExpressionAttributeValues: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]: ...
+        FilterExpression: str | None = None,
+        ExpressionAttributeValues: dict[str, Any] | None = None,
+    ) -> dict[str, Any]: ...
 
 
 class WebSocketManager:
@@ -89,7 +89,7 @@ class WebSocketManager:
             standardized_result = self._standardize_result_format(result, status)
 
         # Construct the message to match API format
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "task_id": task_id,
             "operation": operation,
             "status": status,
@@ -99,7 +99,7 @@ class WebSocketManager:
             "created_at": current_time,
             "updated_at": current_time,
         }
-        message: Dict[str, Any] = {
+        message: dict[str, Any] = {
             "type": "task_status",
             "payload": payload,
         }
@@ -362,10 +362,10 @@ class TaskManager:
 
         self._broadcast_status(task)
 
-    def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
+    def get_task_status(self, task_id: str) -> Optional[dict[str, Any]]:
         """Get current task status"""
         response = self.table.get_item(Key={"task_id": task_id})
-        item: Optional[Dict[str, Any]] = response.get("Item")
+        item: Optional[dict[str, Any]] = response.get("Item")
         return item
 
     def _broadcast_status(self, task: Dict) -> None:

@@ -58,9 +58,9 @@ class Doordash:
 
     def get_payments(
         self,
-        stores: list[str],
-        start_date: datetime.date,
-        end_date: datetime.date,
+        _stores: list[str],
+        _start_date: datetime.date,
+        _end_date: datetime.date,
     ) -> list[list[Any]]:
         self._login()
         driver = self._driver

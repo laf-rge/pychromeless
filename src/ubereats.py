@@ -67,7 +67,6 @@ class UberEats:
         # driver.find_element(By.XPATH, "//button").click()
         # sleep(10)
         input("pause...")
-        return
 
     def __get_month_year(self) -> tuple[int, int]:
         if not self._driver:

@@ -86,7 +86,6 @@ class Crunchtime:
         driver.find_elements(By.XPATH, '//div[@ces-selenium-id="tool_close"]')[
             1
         ].click()
-        return
 
     def get_inventory_report(self, store: str, year: int, month: int) -> None:
         self._login(store)

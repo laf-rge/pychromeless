@@ -46,7 +46,7 @@ class WMCGdrive:
         media = MediaIoBaseUpload(
             io.BytesIO(content), mimetype=mime_type, resumable=True
         )
-        results, existing = self.retrieve_all_files(filename)
+        _results, existing = self.retrieve_all_files(filename)
         if existing is not None:
             request = (
                 self._service.files()
@@ -259,7 +259,7 @@ class WMCGdrive:
                 output, mimetype="application/pdf", resumable=True
             )
 
-            results, existing = self.retrieve_all_files(
+            _results, existing = self.retrieve_all_files(
                 filename, self._public_folder_id
             )  # Pass public folder ID
             if existing is not None:

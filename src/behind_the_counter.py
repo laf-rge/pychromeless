@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Dict, Optional, cast
+from typing import cast
 
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
@@ -15,11 +15,11 @@ class BehindTheCounter:
     def __init__(self) -> None:
         self.url = "https://franchisee.jerseymikes.com/"
         self._parameters = cast(
-            Dict[str, str], SSMParameterStore(prefix="/prod")["btc"]
+            dict[str, str], SSMParameterStore(prefix="/prod")["btc"]
         )
         self.username = str(self._parameters["user"])
         self.password = str(self._parameters["password"])
-        self.driver: Optional[webdriver.Chrome] = None
+        self.driver: webdriver.Chrome | None = None
         self.store_id = "20407"  # Store ID from the export URL
 
     def setup_driver(self) -> None:

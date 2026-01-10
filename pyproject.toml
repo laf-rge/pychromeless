@@ -196,6 +196,7 @@ ignore-paths = [
     "venv/.*",
     "__pycache__/.*",
     ".git/.*",
+    "src/typings/.*",
 ]
 
 [tool.pylint.messages_control]

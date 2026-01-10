@@ -9,9 +9,10 @@ import json
 import logging
 import os
 import time
-from typing import TYPE_CHECKING, Any, Dict, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import boto3
+from botocore.exceptions import ClientError
 
 if TYPE_CHECKING:
     from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
@@ -28,7 +29,7 @@ dynamodb = cast("DynamoDBServiceResource", boto3.resource("dynamodb"))
 table = cast(Any, dynamodb.Table(os.environ["TASK_STATES_TABLE"]))
 
 
-def get_task_status_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def get_task_status_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     Handle requests for task status by ID or operation type.
 
@@ -140,7 +141,7 @@ def get_task_status_handler(event: Dict[str, Any], context: Any) -> Dict[str, An
 
         return create_response(200, items, request_id)
 
-    except Exception:
+    except ClientError:
         logger.exception("Error processing task status request")
         return create_response(500, {"message": "Internal server error"}, request_id)
 
@@ -148,8 +149,8 @@ def get_task_status_handler(event: Dict[str, Any], context: Any) -> Dict[str, An
 def create_response(
     status_code: int,
     body: Any,
-    request_id: Optional[str] = None,
-) -> Dict[str, Any]:
+    request_id: str | None = None,
+) -> dict[str, Any]:
     """Create a standardized API response
 
     Args:
@@ -160,7 +161,7 @@ def create_response(
     Returns:
         Dict containing the response
     """
-    headers: Dict[str, str] = {
+    headers: dict[str, str] = {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
@@ -170,7 +171,7 @@ def create_response(
     if request_id:
         headers["X-Request-ID"] = request_id
 
-    response: Dict[str, Any] = {
+    response: dict[str, Any] = {
         "statusCode": status_code,
         "headers": headers,
         "body": json.dumps(body),

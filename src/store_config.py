@@ -1,8 +1,9 @@
 import json
 import logging
 from datetime import date
-from typing import Dict, List, Optional, Tuple, cast
+from typing import cast
 
+from botocore.exceptions import ClientError
 from ssm_parameter_store import SSMParameterStore
 
 logger = logging.getLogger(__name__)
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class StoreConfig:
     def __init__(self, prefix: str = "/prod"):
-        self._store_config: Dict = {}
+        self._store_config: dict = {}
         self._ssm = SSMParameterStore(prefix=prefix)
         self.refresh()
 
@@ -20,7 +21,7 @@ class StoreConfig:
             stores_param = cast(SSMParameterStore, self._ssm["stores"])
             config = str(stores_param["config"])
             self._store_config = json.loads(config)
-        except Exception as e:
+        except (ClientError, KeyError, json.JSONDecodeError) as e:
             logger.error(f"Failed to load store configuration: {str(e)}")
             # Fallback to default configuration if SSM fails
             self._store_config = {
@@ -37,10 +38,10 @@ class StoreConfig:
             }
             logger.warning("Using fallback store configuration")
 
-    def get_active_stores(self, target_date: date) -> List[str]:
+    def get_active_stores(self, target_date: date) -> list[str]:
         """Get list of stores that were active on a given date."""
         active_stores = []
-        for store_id, config in self._store_config.items():
+        for store_id, _config in self._store_config.items():
             if self.is_store_active(store_id, target_date):
                 active_stores.append(store_id)
         return sorted(active_stores)  # Sort for consistency
@@ -59,21 +60,21 @@ class StoreConfig:
 
         return open_date <= target_date
 
-    def get_store_name(self, store_id: str) -> Optional[str]:
+    def get_store_name(self, store_id: str) -> str | None:
         """Get the name of a store."""
-        name: Optional[str] = self._store_config.get(store_id, {}).get("name")
+        name: str | None = self._store_config.get(store_id, {}).get("name")
         return name
 
     def get_store_open_date(self, store_id: str) -> date:
         """Get the open date of a store."""
         return date.fromisoformat(self._store_config.get(store_id, {}).get("open_date"))
 
-    def get_store_ubereats_uuid(self, store_id: str) -> Optional[str]:
+    def get_store_ubereats_uuid(self, store_id: str) -> str | None:
         """Get the Uber Eats UUID of a store."""
-        uuid: Optional[str] = self._store_config.get(store_id, {}).get("ubereats_uuid")
+        uuid: str | None = self._store_config.get(store_id, {}).get("ubereats_uuid")
         return uuid
 
-    def get_inventory_processing_month(self, processing_date: date) -> Tuple[int, int]:
+    def get_inventory_processing_month(self, processing_date: date) -> tuple[int, int]:
         """
         Determine which month and year should be used for inventory processing.
 
@@ -111,6 +112,6 @@ class StoreConfig:
             return (processing_date.year, processing_date.month)
 
     @property
-    def all_stores(self) -> List[str]:
+    def all_stores(self) -> list[str]:
         """Get list of all store IDs."""
         return sorted(self._store_config.keys())  # Sort for consistency

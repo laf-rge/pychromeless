@@ -56,7 +56,6 @@ class Tips:
             for location in locations_dict["locations"]:
                 self._locations[location["id"]] = location
                 self._stores[location["name"]] = location
-        return
 
     def payperiod_dates(
         self, pay_period: int, year_month_date: datetime.date

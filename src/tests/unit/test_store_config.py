@@ -19,7 +19,7 @@ class TestStoreConfig(unittest.TestCase):
             mock_ssm_class.return_value = mock_ssm_instance
 
             # Mock the __getitem__ call to raise an exception to trigger fallback
-            mock_ssm_instance.__getitem__.side_effect = Exception("Mocked SSM failure")
+            mock_ssm_instance.__getitem__.side_effect = KeyError("Mocked SSM failure")
 
             self.store_config = StoreConfig()
 
@@ -135,7 +135,7 @@ class TestStoreConfigExistingMethods(unittest.TestCase):
             mock_ssm_class.return_value = mock_ssm_instance
 
             # Mock the __getitem__ call to raise an exception to trigger fallback
-            mock_ssm_instance.__getitem__.side_effect = Exception("Mocked SSM failure")
+            mock_ssm_instance.__getitem__.side_effect = KeyError("Mocked SSM failure")
 
             self.store_config = StoreConfig()
 

@@ -120,7 +120,7 @@ def handle_message(
     return status_code
 
 
-def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
+def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     """
     An AWS Lambda handler that receives events from an API Gateway websocket API
     and dispatches them to various handler functions.

@@ -1,12 +1,12 @@
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from auth_utils import OAuth2TokenValidation, extract_token
 
 logger = logging.getLogger(__name__)
 
 
-def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     """
     WebSocket API Gateway authorizer that validates MSAL tokens.
     """

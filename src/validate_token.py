@@ -1,12 +1,12 @@
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from auth_utils import AuthPolicy, HttpVerb, OAuth2TokenValidation, extract_token
 
 logger = logging.getLogger(__name__)
 
 
-def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     REST API Gateway authorizer that validates MSAL tokens.
     """
@@ -44,5 +44,5 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     authResponse["context"] = context
 
-    result: Dict[str, Any] = authResponse
+    result: dict[str, Any] = authResponse
     return result

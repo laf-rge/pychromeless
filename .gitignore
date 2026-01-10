@@ -47,3 +47,4 @@ src/.vscode/
 # Local environment variables
 .env.local
 *.egg-info/
+LINTING_PROGRESS.md

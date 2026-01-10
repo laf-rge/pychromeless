@@ -12,6 +12,7 @@ from datetime import UTC, date, datetime
 from typing import Any, cast
 
 import boto3
+from botocore.exceptions import ClientError
 from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ class DailySalesProgressTracker:
                     "stores": stores,
                 },
             )
-        except Exception as e:
+        except ClientError as e:
             logger.exception(
                 "Failed to initialize progress tracking",
                 extra={"request_id": request_id, "error": str(e)},
@@ -145,7 +146,7 @@ class DailySalesProgressTracker:
                 "store_statuses": item["store_statuses"],
             }
 
-        except Exception as e:
+        except ClientError as e:
             logger.exception(
                 "Failed to update store progress",
                 extra={

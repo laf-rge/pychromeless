@@ -14,6 +14,7 @@ from boto3.session import Session
 from botocore.exceptions import ClientError
 from intuitlib.client import AuthClient
 from quickbooks import QuickBooks
+from quickbooks.exceptions import QuickbooksException
 from quickbooks.helpers import qb_date_format
 from quickbooks.objects import (
     Account,
@@ -137,7 +138,7 @@ inv_account_ref = None
 vendor = None
 
 
-def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
+def lambda_handler(_event: dict[str, Any], _context: Any) -> dict[str, Any]:
     refresh_session()
     return {"statusCode": 200, "body": get_secret()}
 
@@ -176,7 +177,6 @@ def update_royalty(year: int, month: int, payment_data: dict[str, Any]) -> None:
             lines,
             store,
         )
-    return
 
 
 def create_daily_sales(
@@ -194,7 +194,7 @@ def create_daily_sales(
     }
     new_receipts = {}
 
-    for store, sref in store_refs.items():
+    for store, _sref in store_refs.items():
         if store in existing_receipts and store in daily_reports:
             if len(existing_receipts[store].LinkedTxn) > 0 and overwrite:
                 logger.warning(
@@ -305,13 +305,11 @@ def create_daily_sales(
 
         try:
             new_receipt.save(qb=CLIENT)
-        except Exception:
+        except QuickbooksException:
             logger.exception(
                 "Failed to save receipt",
                 extra={"receipt": json.loads(new_receipt.to_json())},
             )
-
-    return
 
 
 def enter_online_cc_fee(year: int, month: int, payment_data: dict[str, Any]) -> None:
@@ -319,7 +317,7 @@ def enter_online_cc_fee(year: int, month: int, payment_data: dict[str, Any]) -> 
 
     supplier = Vendor.where("DisplayName like 'Jersey Mike%'", qb=CLIENT)[0]
     for store, payment_info in payment_data.items():
-        lines = [[wmc_account_ref(6210), "", payment_data[store]["Total Fees"]]]
+        lines = [[wmc_account_ref(6210), "", payment_info["Total Fees"]]]
 
         sync_bill(
             supplier,
@@ -329,7 +327,6 @@ def enter_online_cc_fee(year: int, month: int, payment_data: dict[str, Any]) -> 
             lines,
             store,
         )
-    return
 
 
 def sync_third_party_deposit(
@@ -386,7 +383,7 @@ def sync_third_party_deposit(
 
     try:
         deposit.save(qb=CLIENT)
-    except Exception:
+    except QuickbooksException:
         logger.exception("Failed to save deposit", extra={"deposit": deposit.to_json()})
 
 
@@ -452,7 +449,7 @@ def sync_bill(
 
     try:
         bill.save(qb=CLIENT)
-    except Exception:
+    except QuickbooksException:
         logger.exception("Failed to save bill", extra={"bill": bill.to_json()})
 
 
@@ -506,7 +503,7 @@ def sync_third_party_transactions(
 
         try:
             jentry.save(qb=CLIENT)
-        except Exception:
+        except QuickbooksException:
             logger.exception(
                 "Failed to save journal entry",
                 extra={"journal_entry": jentry.to_json()},
@@ -580,7 +577,7 @@ def sync_inventory(
 
     try:
         jentry.save(qb=CLIENT)
-    except Exception:
+    except QuickbooksException:
         logger.exception(
             "Failed to save journal entry",
             extra={"journal_entry": jentry.to_json()},
@@ -725,7 +722,7 @@ def get_secret() -> bytes | str:
         else:
             return base64.b64decode(get_secret_value_response["SecretBinary"])
     else:
-        raise Exception("Secrets issue.")
+        raise RuntimeError("Failed to retrieve secret from AWS Secrets Manager")
 
 
 def put_secret(secret_string: str) -> dict[str, Any]:
@@ -740,7 +737,9 @@ def bill_export() -> None:
     # store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
     for qb_data_type in [VendorCredit, Bill, SalesReceipt, Deposit, JournalEntry]:
         with open(
-            "purchase_{0}_journal.json".format(qb_data_type.__name__), "w"
+            "purchase_{0}_journal.json".format(qb_data_type.__name__),
+            "w",
+            encoding="utf-8",
         ) as fileout:
             fileout.write("[")
             query_count = qb_data_type.count(
@@ -774,7 +773,9 @@ def fix_deposit() -> None:
     qb_data_type = Deposit
     modify_queue = []
     with open(
-        "purchase_{0}_journal.json".format(qb_data_type.__name__), "w"
+        "purchase_{0}_journal.json".format(qb_data_type.__name__),
+        "w",
+        encoding="utf-8",
     ) as fileout:
         fileout.write("[")
         query_count = qb_data_type.count(
@@ -906,7 +907,7 @@ def fix_wld_online_tips() -> None:
                                 "date": sales_receipt.TxnDate,
                             },
                         )
-                    except Exception:
+                    except QuickbooksException:
                         logger.exception(
                             "Failed to save sales receipt",
                             extra={
@@ -1178,7 +1179,7 @@ def split_bill(
         for bill in new_bills:
             try:
                 bill.delete(qb=CLIENT)
-            except Exception as rollback_error:
+            except QuickbooksException as rollback_error:
                 logger.exception(
                     "Failed to delete split bill during rollback",
                     extra={
