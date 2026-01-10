@@ -191,21 +191,13 @@ class Grubhub:
 
         Args:
             filename: Path to the CSV file exported from Grubhub
-            start_date: Optional start date filter (datetime.date)
-            end_date: Optional end date filter (datetime.date)
+            start_date: Optional start date filter (datetime.date). If None, no start filter.
+            end_date: Optional end date filter (datetime.date). If None, no end filter.
 
         Returns:
             List of payment records in format: ["Grubhub", txdate, notes, lines, store]
             where lines is a list of [account_code, description, amount] tuples
         """
-        if isinstance(start_date, type(None)):
-            start_date = datetime.date.today() - datetime.timedelta(
-                days=(datetime.date.today().weekday() + 7)
-            )
-        if isinstance(end_date, type(None)):
-            end_date = datetime.date.today() - datetime.timedelta(
-                days=(datetime.date.today().weekday() - 7)
-            )
 
         # Helper function to parse numeric values, handling "n/a" and empty strings
         def parse_decimal(value: Any) -> Decimal:
@@ -302,10 +294,13 @@ class Grubhub:
             txdate = deposit_data["deposit_date"]
             store = deposit_data["store"]
 
-            # Skip if outside date range or missing required data
+            # Skip if missing required data
             if txdate is None or store is None:
                 continue
-            if txdate < start_date or txdate > end_date:
+            # Apply date filtering only if dates are specified
+            if start_date is not None and txdate < start_date:
+                continue
+            if end_date is not None and txdate > end_date:
                 continue
 
             # Build notes from adjustments

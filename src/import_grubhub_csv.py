@@ -12,7 +12,7 @@ Example:
 import argparse
 import logging
 import sys
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 
 import qb
@@ -38,12 +38,12 @@ def main() -> int:
     parser.add_argument(
         "--start-date",
         type=str,
-        help="Start date for filtering deposits (YYYY-MM-DD). Defaults to 14 days ago.",
+        help="Start date for filtering deposits (YYYY-MM-DD). If not specified, no start filter.",
     )
     parser.add_argument(
         "--end-date",
         type=str,
-        help="End date for filtering deposits (YYYY-MM-DD). Defaults to today.",
+        help="End date for filtering deposits (YYYY-MM-DD). If not specified, no end filter.",
     )
     parser.add_argument(
         "--dry-run",
@@ -59,15 +59,16 @@ def main() -> int:
         logger.error("CSV file not found: %s", args.csv_file)
         sys.exit(1)
 
-    # Parse date arguments
+    # Parse date arguments (None means no filtering)
+    start_date: date | None = None
+    end_date: date | None = None
+
     if args.start_date:
         try:
             start_date = date.fromisoformat(args.start_date)
         except ValueError:
             logger.error("Invalid start date format. Use YYYY-MM-DD")
             sys.exit(1)
-    else:
-        start_date = date.today() - timedelta(days=14)
 
     if args.end_date:
         try:
@@ -75,8 +76,6 @@ def main() -> int:
         except ValueError:
             logger.error("Invalid end date format. Use YYYY-MM-DD")
             sys.exit(1)
-    else:
-        end_date = date.today()
 
     logger.info(
         "Starting Grubhub CSV import",
