@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import time
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any, cast
 
 import boto3
@@ -18,6 +19,19 @@ if TYPE_CHECKING:
     from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
 
 from logging_utils import setup_json_logger
+
+
+class DecimalEncoder(json.JSONEncoder):
+    """JSON encoder that handles Decimal types from DynamoDB."""
+
+    def default(self, o: Any) -> Any:
+        if isinstance(o, Decimal):
+            # Convert to int if it's a whole number, otherwise float
+            if o % 1 == 0:
+                return int(o)
+            return float(o)
+        return super().default(o)
+
 
 # Set up logging if not in Lambda environment
 if "AWS_LAMBDA_FUNCTION_NAME" not in os.environ:
@@ -180,7 +194,7 @@ def create_response(
     response: dict[str, Any] = {
         "statusCode": status_code,
         "headers": headers,
-        "body": json.dumps(body),
+        "body": json.dumps(body, cls=DecimalEncoder),
     }
 
     return response
