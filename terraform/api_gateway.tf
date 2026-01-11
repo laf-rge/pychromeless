@@ -1187,14 +1187,19 @@ resource "aws_api_gateway_method_response" "payroll_allocation_method_response_o
 }
 
 resource "aws_api_gateway_integration_response" "payroll_allocation_options-200" {
-  http_method = aws_api_gateway_method.method_payroll_allocation_options.http_method
   rest_api_id = aws_api_gateway_rest_api.josiah.id
   resource_id = aws_api_gateway_resource.payroll_allocation_resource.id
+  http_method = aws_api_gateway_method.method_payroll_allocation_options.http_method
+  status_code = "200"
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
-    "method.response.header.Access-Control-Allow-Methods" = local.cors_methods
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
     "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
   }
-  status_code = "200"
+
+  depends_on = [
+    aws_api_gateway_integration.integration_payroll_allocation_OPTIONS,
+    aws_api_gateway_method_response.payroll_allocation_method_response_options
+  ]
 }
