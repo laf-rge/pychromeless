@@ -18,6 +18,14 @@ class DynamoDBTable(Protocol):
 
     def get_item(self, Key: dict[str, Any]) -> dict[str, Any]: ...
 
+    def query(
+        self,
+        KeyConditionExpression: str,
+        ExpressionAttributeValues: dict[str, Any],
+        ScanIndexForward: bool = True,
+        Limit: int | None = None,
+    ) -> dict[str, Any]: ...
+
     def update_item(
         self,
         Key: dict[str, Any],
@@ -106,9 +114,20 @@ class WebSocketManager:
 
         # Persist task state to DynamoDB
         # Check if task already exists to preserve created_at
+        # Note: Table has composite key (task_id + timestamp), so we use query
         try:
-            existing_task = self.task_states_table.get_item(Key={"task_id": task_id})
-            created_at = existing_task.get("Item", {}).get("created_at", current_time)
+            existing_response = self.task_states_table.query(
+                KeyConditionExpression="task_id = :tid",
+                ExpressionAttributeValues={":tid": task_id},
+                ScanIndexForward=False,  # Descending order (newest first)
+                Limit=1,
+            )
+            existing_items = existing_response.get("Items", [])
+            created_at = (
+                existing_items[0].get("created_at", current_time)
+                if existing_items
+                else current_time
+            )
         except Exception as e:
             logger.warning(f"Error fetching existing task, using current time: {e}")
             created_at = current_time
@@ -117,6 +136,7 @@ class WebSocketManager:
         ttl = current_time + (24 * 60 * 60)
         task_item = {
             "task_id": task_id,
+            "timestamp": current_time,  # Required sort key for composite primary key
             "operation": operation,
             "status": status,
             "progress": progress,
@@ -234,6 +254,7 @@ class TaskManager:
 
         task = {
             "task_id": task_id,
+            "timestamp": current_time,  # Required sort key for composite primary key
             "operation": operation.value,  # Store the enum value
             "status": status,
             "progress": progress,
@@ -258,32 +279,32 @@ class TaskManager:
         current_time = int(time.time())
         ttl = current_time + operation.ttl_seconds
 
+        # Query for existing task to get created_at (table has composite key)
+        existing_response = self.table.query(
+            KeyConditionExpression="task_id = :tid",
+            ExpressionAttributeValues={":tid": task_id},
+            ScanIndexForward=False,
+            Limit=1,
+        )
+        existing_items = existing_response.get("Items", [])
+        created_at = (
+            existing_items[0].get("created_at", current_time)
+            if existing_items
+            else current_time
+        )
+
         task = {
             "task_id": task_id,
+            "timestamp": current_time,  # Required sort key for composite primary key
             "operation": operation.value,
             "status": status,
             "progress": progress,
+            "created_at": created_at,
             "updated_at": current_time,
             "ttl": ttl,
         }
 
-        self.table.update_item(
-            Key={"task_id": task_id},
-            UpdateExpression="SET #status = :status, #progress = :progress, #updated_at = :updated_at, #ttl = :ttl",
-            ExpressionAttributeNames={
-                "#status": "status",
-                "#progress": "progress",
-                "#updated_at": "updated_at",
-                "#ttl": "ttl",
-            },
-            ExpressionAttributeValues={
-                ":status": status,
-                ":progress": progress,
-                ":updated_at": current_time,
-                ":ttl": ttl,
-            },
-        )
-
+        self.table.put_item(Item=task)
         self._broadcast_status(task)
 
     def complete_task(
@@ -297,32 +318,32 @@ class TaskManager:
         current_time = int(time.time())
         ttl = current_time + operation.ttl_seconds
 
+        # Query for existing task to get created_at (table has composite key)
+        existing_response = self.table.query(
+            KeyConditionExpression="task_id = :tid",
+            ExpressionAttributeValues={":tid": task_id},
+            ScanIndexForward=False,
+            Limit=1,
+        )
+        existing_items = existing_response.get("Items", [])
+        created_at = (
+            existing_items[0].get("created_at", current_time)
+            if existing_items
+            else current_time
+        )
+
         task = {
             "task_id": task_id,
+            "timestamp": current_time,  # Required sort key for composite primary key
             "operation": operation.value,
             "status": status,
             "result": result,
+            "created_at": created_at,
             "updated_at": current_time,
             "ttl": ttl,
         }
 
-        self.table.update_item(
-            Key={"task_id": task_id},
-            UpdateExpression="SET #status = :status, #result = :result, #updated_at = :updated_at, #ttl = :ttl",
-            ExpressionAttributeNames={
-                "#status": "status",
-                "#result": "result",
-                "#updated_at": "updated_at",
-                "#ttl": "ttl",
-            },
-            ExpressionAttributeValues={
-                ":status": status,
-                ":result": result,
-                ":updated_at": current_time,
-                ":ttl": ttl,
-            },
-        )
-
+        self.table.put_item(Item=task)
         self._broadcast_status(task)
 
     def fail_task(
@@ -336,39 +357,45 @@ class TaskManager:
         current_time = int(time.time())
         ttl = current_time + operation.ttl_seconds
 
+        # Query for existing task to get created_at (table has composite key)
+        existing_response = self.table.query(
+            KeyConditionExpression="task_id = :tid",
+            ExpressionAttributeValues={":tid": task_id},
+            ScanIndexForward=False,
+            Limit=1,
+        )
+        existing_items = existing_response.get("Items", [])
+        created_at = (
+            existing_items[0].get("created_at", current_time)
+            if existing_items
+            else current_time
+        )
+
         task = {
             "task_id": task_id,
+            "timestamp": current_time,  # Required sort key for composite primary key
             "operation": operation.value,
             "status": status,
             "error": error,
+            "created_at": created_at,
             "updated_at": current_time,
             "ttl": ttl,
         }
 
-        self.table.update_item(
-            Key={"task_id": task_id},
-            UpdateExpression="SET #status = :status, #error = :error, #updated_at = :updated_at, #ttl = :ttl",
-            ExpressionAttributeNames={
-                "#status": "status",
-                "#error": "error",
-                "#updated_at": "updated_at",
-                "#ttl": "ttl",
-            },
-            ExpressionAttributeValues={
-                ":status": status,
-                ":error": error,
-                ":updated_at": current_time,
-                ":ttl": ttl,
-            },
-        )
-
+        self.table.put_item(Item=task)
         self._broadcast_status(task)
 
     def get_task_status(self, task_id: str) -> dict[str, Any] | None:
-        """Get current task status"""
-        response = self.table.get_item(Key={"task_id": task_id})
-        item: dict[str, Any] | None = response.get("Item")
-        return item
+        """Get current task status (most recent entry for this task_id)"""
+        # Table has composite key (task_id + timestamp), use query to get most recent
+        response = self.table.query(
+            KeyConditionExpression="task_id = :tid",
+            ExpressionAttributeValues={":tid": task_id},
+            ScanIndexForward=False,  # Descending order (newest first)
+            Limit=1,
+        )
+        items = response.get("Items", [])
+        return items[0] if items else None
 
     def _broadcast_status(self, task: dict[str, Any]) -> None:
         """Broadcast task status to all connected clients"""

@@ -62,12 +62,18 @@ def get_task_status_handler(event: dict[str, Any], context: Any) -> dict[str, An
 
                 return create_response(200, items, request_id)
 
-            # Get task by ID
-            response = table.get_item(Key={"task_id": task_id})
-            if "Item" not in response:
+            # Get task by ID (table has composite key, use query for most recent)
+            response = table.query(
+                KeyConditionExpression="task_id = :tid",
+                ExpressionAttributeValues={":tid": task_id},
+                ScanIndexForward=False,  # Descending order (newest first)
+                Limit=1,
+            )
+            items = response.get("Items", [])
+            if not items:
                 return create_response(404, {"message": "Task not found"}, request_id)
 
-            return create_response(200, response["Item"], request_id)
+            return create_response(200, items[0], request_id)
 
         # Check if we're getting tasks by operation type or recent tasks
         if "queryStringParameters" in event and event["queryStringParameters"]:
