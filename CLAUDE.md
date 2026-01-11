@@ -257,11 +257,54 @@ PYTHONPATH=src python -m pytest src/tests/unit/test_tips.py -v
 4. Build and deploy: `make all`
 
 ### Adding a New Lambda Function
-1. Add handler to `src/lambda_function.py`
-2. Define in `terraform/lambda.tf` `locals.lambda_functions`
-3. Add environment variables in `terraform/lambda.tf`
-4. Update `terraform/api_gateway.tf` if HTTP endpoint needed
-5. Run `make all` to build and deploy
+
+1. **Add handler to `src/lambda_function.py`**
+   - Create handler function following existing patterns
+   - Use `create_response()` for API responses (includes CORS headers)
+
+2. **Define in `terraform/lambda.tf`**
+   - Add to `locals.lambda_functions` map
+   - Add environment variables if needed
+
+3. **Add API Gateway resources in `terraform/api_gateway.tf`** (if HTTP endpoint needed)
+
+   For a POST endpoint, add these 8 resources in order:
+
+   ```hcl
+   # 1. Resource (URL path)
+   resource "aws_api_gateway_resource" "my_endpoint_resource" { ... }
+
+   # 2. Method (POST with auth)
+   resource "aws_api_gateway_method" "proxy_my_endpoint" { ... }
+
+   # 3. Integration (Lambda proxy)
+   resource "aws_api_gateway_integration" "lambda_my_endpoint" { ... }
+
+   # 4. Method Response (200 with CORS headers)
+   resource "aws_api_gateway_method_response" "my_endpoint_method_response_200" { ... }
+
+   # 5. OPTIONS method (CORS preflight - no auth)
+   resource "aws_api_gateway_method" "method_my_endpoint_options" { ... }
+
+   # 6. OPTIONS integration (MOCK)
+   resource "aws_api_gateway_integration" "integration_my_endpoint_OPTIONS" { ... }
+
+   # 7. OPTIONS method response
+   resource "aws_api_gateway_method_response" "my_endpoint_method_response_options" { ... }
+
+   # 8. OPTIONS integration response (CORS headers)
+   resource "aws_api_gateway_integration_response" "my_endpoint_options-200" { ... }
+   ```
+
+4. **Add to deployment triggers** (in `aws_api_gateway_deployment.josiah`)
+   - Add integration to `depends_on` list
+   - Add entries to `triggers` block
+
+5. **Add Lambda permission** for API Gateway invocation (in `terraform/lambda.tf`)
+
+6. **Run `make all`** to build and deploy
+
+**IMPORTANT:** Copy an existing endpoint (like `fdms_statement_import` or `grubhub_csv_import`) as a template - don't create from scratch.
 
 ## Important Patterns & Conventions
 

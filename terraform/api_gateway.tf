@@ -629,8 +629,7 @@ resource "aws_api_gateway_stage" "test" {
 
   lifecycle {
     ignore_changes = [
-      deployment_id, // Prevent unwanted updates
-      description    // Prevent description changes from forcing updates
+      description // Prevent description changes from forcing updates
     ]
   }
 
