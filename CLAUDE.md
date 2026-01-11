@@ -306,6 +306,12 @@ PYTHONPATH=src python -m pytest src/tests/unit/test_tips.py -v
 
 **IMPORTANT:** Copy an existing endpoint (like `fdms_statement_import` or `grubhub_csv_import`) as a template - don't create from scratch.
 
+**Common Pitfalls:**
+- Missing `depends_on` in integration response → "Invalid Integration identifier" error
+- `deployment_id` in stage lifecycle `ignore_changes` → new endpoints don't deploy to stage
+- Missing OPTIONS method → CORS errors on preflight requests
+- Forgetting to add Lambda permission → 500 errors when API Gateway calls Lambda
+
 ## Important Patterns & Conventions
 
 ### Request ID Tracking
@@ -360,6 +366,38 @@ progress.update(step_name="Scraping data", current_step=1)
 - **Cold starts**: Container functions have ~10-15 second cold starts
 - **Rate limits**: QuickBooks API has rate limits (handle 429 responses)
 - **DynamoDB TTL**: Task states auto-delete after 12-48 hours
+
+## Common Gotchas & Lessons Learned
+
+### DynamoDB
+
+- **Composite Keys**: Tables with composite primary keys (partition + sort) require `query()` not `get_item()` to find by partition key alone. Example: `task_states` table has `task_id` + `timestamp` composite key.
+- **Decimal Type**: DynamoDB returns numbers as Python `Decimal`. Use `DecimalEncoder` for JSON serialization or convert explicitly.
+- **Deduplication**: With composite keys, multiple records per partition key exist. Deduplicate results by partition key when returning lists.
+
+### API Gateway / Terraform
+
+- **New Endpoints**: Follow the 8-resource checklist in "Adding a New Lambda Function" section above.
+- **Deployment Race Conditions**: Use explicit `depends_on` for integration responses that reference integrations.
+- **Stage Updates**: Never add `deployment_id` to stage lifecycle `ignore_changes` - prevents new endpoints from deploying.
+
+### File Uploads
+
+- **Duplicate Field Names**: Multipart uploads with same field name (e.g., `file[]`) need deduplication in `decode_upload()`. See `src/tips_processing.py`.
+
+### External Data Parsing
+
+- **Data Variations**: Always handle apostrophes, casing, whitespace variations in external data.
+- **Example**: Use `JERSEY MIKE'?S` regex to handle both "MIKE'S" and "MIKES" in FDMS statements.
+
+### Python Logging
+
+- **Reserved Attributes**: Never use `filename`, `lineno`, `funcName`, etc. in logging `extra` dicts - they're reserved by Python's LogRecord.
+
+### Code Organization
+
+- **QuickBooks Utilities**: All QB helpers belong in `src/qb.py` (store refs, account refs, vendor lookups). Don't duplicate patterns in feature modules.
+- **Financial Calculations**: Always use `Decimal` type with `TWO_PLACES = Decimal(10) ** -2` for money. Import from `qb.py`.
 
 ## References
 

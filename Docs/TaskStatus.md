@@ -237,6 +237,20 @@ When status is "processing", the progress object includes:
 - `created_at`: Unix timestamp when the task was created
 - `updated_at`: Unix timestamp of the last status update
 
+## DynamoDB Schema
+
+The `task_states` table uses a **composite primary key**:
+- **Partition key**: `task_id` (String)
+- **Sort key**: `timestamp` (Number)
+
+This design allows multiple state snapshots per task (history of state changes). The API automatically returns only the most recent state for each `task_id` when querying lists.
+
+**Global Secondary Index**: `operation_type-index`
+- Hash key: `operation`
+- Range key: `timestamp`
+
+**TTL**: Tasks are automatically deleted 12-48 hours after creation (varies by operation type).
+
 ## Notes
 
 - All endpoints require authentication via MSAL token
