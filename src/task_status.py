@@ -120,11 +120,21 @@ def get_task_status_handler(event: dict[str, Any], context: Any) -> dict[str, An
                 # Sort by updated_at descending (newest first)
                 recent_items.sort(key=lambda x: x.get("updated_at", 0), reverse=True)
 
-                # Limit results
-                recent_items = recent_items[:limit]
+                # Deduplicate by task_id, keeping only the most recent record per task
+                # (composite key means multiple records per task_id exist)
+                seen_task_ids: set[str] = set()
+                deduplicated_items: list[dict[str, Any]] = []
+                for item in recent_items:
+                    task_id = item.get("task_id")
+                    if task_id and task_id not in seen_task_ids:
+                        seen_task_ids.add(task_id)
+                        deduplicated_items.append(item)
 
-                logger.info(f"Returning {len(recent_items)} recent tasks")
-                return create_response(200, recent_items, request_id)
+                # Limit results
+                deduplicated_items = deduplicated_items[:limit]
+
+                logger.info(f"Returning {len(deduplicated_items)} recent tasks")
+                return create_response(200, deduplicated_items, request_id)
 
             operation = params.get("operation")
             if not operation:
