@@ -42,6 +42,8 @@ src/.vscode/
 
 *.csv
 
+*.pdf
+
 .env
 
 # Local environment variables
