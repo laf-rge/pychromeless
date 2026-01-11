@@ -17,6 +17,10 @@ import logging
 import os
 import re
 import uuid
+from concurrent.futures import (  # pylint: disable=no-name-in-module  # type: ignore[attr-defined]  # noqa: F401
+    ThreadPoolExecutor,
+    as_completed,
+)
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from functools import partial  # noqa # pylint: disable=unused-import
@@ -111,8 +115,8 @@ def third_party_deposit_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
     """
     context = _args[1] if _args and len(_args) > 1 else None
     task_id = (
-        (context.aws_request_id if context else None) or f"local-{str(uuid.uuid4())}"
-    )
+        context.aws_request_id if context else None
+    ) or f"local-{str(uuid.uuid4())}"
     ws_manager = WebSocketManager()
 
     ws_manager.broadcast_status(
@@ -202,8 +206,8 @@ def invoice_sync_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
     """
     context = _args[1] if _args and len(_args) > 1 else None
     task_id = (
-        (context.aws_request_id if context else None) or f"local-{str(uuid.uuid4())}"
-    )
+        context.aws_request_id if context else None
+    ) or f"local-{str(uuid.uuid4())}"
     ws_manager = WebSocketManager()
 
     ws_manager.broadcast_status(
@@ -371,10 +375,6 @@ def daily_sales_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
             # Reset for this transaction date
             all_journal_data.clear()
             failed_stores.clear()
-
-            # Import here to avoid issues with availability
-            # pylint: disable=import-outside-toplevel
-            from concurrent.futures import ThreadPoolExecutor, as_completed
 
             def invoke_store_lambda(
                 store: str, txdate: date = txdate
@@ -820,8 +820,8 @@ def daily_journal_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
     """
     context = _args[1] if _args and len(_args) > 1 else None
     task_id = (
-        (context.aws_request_id if context else None) or f"local-{str(uuid.uuid4())}"
-    )
+        context.aws_request_id if context else None
+    ) or f"local-{str(uuid.uuid4())}"
     ws_manager = WebSocketManager()
 
     ws_manager.broadcast_status(
@@ -849,10 +849,14 @@ def daily_journal_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
                 "text/plain",
             )
 
-        message = "<h1>Wagoner Management Corp.</h1>\n\n<h2>Cash Drawer Opens:</h2>\n<pre>"
+        message = (
+            "<h1>Wagoner Management Corp.</h1>\n\n<h2>Cash Drawer Opens:</h2>\n<pre>"
+        )
 
         for store, journal in drawer_opens.items():
-            message = "{}{}: {}\n".format(message, store, journal.count("Cash Drawer Open"))
+            message = "{}{}: {}\n".format(
+                message, store, journal.count("Cash Drawer Open")
+            )
 
         message += "</pre>\n\n<h2>Missing Punches:</h2>\n<pre>"
 
@@ -920,8 +924,8 @@ def daily_journal_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
 def email_tips_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
     context = args[1] if args and len(args) > 1 else None
     task_id = (
-        (context.aws_request_id if context else None) or f"local-{str(uuid.uuid4())}"
-    )
+        context.aws_request_id if context else None
+    ) or f"local-{str(uuid.uuid4())}"
     ws_manager = WebSocketManager()
 
     ws_manager.broadcast_status(
@@ -1342,14 +1346,11 @@ def payroll_allocation_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
             - existing_url: str (URL to existing entry if exists is true)
     """
     # pylint: disable=import-outside-toplevel
+    from payroll_allocation import process_payroll_allocation
     from tips_processing import decode_upload
 
-    from payroll_allocation import process_payroll_allocation
-
     context = args[1] if args and len(args) > 1 else None
-    task_id = (
-        (context.aws_request_id if context else None) or f"local-{uuid.uuid4()}"
-    )
+    task_id = (context.aws_request_id if context else None) or f"local-{uuid.uuid4()}"
     ws_manager = WebSocketManager()
 
     ws_manager.broadcast_status(
@@ -1460,14 +1461,11 @@ def grubhub_csv_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     import tempfile
     from datetime import date
 
+    from grubhub import Grubhub
     from tips_processing import decode_upload
 
-    from grubhub import Grubhub
-
     context = args[1] if args and len(args) > 1 else None
-    task_id = (
-        (context.aws_request_id if context else None) or f"local-{uuid.uuid4()}"
-    )
+    task_id = (context.aws_request_id if context else None) or f"local-{uuid.uuid4()}"
     ws_manager = WebSocketManager()
 
     ws_manager.broadcast_status(
@@ -1534,7 +1532,9 @@ def grubhub_csv_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                 task_id=task_id,
                 operation=OperationType.GRUBHUB_CSV_IMPORT,
                 status="completed",
-                result={"summary": "No deposits found in CSV for the specified date range"},
+                result={
+                    "summary": "No deposits found in CSV for the specified date range"
+                },
             )
             return create_response(
                 200,
