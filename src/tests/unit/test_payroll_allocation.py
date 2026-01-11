@@ -5,6 +5,13 @@ import unittest
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
+# Save original modules to restore later (important for test isolation)
+_original_modules = {
+    key: sys.modules.get(key)
+    for key in ["quickbooks", "quickbooks.helpers", "quickbooks.objects",
+                "quickbooks.objects.journalentry", "qb"]
+}
+
 # Mock quickbooks module before importing payroll_allocation
 sys.modules["quickbooks"] = MagicMock()
 sys.modules["quickbooks.helpers"] = MagicMock()
@@ -26,6 +33,13 @@ from payroll_allocation import (
     PayrollData,
     parse_gusto_csv,
 )
+
+# Restore original modules after import so other tests can use the real quickbooks
+for key, original in _original_modules.items():
+    if original is None:
+        sys.modules.pop(key, None)
+    else:
+        sys.modules[key] = original
 
 
 class TestPayrollData(unittest.TestCase):

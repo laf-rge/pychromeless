@@ -72,7 +72,9 @@ class OAuth2TokenValidation:
         try:
             unverified_header = jwt.get_unverified_header(token)
         except Exception as e:
-            raise TokenDecodeError(f"Unable to decode authorization token headers: {e}") from e
+            raise TokenDecodeError(
+                f"Unable to decode authorization token headers: {e}"
+            ) from e
 
         try:
             rsa_key = self.find_rsa_key(self.jwks, unverified_header)
@@ -277,7 +279,9 @@ def extract_token(event: dict[str, Any], source: str) -> str:
     if source == "rest":
         auth_param = event.get("authorizationToken", "")
         if not auth_param:
-            raise AuthorizationError("No Authorization token found in authorizationToken")
+            raise AuthorizationError(
+                "No Authorization token found in authorizationToken"
+            )
     elif source == "websocket":
         auth_param = event.get("queryStringParameters", {}).get("Authorization", "")
         if not auth_param:
@@ -286,7 +290,9 @@ def extract_token(event: dict[str, Any], source: str) -> str:
         raise ValueError("Invalid source. Must be 'rest' or 'websocket'")
 
     if not auth_param.startswith("Bearer "):
-        raise AuthorizationError("Invalid Authorization format. Must start with 'Bearer '")
+        raise AuthorizationError(
+            "Invalid Authorization format. Must start with 'Bearer '"
+        )
 
     token: str = auth_param[7:]  # Remove "Bearer " prefix
     return token

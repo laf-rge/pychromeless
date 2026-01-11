@@ -26,6 +26,7 @@ const navigation: NavSection[] = [
       { name: "Invoice Sync", href: "/financial/invoice-sync" },
       { name: "Bill Split", href: "/financial/bill-split" },
       { name: "GrubHub Import", href: "/financial/grubhub-import" },
+      { name: "FDMS Import", href: "/financial/fdms-import" },
     ],
   },
   {

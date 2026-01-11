@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
   DAILY_SALES: "",  // Root endpoint (no path)
   INVOICE_SYNC: "/invoice_sync",
   SPLIT_BILL: "/split_bill",
+  FDMS_STATEMENT_IMPORT: "/fdms_statement_import",
 
   // Payroll Operations
   EMAIL_TIPS: "/email_tips",

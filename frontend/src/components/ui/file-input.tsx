@@ -5,11 +5,13 @@ import { Button } from "./button";
 export interface FileInputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "value"> {
   onFileChange?: (file: File | undefined) => void;
+  onFilesChange?: (files: File[]) => void;
   selectedFile?: File;
+  selectedFiles?: File[];
 }
 
 const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
-  ({ className, onFileChange, selectedFile, id, onChange, ...props }, ref) => {
+  ({ className, onFileChange, onFilesChange, selectedFile, selectedFiles, id, onChange, multiple, ...props }, ref) => {
     const inputRef = React.useRef<HTMLInputElement>(null);
 
     // Merge refs
@@ -20,10 +22,30 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      onFileChange?.(file);
+      if (multiple) {
+        const files = e.target.files ? Array.from(e.target.files) : [];
+        onFilesChange?.(files);
+      } else {
+        const file = e.target.files?.[0];
+        onFileChange?.(file);
+      }
       onChange?.(e);
     };
+
+    const getDisplayText = () => {
+      if (multiple && selectedFiles) {
+        if (selectedFiles.length === 0) {
+          return "No files selected";
+        }
+        if (selectedFiles.length === 1) {
+          return selectedFiles[0].name;
+        }
+        return `${selectedFiles.length} files selected`;
+      }
+      return selectedFile ? selectedFile.name : "No file selected";
+    };
+
+    const hasSelection = multiple ? (selectedFiles && selectedFiles.length > 0) : !!selectedFile;
 
     return (
       <div className={cn("flex items-center gap-3", className)}>
@@ -32,6 +54,7 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
           ref={inputRef}
           className="sr-only"
           id={id}
+          multiple={multiple}
           {...props}
           onChange={handleChange}
         />
@@ -42,15 +65,15 @@ const FileInput = React.forwardRef<HTMLInputElement, FileInputProps>(
           onClick={handleClick}
           className="shrink-0"
         >
-          Choose File
+          {multiple ? "Choose Files" : "Choose File"}
         </Button>
         <span
           className={cn(
             "text-sm truncate",
-            selectedFile ? "text-foreground" : "text-muted-foreground"
+            hasSelection ? "text-foreground" : "text-muted-foreground"
           )}
         >
-          {selectedFile ? selectedFile.name : "No file selected"}
+          {getDisplayText()}
         </span>
       </div>
     );

@@ -1644,3 +1644,188 @@ def grubhub_csv_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
             error=str(e),
         )
         return create_response(500, {"message": f"Error: {str(e)}"})
+
+
+def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    """
+    Import FDMS statement PDFs and create bills in QuickBooks.
+
+    Lambda invocation:
+        - HTTP Method: POST
+        - Content-Type: multipart/form-data
+        - Form fields:
+            - file[]: One or more FDMS statement PDF files
+
+    Returns:
+        JSON response with:
+            - success: bool
+            - summary: dict with total_files/bills_created/files_with_chargebacks/failed
+            - results: list of per-file results with bill URLs and chargeback/adjustment info
+    """
+    # pylint: disable=import-outside-toplevel
+    from fdms_statement import (
+        FDMSParseError,
+        create_fdms_bill,
+        parse_fdms_pdf,
+    )
+    from tips_processing import decode_upload
+
+    context = args[1] if args and len(args) > 1 else None
+    task_id = (context.aws_request_id if context else None) or f"local-{uuid.uuid4()}"
+    ws_manager = WebSocketManager()
+
+    ws_manager.broadcast_status(
+        task_id=task_id,
+        operation=OperationType.FDMS_STATEMENT_IMPORT,
+        status="started",
+    )
+
+    try:
+        event = args[0] if args and len(args) > 0 else {}
+
+        # Parse multipart form data
+        multipart_content = decode_upload(event)
+
+        # Collect all PDF files from form data
+        pdf_files: list[tuple[str, bytes]] = []
+
+        for key, value in multipart_content.items():
+            # Accept file[], file[0], file[1], etc. or just "file"
+            if key.startswith("file") and isinstance(value, bytes):
+                # Try to get filename from content-disposition if available
+                filename = f"statement_{len(pdf_files) + 1}.pdf"
+                pdf_files.append((filename, value))
+
+        if not pdf_files:
+            ws_manager.broadcast_status(
+                task_id=task_id,
+                operation=OperationType.FDMS_STATEMENT_IMPORT,
+                status="failed",
+                error="No PDF files provided",
+            )
+            return create_response(400, {"message": "No PDF files provided"})
+
+        # Process each PDF
+        results: list[dict[str, Any]] = []
+        bills_created = 0
+        files_with_chargebacks = 0
+        failed = 0
+
+        for i, (filename, pdf_content) in enumerate(pdf_files):
+            result: dict[str, Any] = {
+                "filename": filename,
+                "store": None,
+                "statement_month": None,
+                "total_fees": None,
+                "bill_url": None,
+                "bill_doc_number": None,
+                "has_chargebacks": False,
+                "has_adjustments": False,
+                "chargebacks_text": None,
+                "adjustments_text": None,
+                "error": None,
+            }
+
+            try:
+                # Parse PDF
+                data = parse_fdms_pdf(pdf_content)
+                result["store"] = data.store_number
+                result["statement_month"] = data.statement_month.strftime("%B %Y")
+                total = (
+                    data.interchange_program_fees
+                    + data.service_charges
+                    + data.total_fees
+                )
+                result["total_fees"] = f"${total}"
+                result["bill_doc_number"] = (
+                    f"FDMS-{data.store_number}-{data.statement_month.strftime('%Y%m')}"
+                )
+
+                # Create bill in QuickBooks
+                bill_url, chargebacks_text, adjustments_text = create_fdms_bill(data)
+                result["bill_url"] = bill_url
+                result["chargebacks_text"] = chargebacks_text
+                result["adjustments_text"] = adjustments_text
+                result["has_chargebacks"] = bool(data.chargebacks)
+                result["has_adjustments"] = bool(data.adjustments)
+
+                bills_created += 1
+                if data.chargebacks or data.adjustments:
+                    files_with_chargebacks += 1
+
+                logger.info(
+                    "Successfully processed FDMS statement",
+                    extra={
+                        "filename": filename,
+                        "store": data.store_number,
+                        "statement_month": str(data.statement_month),
+                        "total_fees": str(total),
+                    },
+                )
+
+            except FDMSParseError as e:
+                result["error"] = f"Parse error: {str(e)}"
+                failed += 1
+                logger.warning(
+                    "Failed to parse FDMS statement",
+                    extra={"filename": filename, "error": str(e)},
+                )
+
+            except Exception as e:
+                result["error"] = f"Error: {str(e)}"
+                failed += 1
+                logger.exception(
+                    "Error processing FDMS statement",
+                    extra={"filename": filename},
+                )
+
+            results.append(result)
+
+            # Send progress update
+            ws_manager.broadcast_status(
+                task_id=task_id,
+                operation=OperationType.FDMS_STATEMENT_IMPORT,
+                status="in_progress",
+                result={
+                    "message": f"Processed file {i + 1} of {len(pdf_files)}",
+                    "current": i + 1,
+                    "total": len(pdf_files),
+                },
+            )
+
+        summary = {
+            "total_files": len(pdf_files),
+            "bills_created": bills_created,
+            "files_with_chargebacks": files_with_chargebacks,
+            "failed": failed,
+        }
+
+        success = failed == 0
+
+        ws_manager.broadcast_status(
+            task_id=task_id,
+            operation=OperationType.FDMS_STATEMENT_IMPORT,
+            status="completed" if success else "completed_with_errors",
+            result={
+                "summary": f"Created {bills_created} bills, {files_with_chargebacks} with chargebacks/adjustments, {failed} failed",
+            },
+        )
+
+        return create_response(
+            200,
+            {
+                "success": success,
+                "summary": summary,
+                "results": results,
+            },
+        )
+
+    except Exception as e:
+        logger.exception("Error processing FDMS statement import")
+        ws_manager.broadcast_status(
+            task_id=task_id,
+            operation=OperationType.FDMS_STATEMENT_IMPORT,
+            status="failed",
+            error=str(e),
+        )
+        return create_response(500, {"message": f"Error: {str(e)}"})

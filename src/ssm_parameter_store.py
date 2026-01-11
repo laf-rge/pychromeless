@@ -55,9 +55,7 @@ class SSMParameterStore:
         self._substores: dict[str, SSMParameterStore] = {}
         self._ttl: int | None = ttl
 
-    def get(
-        self, name: str, **kwargs: Any
-    ) -> str | list[str] | "SSMParameterStore":
+    def get(self, name: str, **kwargs: Any) -> str | list[str] | "SSMParameterStore":
         """
         Get a parameter or a substore.
 
@@ -76,9 +74,7 @@ class SSMParameterStore:
         abs_key = f"{self._prefix}{name}"
         if name not in self._keys:
             if "default" in kwargs:
-                default_val: str | list[str] | SSMParameterStore = kwargs[
-                    "default"
-                ]
+                default_val: str | list[str] | SSMParameterStore = kwargs["default"]
                 return default_val
 
             raise KeyError(name)
@@ -218,9 +214,12 @@ class SSMParameterStore:
 
     def __getitem__(
         self, name: str | slice
-    ) -> str | list[str] | "SSMParameterStore" | dict[
-        str, str | list[str] | "SSMParameterStore"
-    ]:
+    ) -> (
+        str
+        | list[str]
+        | "SSMParameterStore"
+        | dict[str, str | list[str] | "SSMParameterStore"]
+    ):
         """
         Get a parameter using the subscript notation.
 

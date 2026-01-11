@@ -11,6 +11,7 @@ export interface FormValues {
   mp?: MonthPickerValue;
   pay_period?: string;
   file?: File;
+  files?: File[];
   invoiceNumber?: string;
   locations?: string[];
   allow_update?: string;

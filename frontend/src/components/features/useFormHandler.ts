@@ -99,6 +99,11 @@ export const useFormHandler = <T extends FormValues>(
         if (values.file) {
           formData.append("file[]", values.file);
         }
+        if (values.files) {
+          values.files.forEach((file) => {
+            formData.append("file[]", file);
+          });
+        }
         if (values.allow_update) {
           formData.append("allow_update", values.allow_update);
         }

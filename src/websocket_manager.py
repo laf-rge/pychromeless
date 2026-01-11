@@ -166,7 +166,9 @@ class WebSocketManager:
                     },
                 )
 
-    def _standardize_result_format(self, result: dict[str, Any], status: str) -> dict[str, Any]:
+    def _standardize_result_format(
+        self, result: dict[str, Any], status: str
+    ) -> dict[str, Any]:
         """Standardize result format to ensure consistent structure with success boolean
 
         Args:

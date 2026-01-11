@@ -7,9 +7,9 @@ across all test modules in the project.
 
 import os
 import sys
+from collections.abc import Generator
 from datetime import date, datetime
 from decimal import Decimal
-from collections.abc import Generator
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 

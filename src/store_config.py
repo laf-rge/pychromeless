@@ -4,6 +4,7 @@ from datetime import date
 from typing import cast
 
 from botocore.exceptions import ClientError
+
 from ssm_parameter_store import SSMParameterStore
 
 logger = logging.getLogger(__name__)

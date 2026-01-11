@@ -134,6 +134,14 @@ locals {
       timeout     = 300 # 5 minutes
       memory      = 10240
       env_vars    = local.lambda_env_grubhub_csv_import
+    },
+    fdms_statement_import = {
+      name        = "fdms-statement-import"
+      description = "Import FDMS statement PDFs and create bills in QuickBooks"
+      handler     = "lambda_function.fdms_statement_import_handler"
+      timeout     = 300 # 5 minutes
+      memory      = 10240
+      env_vars    = local.lambda_env_fdms_statement_import
     }
   }
 

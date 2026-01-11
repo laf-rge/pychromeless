@@ -16,8 +16,8 @@ from payroll_allocation import (
     PAYROLL_ACCOUNTS,
     STORE_ORDER,
     PayrollData,
-    journal_entry_to_dict,
     get_journal_entry_by_doc_number,
+    journal_entry_to_dict,
     parse_gusto_csv,
 )
 from qb import refresh_session
