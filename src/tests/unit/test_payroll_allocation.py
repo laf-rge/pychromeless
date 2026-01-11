@@ -8,8 +8,13 @@ from unittest.mock import MagicMock, patch
 # Save original modules to restore later (important for test isolation)
 _original_modules = {
     key: sys.modules.get(key)
-    for key in ["quickbooks", "quickbooks.helpers", "quickbooks.objects",
-                "quickbooks.objects.journalentry", "qb"]
+    for key in [
+        "quickbooks",
+        "quickbooks.helpers",
+        "quickbooks.objects",
+        "quickbooks.objects.journalentry",
+        "qb",
+    ]
 }
 
 # Mock quickbooks module before importing payroll_allocation

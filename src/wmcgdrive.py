@@ -93,6 +93,21 @@ class WMCGdrive:
 
         return results, None
 
+    def retrieve_journal_files_with_size(self) -> list[dict[str, Any]]:
+        """Retrieve all daily journal files with size information.
+
+        Returns:
+            List of file dicts with 'id', 'name', and 'size' fields.
+        """
+        return self._paginated_file_list(
+            {
+                "q": f"'{self._journal_folder_id}' in parents and name contains '_daily_journal.txt'",
+                "supportsAllDrives": True,
+                "includeItemsFromAllDrives": True,
+                "fields": "nextPageToken, files(id, name, size)",
+            }
+        )
+
     def get_employee_folder_ids(self) -> dict[str, str]:
         employee_folder_ids = {}
         page_token = None

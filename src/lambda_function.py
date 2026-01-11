@@ -1742,7 +1742,9 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                 )
 
                 # Create bills in QuickBooks (one per fee type: INT, SVC, FEE)
-                bills_count, chargebacks_text, adjustments_text = create_fdms_bills(data)
+                bills_count, chargebacks_text, adjustments_text = create_fdms_bills(
+                    data
+                )
                 result["bills_count"] = bills_count
                 result["chargebacks_text"] = chargebacks_text
                 result["adjustments_text"] = adjustments_text
