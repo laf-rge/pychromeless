@@ -33,6 +33,7 @@ const navigation: NavSection[] = [
       { name: "Email Tips", href: "/payroll/email-tips" },
       { name: "Transform Tips", href: "/payroll/transform-tips" },
       { name: "Gusto MPVs", href: "/payroll/mpvs" },
+      { name: "Payroll Allocation", href: "/payroll/allocation" },
     ],
   },
   {

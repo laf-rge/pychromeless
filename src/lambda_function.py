@@ -1316,3 +1316,121 @@ def cleanup_connections_handler(event: dict[str, Any], context: Any) -> dict[str
 
     result: dict[str, Any] = _impl(event, context)
     return result
+
+
+def payroll_allocation_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    """
+    Process payroll allocation from Gusto CSV to QuickBooks journal entry.
+
+    Lambda invocation:
+        - HTTP Method: POST
+        - Content-Type: multipart/form-data
+        - Form fields:
+            - file: Gusto "Total By Location" CSV file
+            - year: YYYY (required)
+            - month: MM (required)
+            - allow_update: "true" to replace existing entry (optional, default false)
+
+    Returns:
+        JSON response with:
+            - success: bool
+            - journal_entry_url: str (if successful)
+            - doc_number: str (e.g., "labor-2025-11")
+            - summary: dict with allocation summary
+            - warnings: list of any warnings (e.g., reimbursements to handle)
+            - exists: bool (if entry already exists and allow_update was false)
+            - existing_url: str (URL to existing entry if exists is true)
+    """
+    # pylint: disable=import-outside-toplevel
+    from tips_processing import decode_upload
+
+    from payroll_allocation import process_payroll_allocation
+
+    context = args[1] if args and len(args) > 1 else None
+    task_id = (
+        (context.aws_request_id if context else None) or f"local-{uuid.uuid4()}"
+    )
+    ws_manager = WebSocketManager()
+
+    ws_manager.broadcast_status(
+        task_id=task_id,
+        operation=OperationType.PAYROLL_ALLOCATION,
+        status="started",
+    )
+
+    try:
+        event = args[0] if args and len(args) > 0 else {}
+
+        # Parse multipart form data
+        multipart_content = decode_upload(event)
+
+        # Extract year and month from form data
+        year_bytes = multipart_content.get("year", b"")
+        month_bytes = multipart_content.get("month", b"")
+
+        if not year_bytes or not month_bytes:
+            ws_manager.broadcast_status(
+                task_id=task_id,
+                operation=OperationType.PAYROLL_ALLOCATION,
+                status="failed",
+                error="year and month are required",
+            )
+            return create_response(400, {"message": "year and month are required"})
+
+        year = int(year_bytes.decode("utf-8"))
+        month = int(month_bytes.decode("utf-8"))
+
+        # Extract allow_update flag (default to False)
+        allow_update_bytes = multipart_content.get("allow_update", b"")
+        allow_update = allow_update_bytes.decode("utf-8").lower() == "true"
+
+        # Extract CSV file content
+        csv_content = multipart_content.get("file", b"")
+        if not csv_content:
+            # Try alternative field names
+            csv_content = multipart_content.get("file[]", b"")
+
+        if not csv_content:
+            ws_manager.broadcast_status(
+                task_id=task_id,
+                operation=OperationType.PAYROLL_ALLOCATION,
+                status="failed",
+                error="CSV file is required",
+            )
+            return create_response(400, {"message": "CSV file is required"})
+
+        # Process payroll allocation
+        result = process_payroll_allocation(
+            year, month, csv_content, allow_update=allow_update
+        )
+
+        if result.get("success"):
+            ws_manager.broadcast_status(
+                task_id=task_id,
+                operation=OperationType.PAYROLL_ALLOCATION,
+                status="completed",
+                result={
+                    "summary": f"Created journal entry {result['doc_number']}",
+                    "journal_entry_url": result.get("journal_entry_url"),
+                    "warnings": result.get("warnings", []),
+                },
+            )
+            return create_response(200, result)
+        else:
+            ws_manager.broadcast_status(
+                task_id=task_id,
+                operation=OperationType.PAYROLL_ALLOCATION,
+                status="failed",
+                error=result.get("error", "Unknown error"),
+            )
+            return create_response(400, result)
+
+    except Exception as e:
+        logger.exception("Error processing payroll allocation")
+        ws_manager.broadcast_status(
+            task_id=task_id,
+            operation=OperationType.PAYROLL_ALLOCATION,
+            status="failed",
+            error=str(e),
+        )
+        return create_response(500, {"message": f"Error: {str(e)}"})

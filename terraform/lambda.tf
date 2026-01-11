@@ -118,6 +118,14 @@ locals {
       timeout     = 300 # 5 minutes for single store processing
       memory      = 10240
       env_vars    = local.lambda_env_daily_sales
+    },
+    payroll_allocation = {
+      name        = "payroll-allocation"
+      description = "Process payroll allocation from Gusto CSV to QuickBooks journal entry"
+      handler     = "lambda_function.payroll_allocation_handler"
+      timeout     = 300 # 5 minutes
+      memory      = 10240
+      env_vars    = local.lambda_env_payroll_allocation
     }
   }
 

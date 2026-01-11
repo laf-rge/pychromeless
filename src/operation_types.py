@@ -8,6 +8,7 @@ class OperationType(str, Enum):
     UPDATE_FOOD_HANDLER_PDFS = "update_food_handler_pdfs"
     DAILY_JOURNAL = "daily_journal"
     THIRD_PARTY_DEPOSIT = "third_party_deposit"
+    PAYROLL_ALLOCATION = "payroll_allocation"
 
     @property
     def display_name(self) -> str:
@@ -19,6 +20,7 @@ class OperationType(str, Enum):
             OperationType.UPDATE_FOOD_HANDLER_PDFS: "Food Handler PDF Update",
             OperationType.DAILY_JOURNAL: "Daily Journal Processing",
             OperationType.THIRD_PARTY_DEPOSIT: "Third Party Deposits",
+            OperationType.PAYROLL_ALLOCATION: "Payroll Allocation",
         }
         return display_names.get(self, self.value.replace("_", " ").title())
 
@@ -32,5 +34,6 @@ class OperationType(str, Enum):
             OperationType.UPDATE_FOOD_HANDLER_PDFS: 12 * 60 * 60,  # 12 hours
             OperationType.DAILY_JOURNAL: 24 * 60 * 60,  # 24 hours
             OperationType.THIRD_PARTY_DEPOSIT: 24 * 60 * 60,  # 24 hours
+            OperationType.PAYROLL_ALLOCATION: 24 * 60 * 60,  # 24 hours
         }
         return ttl_periods.get(self, 24 * 60 * 60)  # Default to 24 hours

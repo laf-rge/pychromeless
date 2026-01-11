@@ -558,7 +558,9 @@ resource "aws_api_gateway_deployment" "josiah" {
     aws_api_gateway_method_response.update_food_handler_pdfs_method_response_202,
     aws_api_gateway_integration.get_task_status_by_id_integration,
     aws_api_gateway_integration.get_task_status_by_operation_integration,
-    aws_api_gateway_integration.task_status_options_integration
+    aws_api_gateway_integration.task_status_options_integration,
+    aws_api_gateway_integration.lambda_payroll_allocation,
+    aws_api_gateway_integration.integration_payroll_allocation_OPTIONS
   ]
 
   rest_api_id = aws_api_gateway_rest_api.josiah.id
@@ -580,6 +582,10 @@ resource "aws_api_gateway_deployment" "josiah" {
       task_status_integration              = aws_api_gateway_integration.get_task_status_by_id_integration.id
       task_status_by_operation_integration = aws_api_gateway_integration.get_task_status_by_operation_integration.id
       task_status_options_integration      = aws_api_gateway_integration.task_status_options_integration.id
+      payroll_allocation_integration       = aws_api_gateway_integration.lambda_payroll_allocation.id
+      payroll_allocation_method            = aws_api_gateway_method.proxy_payroll_allocation.id
+      payroll_allocation_response          = aws_api_gateway_method_response.payroll_allocation_method_response_200.id
+      payroll_allocation_options           = aws_api_gateway_integration.integration_payroll_allocation_OPTIONS.id
     }))
   }
 
@@ -1110,4 +1116,85 @@ resource "aws_api_gateway_integration_response" "task_status_options_response" {
     aws_api_gateway_integration.task_status_options_integration,
     aws_api_gateway_method_response.task_status_options_response
   ]
+}
+
+# Payroll Allocation API Resources
+resource "aws_api_gateway_resource" "payroll_allocation_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_rest_api.josiah.root_resource_id
+  path_part   = "payroll_allocation"
+}
+
+resource "aws_api_gateway_method" "proxy_payroll_allocation" {
+  rest_api_id        = aws_api_gateway_rest_api.josiah.id
+  resource_id        = aws_api_gateway_resource.payroll_allocation_resource.id
+  http_method        = "POST"
+  authorization      = "CUSTOM"
+  authorizer_id      = aws_api_gateway_authorizer.azure_auth.id
+  request_parameters = {}
+}
+
+resource "aws_api_gateway_integration" "lambda_payroll_allocation" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_method.proxy_payroll_allocation.resource_id
+  http_method = aws_api_gateway_method.proxy_payroll_allocation.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.functions["payroll_allocation"].invoke_arn
+}
+
+resource "aws_api_gateway_method_response" "payroll_allocation_method_response_200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.payroll_allocation_resource.id
+  http_method = aws_api_gateway_method.proxy_payroll_allocation.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.X-Request-ID"                 = true
+  }
+}
+
+resource "aws_api_gateway_method" "method_payroll_allocation_options" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.payroll_allocation_resource.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "integration_payroll_allocation_OPTIONS" {
+  http_method = aws_api_gateway_method.method_payroll_allocation_options.http_method
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.payroll_allocation_resource.id
+  type        = "MOCK"
+}
+
+resource "aws_api_gateway_method_response" "payroll_allocation_method_response_options" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.payroll_allocation_resource.id
+  http_method = aws_api_gateway_method.method_payroll_allocation_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "payroll_allocation_options-200" {
+  http_method = aws_api_gateway_method.method_payroll_allocation_options.http_method
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.payroll_allocation_resource.id
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
+    "method.response.header.Access-Control-Allow-Methods" = local.cors_methods
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
+  }
+  status_code = "200"
 }

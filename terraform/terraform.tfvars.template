@@ -62,6 +62,9 @@ service_credentials = {
   # Zenput credentials
   zenput_token = "YOUR_ZENPUT_API_TOKEN"
 
+  # QuickBooks Online
+  qbo_company_id = "YOUR_QBO_COMPANY_ID"
+
   # Google Drive service account JSON
   gdrive_json = <<-EOT
 {

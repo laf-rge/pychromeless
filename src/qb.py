@@ -37,7 +37,12 @@ from quickbooks.objects import (
     VendorCredit,
 )
 
+from ssm_parameter_store import SSMParameterStore
+
 logger = logging.getLogger(__name__)
+
+# QBO configuration from SSM Parameter Store
+_qbo_params = SSMParameterStore(prefix="/prod/qbo")
 
 # warning! this won't work if we multiply
 TWO_PLACES = Decimal(10) ** -2
@@ -667,7 +672,7 @@ def refresh_session() -> Any:
     # QuickBooks.enable_global()
     CLIENT = QuickBooks(
         auth_client=AUTH_CLIENT,
-        company_id="1401432085",
+        company_id=_qbo_params["company_id"],
         minorversion=75,
         use_decimal=True,
     )

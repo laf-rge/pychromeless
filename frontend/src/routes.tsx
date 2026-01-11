@@ -10,6 +10,7 @@ import { BillSplit } from "./pages/financial/BillSplit";
 import { EmailTips } from "./pages/payroll/EmailTips";
 import { TransformTips } from "./pages/payroll/TransformTips";
 import { MPVs } from "./pages/payroll/MPVs";
+import { PayrollAllocation } from "./pages/payroll/PayrollAllocation";
 import { FoodHandlerLinks } from "./pages/utilities/FoodHandlerLinks";
 import { ErrorTester } from "./pages/utilities/ErrorTester";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
@@ -153,6 +154,20 @@ export function AppRoutes() {
                 <ErrorBoundary>
                   <AppShell showSidebar={true}>
                     <MPVs />
+                  </AppShell>
+                </ErrorBoundary>
+              </ProtectedRoute>
+            </PageLayout>
+          }
+        />
+        <Route
+          path="/payroll/allocation"
+          element={
+            <PageLayout>
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <AppShell showSidebar={true}>
+                    <PayrollAllocation />
                   </AppShell>
                 </ErrorBoundary>
               </ProtectedRoute>

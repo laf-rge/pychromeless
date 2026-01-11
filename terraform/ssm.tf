@@ -168,6 +168,15 @@ resource "aws_ssm_parameter" "zenput_token" {
   tags        = local.common_tags
 }
 
+# QuickBooks Online configuration
+resource "aws_ssm_parameter" "qbo_company_id" {
+  name        = "/${terraform.workspace}/qbo/company_id"
+  description = "QuickBooks Online company ID"
+  type        = "String"
+  value       = var.service_credentials.qbo_company_id
+  tags        = local.common_tags
+}
+
 resource "aws_ssm_parameter" "gcp_employees_folder" {
   name        = "/${terraform.workspace}/gcp/employees_folder"
   description = "Google Drive employees folder ID"
