@@ -33,12 +33,15 @@ export function TaskHistoryCard({ task }: TaskHistoryCardProps) {
 
   return (
     <Card
-      className="hover:shadow-md transition-shadow border-l-4 cursor-pointer"
+      className="hover:shadow-md transition-shadow border-l-4"
       style={{ borderLeftColor: task.color }}
-      onClick={() => setIsExpanded(!isExpanded)}
     >
       <CardContent className="p-4">
-        <div className="flex items-center justify-between gap-3">
+        {/* Header area - clickable to toggle expansion */}
+        <div
+          className="flex items-center justify-between gap-3 cursor-pointer"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
           <div className="flex items-center gap-3 flex-1 min-w-0">
             {getStatusIcon(task.status)}
             <div className="flex-1 min-w-0">
@@ -60,8 +63,12 @@ export function TaskHistoryCard({ task }: TaskHistoryCardProps) {
           </div>
         </div>
 
+        {/* Expanded content - click does not collapse, allows text selection */}
         {isExpanded && (
-          <div className="mt-4 space-y-3 border-t pt-4">
+          <div
+            className="mt-4 space-y-3 border-t pt-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Task ID */}
             <div>
               <span className="text-sm font-medium">Task ID:</span>
