@@ -1665,7 +1665,7 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     # pylint: disable=import-outside-toplevel
     from fdms_statement import (
         FDMSParseError,
-        create_fdms_bill,
+        create_fdms_bills,
         parse_fdms_pdf,
     )
     from tips_processing import decode_upload
@@ -1717,7 +1717,7 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                 "store": None,
                 "statement_month": None,
                 "total_fees": None,
-                "bill_url": None,
+                "bills_count": 0,
                 "bill_doc_number": None,
                 "has_chargebacks": False,
                 "has_adjustments": False,
@@ -1741,15 +1741,15 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                     f"FDMS-{data.store_number}-{data.statement_month.strftime('%Y%m')}"
                 )
 
-                # Create bill in QuickBooks
-                bill_url, chargebacks_text, adjustments_text = create_fdms_bill(data)
-                result["bill_url"] = bill_url
+                # Create bills in QuickBooks (one per fee type: INT, SVC, FEE)
+                bills_count, chargebacks_text, adjustments_text = create_fdms_bills(data)
+                result["bills_count"] = bills_count
                 result["chargebacks_text"] = chargebacks_text
                 result["adjustments_text"] = adjustments_text
                 result["has_chargebacks"] = bool(data.chargebacks)
                 result["has_adjustments"] = bool(data.adjustments)
 
-                bills_created += 1
+                bills_created += bills_count
                 if data.chargebacks or data.adjustments:
                     files_with_chargebacks += 1
 
@@ -1760,6 +1760,7 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                         "store": data.store_number,
                         "statement_month": str(data.statement_month),
                         "total_fees": str(total),
+                        "bills_count": bills_count,
                     },
                 )
 
