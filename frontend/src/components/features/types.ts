@@ -13,6 +13,7 @@ export interface FormValues {
   file?: File;
   invoiceNumber?: string;
   locations?: string[];
+  allow_update?: string;
 }
 
 export interface ApiConfig {
@@ -22,6 +23,8 @@ export interface ApiConfig {
   formDataSubmission: boolean;
   defaultValues?: Partial<FormValues>;
   onResponse?: (response: AxiosResponse) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onSuccess?: (data: any) => void;
 }
 
 export interface ValidationRules {

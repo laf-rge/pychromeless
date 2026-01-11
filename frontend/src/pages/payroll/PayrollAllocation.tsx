@@ -8,10 +8,10 @@ import {
 } from "../../components/ui";
 import { Feature } from "../../components/features/Feature";
 import { useFormHandler } from "../../components/features/useFormHandler";
-import { FormValues } from "../../components/features/types";
+import { FormValues, MonthPickerValue } from "../../components/features/types";
 import { logger } from "../../utils/logger";
 import { JosiahAlert } from "../../components/features/JosiahAlert";
-import { MonthPicker } from "../../components/features/MonthPicker";
+import { MonthPicker } from "../../components/ui/month-picker";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { API_BASE_URL, API_ENDPOINTS } from "../../config/api";
 
@@ -207,12 +207,8 @@ export function PayrollAllocation() {
         <FormControl isInvalid={!!errors.mp}>
           <FormLabel>Select Month:</FormLabel>
           <MonthPicker
-            value={selectedMonth}
-            onChange={(value) => setValue("mp", value)}
-            validate={{
-              notFuture: (value) =>
-                !isFutureMonth(value) || "Cannot select current or future month",
-            }}
+            value={selectedMonth ?? defaultMonth}
+            onChange={(value: MonthPickerValue) => setValue("mp", value)}
           />
           <FormMessage>{errors.mp && errors.mp.message}</FormMessage>
         </FormControl>

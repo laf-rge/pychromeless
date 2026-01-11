@@ -99,6 +99,9 @@ export const useFormHandler = <T extends FormValues>(
         if (values.file) {
           formData.append("file[]", values.file);
         }
+        if (values.allow_update) {
+          formData.append("allow_update", values.allow_update);
+        }
         logger.debug({
           year: values.mp?.year,
           month: values.mp ? values.mp.month + 1 : undefined,
@@ -158,6 +161,7 @@ export const useFormHandler = <T extends FormValues>(
       const contentType = response.headers["content-type"];
       if (contentType === "application/json") {
         logger.debug(response.data);
+        apiConfig.onSuccess?.(response.data);
       } else {
         logger.debug(response.headers);
         const disposition = response.headers["content-disposition"];
