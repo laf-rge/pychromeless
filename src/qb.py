@@ -340,7 +340,14 @@ def sync_third_party_deposit(
     notes: str,
     lines: list[list[Any]],
     department: str | None = None,
-) -> None:
+) -> str:
+    """
+    Sync a third party deposit to QuickBooks.
+
+    Returns:
+        "created" if deposit was created
+        "skipped" if deposit already exists
+    """
     refresh_session()
 
     store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
@@ -363,7 +370,7 @@ def sync_third_party_deposit(
                     "amount": lines[0][2],
                 },
             )
-            return
+            return "skipped"
     deposit = Deposit()
     deposit.TxnDate = qb_date_format(deposit_date)
     deposit.PrivateNote = notes
@@ -386,10 +393,8 @@ def sync_third_party_deposit(
         line_num += 1
         deposit.Line.append(line)
 
-    try:
-        deposit.save(qb=CLIENT)
-    except QuickbooksException:
-        logger.exception("Failed to save deposit", extra={"deposit": deposit.to_json()})
+    deposit.save(qb=CLIENT)
+    return "created"
 
 
 def sync_bill(

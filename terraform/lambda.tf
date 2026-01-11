@@ -126,6 +126,14 @@ locals {
       timeout     = 300 # 5 minutes
       memory      = 10240
       env_vars    = local.lambda_env_payroll_allocation
+    },
+    grubhub_csv_import = {
+      name        = "grubhub-csv-import"
+      description = "Import GrubHub deposits from CSV export to QuickBooks"
+      handler     = "lambda_function.grubhub_csv_import_handler"
+      timeout     = 300 # 5 minutes
+      memory      = 10240
+      env_vars    = local.lambda_env_grubhub_csv_import
     }
   }
 

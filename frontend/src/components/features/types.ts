@@ -14,6 +14,8 @@ export interface FormValues {
   invoiceNumber?: string;
   locations?: string[];
   allow_update?: string;
+  start_date?: string;
+  end_date?: string;
 }
 
 export interface ApiConfig {

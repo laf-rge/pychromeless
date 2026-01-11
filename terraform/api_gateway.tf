@@ -560,7 +560,9 @@ resource "aws_api_gateway_deployment" "josiah" {
     aws_api_gateway_integration.get_task_status_by_operation_integration,
     aws_api_gateway_integration.task_status_options_integration,
     aws_api_gateway_integration.lambda_payroll_allocation,
-    aws_api_gateway_integration.integration_payroll_allocation_OPTIONS
+    aws_api_gateway_integration.integration_payroll_allocation_OPTIONS,
+    aws_api_gateway_integration.lambda_grubhub_csv_import,
+    aws_api_gateway_integration.integration_grubhub_csv_import_OPTIONS
   ]
 
   rest_api_id = aws_api_gateway_rest_api.josiah.id
@@ -586,6 +588,10 @@ resource "aws_api_gateway_deployment" "josiah" {
       payroll_allocation_method            = aws_api_gateway_method.proxy_payroll_allocation.id
       payroll_allocation_response          = aws_api_gateway_method_response.payroll_allocation_method_response_200.id
       payroll_allocation_options           = aws_api_gateway_integration.integration_payroll_allocation_OPTIONS.id
+      grubhub_csv_import_integration       = aws_api_gateway_integration.lambda_grubhub_csv_import.id
+      grubhub_csv_import_method            = aws_api_gateway_method.proxy_grubhub_csv_import.id
+      grubhub_csv_import_response          = aws_api_gateway_method_response.grubhub_csv_import_method_response_200.id
+      grubhub_csv_import_options           = aws_api_gateway_integration.integration_grubhub_csv_import_OPTIONS.id
     }))
   }
 
@@ -1201,5 +1207,91 @@ resource "aws_api_gateway_integration_response" "payroll_allocation_options-200"
   depends_on = [
     aws_api_gateway_integration.integration_payroll_allocation_OPTIONS,
     aws_api_gateway_method_response.payroll_allocation_method_response_options
+  ]
+}
+
+# GrubHub CSV Import API Resources
+resource "aws_api_gateway_resource" "grubhub_csv_import_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_rest_api.josiah.root_resource_id
+  path_part   = "grubhub_csv_import"
+}
+
+resource "aws_api_gateway_method" "proxy_grubhub_csv_import" {
+  rest_api_id        = aws_api_gateway_rest_api.josiah.id
+  resource_id        = aws_api_gateway_resource.grubhub_csv_import_resource.id
+  http_method        = "POST"
+  authorization      = "CUSTOM"
+  authorizer_id      = aws_api_gateway_authorizer.azure_auth.id
+  request_parameters = {}
+}
+
+resource "aws_api_gateway_integration" "lambda_grubhub_csv_import" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_method.proxy_grubhub_csv_import.resource_id
+  http_method = aws_api_gateway_method.proxy_grubhub_csv_import.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.functions["grubhub_csv_import"].invoke_arn
+}
+
+resource "aws_api_gateway_method_response" "grubhub_csv_import_method_response_200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.grubhub_csv_import_resource.id
+  http_method = aws_api_gateway_method.proxy_grubhub_csv_import.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.X-Request-ID"                 = true
+  }
+}
+
+resource "aws_api_gateway_method" "method_grubhub_csv_import_options" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.grubhub_csv_import_resource.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "integration_grubhub_csv_import_OPTIONS" {
+  http_method = aws_api_gateway_method.method_grubhub_csv_import_options.http_method
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.grubhub_csv_import_resource.id
+  type        = "MOCK"
+}
+
+resource "aws_api_gateway_method_response" "grubhub_csv_import_method_response_options" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.grubhub_csv_import_resource.id
+  http_method = aws_api_gateway_method.method_grubhub_csv_import_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "grubhub_csv_import_options-200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.grubhub_csv_import_resource.id
+  http_method = aws_api_gateway_method.method_grubhub_csv_import_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.integration_grubhub_csv_import_OPTIONS,
+    aws_api_gateway_method_response.grubhub_csv_import_method_response_options
   ]
 }

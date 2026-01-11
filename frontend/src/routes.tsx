@@ -7,6 +7,7 @@ import { DashboardPage } from "./pages/Dashboard";
 import { DailySales } from "./pages/financial/DailySales";
 import { InvoiceSync } from "./pages/financial/InvoiceSync";
 import { BillSplit } from "./pages/financial/BillSplit";
+import { GrubhubImport } from "./pages/financial/GrubhubImport";
 import { EmailTips } from "./pages/payroll/EmailTips";
 import { TransformTips } from "./pages/payroll/TransformTips";
 import { MPVs } from "./pages/payroll/MPVs";
@@ -112,6 +113,20 @@ export function AppRoutes() {
                 <ErrorBoundary>
                   <AppShell showSidebar={true}>
                     <BillSplit />
+                  </AppShell>
+                </ErrorBoundary>
+              </ProtectedRoute>
+            </PageLayout>
+          }
+        />
+        <Route
+          path="/financial/grubhub-import"
+          element={
+            <PageLayout>
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <AppShell showSidebar={true}>
+                    <GrubhubImport />
                   </AppShell>
                 </ErrorBoundary>
               </ProtectedRoute>

@@ -1434,3 +1434,213 @@ def payroll_allocation_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
             error=str(e),
         )
         return create_response(500, {"message": f"Error: {str(e)}"})
+
+
+def grubhub_csv_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    """
+    Import GrubHub deposits from CSV export to QuickBooks.
+
+    Lambda invocation:
+        - HTTP Method: POST
+        - Content-Type: multipart/form-data
+        - Form fields:
+            - file: GrubHub deposit CSV export (required)
+            - start_date: YYYY-MM-DD (optional, filter deposits after this date)
+            - end_date: YYYY-MM-DD (optional, filter deposits before this date)
+
+    Returns:
+        JSON response with:
+            - success: bool
+            - summary: dict with total/imported/skipped/failed counts
+            - imported_deposits: list of imported deposits
+            - skipped_deposits: list of skipped deposits (duplicates)
+            - errors: list of failed deposits with error messages
+    """
+    # pylint: disable=import-outside-toplevel
+    import tempfile
+    from datetime import date
+
+    from tips_processing import decode_upload
+
+    from grubhub import Grubhub
+
+    context = args[1] if args and len(args) > 1 else None
+    task_id = (
+        (context.aws_request_id if context else None) or f"local-{uuid.uuid4()}"
+    )
+    ws_manager = WebSocketManager()
+
+    ws_manager.broadcast_status(
+        task_id=task_id,
+        operation=OperationType.GRUBHUB_CSV_IMPORT,
+        status="started",
+    )
+
+    try:
+        event = args[0] if args and len(args) > 0 else {}
+
+        # Parse multipart form data
+        multipart_content = decode_upload(event)
+
+        # Extract CSV file content
+        csv_content = multipart_content.get("file", b"")
+        if not csv_content:
+            csv_content = multipart_content.get("file[]", b"")
+
+        if not csv_content:
+            ws_manager.broadcast_status(
+                task_id=task_id,
+                operation=OperationType.GRUBHUB_CSV_IMPORT,
+                status="failed",
+                error="CSV file is required",
+            )
+            return create_response(400, {"message": "CSV file is required"})
+
+        # Extract optional date filters
+        start_date: date | None = None
+        end_date: date | None = None
+
+        start_date_bytes = multipart_content.get("start_date", b"")
+        if start_date_bytes:
+            start_date_str = start_date_bytes.decode("utf-8").strip()
+            if start_date_str:
+                start_date = date.fromisoformat(start_date_str)
+
+        end_date_bytes = multipart_content.get("end_date", b"")
+        if end_date_bytes:
+            end_date_str = end_date_bytes.decode("utf-8").strip()
+            if end_date_str:
+                end_date = date.fromisoformat(end_date_str)
+
+        # Write CSV to temp file for parsing
+        with tempfile.NamedTemporaryFile(
+            mode="wb", suffix=".csv", delete=False
+        ) as tmp_file:
+            tmp_file.write(csv_content)
+            tmp_filename = tmp_file.name
+
+        try:
+            # Parse CSV
+            gh = Grubhub()
+            results = gh.get_payments_from_csv(tmp_filename, start_date, end_date)
+        finally:
+            # Clean up temp file
+            import os
+
+            os.unlink(tmp_filename)
+
+        if not results:
+            ws_manager.broadcast_status(
+                task_id=task_id,
+                operation=OperationType.GRUBHUB_CSV_IMPORT,
+                status="completed",
+                result={"summary": "No deposits found in CSV for the specified date range"},
+            )
+            return create_response(
+                200,
+                {
+                    "success": True,
+                    "summary": {
+                        "total_deposits": 0,
+                        "imported": 0,
+                        "skipped": 0,
+                        "failed": 0,
+                    },
+                    "imported_deposits": [],
+                    "skipped_deposits": [],
+                    "errors": [],
+                },
+            )
+
+        # Import deposits to QuickBooks
+        imported_deposits = []
+        skipped_deposits = []
+        errors = []
+
+        for i, result in enumerate(results):
+            service, txdate, notes, lines, store = result
+            amount = lines[0][2] if lines else "0"
+
+            try:
+                status = qb.sync_third_party_deposit(
+                    service, txdate, notes, lines, store
+                )
+
+                if status == "created":
+                    imported_deposits.append(
+                        {"store": store, "date": str(txdate), "amount": amount}
+                    )
+                else:  # status == "skipped"
+                    skipped_deposits.append(
+                        {
+                            "store": store,
+                            "date": str(txdate),
+                            "amount": amount,
+                            "reason": "Already exists",
+                        }
+                    )
+
+                # Send progress update
+                ws_manager.broadcast_status(
+                    task_id=task_id,
+                    operation=OperationType.GRUBHUB_CSV_IMPORT,
+                    status="in_progress",
+                    result={
+                        "message": f"Processing deposit {i + 1} of {len(results)}",
+                        "current": i + 1,
+                        "total": len(results),
+                    },
+                )
+
+            except Exception as e:
+                logger.exception(
+                    "Failed to import deposit",
+                    extra={"store": store, "date": str(txdate), "amount": amount},
+                )
+                errors.append(
+                    {
+                        "store": store,
+                        "date": str(txdate),
+                        "amount": amount,
+                        "error": str(e),
+                    }
+                )
+
+        summary = {
+            "total_deposits": len(results),
+            "imported": len(imported_deposits),
+            "skipped": len(skipped_deposits),
+            "failed": len(errors),
+        }
+
+        success = len(errors) == 0
+
+        ws_manager.broadcast_status(
+            task_id=task_id,
+            operation=OperationType.GRUBHUB_CSV_IMPORT,
+            status="completed" if success else "completed_with_errors",
+            result={
+                "summary": f"Imported {summary['imported']}, skipped {summary['skipped']}, failed {summary['failed']}",
+            },
+        )
+
+        return create_response(
+            200,
+            {
+                "success": success,
+                "summary": summary,
+                "imported_deposits": imported_deposits,
+                "skipped_deposits": skipped_deposits,
+                "errors": errors,
+            },
+        )
+
+    except Exception as e:
+        logger.exception("Error processing GrubHub CSV import")
+        ws_manager.broadcast_status(
+            task_id=task_id,
+            operation=OperationType.GRUBHUB_CSV_IMPORT,
+            status="failed",
+            error=str(e),
+        )
+        return create_response(500, {"message": f"Error: {str(e)}"})

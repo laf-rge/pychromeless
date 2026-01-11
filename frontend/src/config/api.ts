@@ -29,6 +29,7 @@ export const API_ENDPOINTS = {
   TRANSFORM_TIPS: "/transform_tips",
   GET_MPVS: "/get_mpvs",
   PAYROLL_ALLOCATION: "/payroll_allocation",
+  GRUBHUB_CSV_IMPORT: "/grubhub_csv_import",
 
   // Utilities
   GET_FOOD_HANDLER_LINKS: "/get_food_handler_links",

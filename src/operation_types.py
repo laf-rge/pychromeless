@@ -9,6 +9,7 @@ class OperationType(str, Enum):
     DAILY_JOURNAL = "daily_journal"
     THIRD_PARTY_DEPOSIT = "third_party_deposit"
     PAYROLL_ALLOCATION = "payroll_allocation"
+    GRUBHUB_CSV_IMPORT = "grubhub_csv_import"
 
     @property
     def display_name(self) -> str:
@@ -21,6 +22,7 @@ class OperationType(str, Enum):
             OperationType.DAILY_JOURNAL: "Daily Journal Processing",
             OperationType.THIRD_PARTY_DEPOSIT: "Third Party Deposits",
             OperationType.PAYROLL_ALLOCATION: "Payroll Allocation",
+            OperationType.GRUBHUB_CSV_IMPORT: "GrubHub CSV Import",
         }
         return display_names.get(self, self.value.replace("_", " ").title())
 
@@ -35,5 +37,6 @@ class OperationType(str, Enum):
             OperationType.DAILY_JOURNAL: 24 * 60 * 60,  # 24 hours
             OperationType.THIRD_PARTY_DEPOSIT: 24 * 60 * 60,  # 24 hours
             OperationType.PAYROLL_ALLOCATION: 24 * 60 * 60,  # 24 hours
+            OperationType.GRUBHUB_CSV_IMPORT: 24 * 60 * 60,  # 24 hours
         }
         return ttl_periods.get(self, 24 * 60 * 60)  # Default to 24 hours

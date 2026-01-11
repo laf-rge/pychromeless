@@ -120,6 +120,7 @@ locals {
   get_food_handler_links   = { prod = local.base_env_config }
   update_food_handler_pdfs = { prod = local.base_env_config }
   payroll_allocation       = { prod = local.base_env_config }
+  grubhub_csv_import       = { prod = local.base_env_config }
   authorizer               = { prod = local.base_env_config }
 
   # Websocket configuration with additional DynamoDB settings
@@ -139,6 +140,7 @@ locals {
   lambda_env_get_food_handler_links   = local.get_food_handler_links[terraform.workspace]
   lambda_env_update_food_handler_pdfs = local.update_food_handler_pdfs[terraform.workspace]
   lambda_env_payroll_allocation       = local.payroll_allocation[terraform.workspace]
+  lambda_env_grubhub_csv_import       = local.grubhub_csv_import[terraform.workspace]
   lambda_env_websocket = {
     CONNECTIONS_TABLE  = aws_dynamodb_table.websocket_connections.name
     WEBSOCKET_ENDPOINT = replace(aws_apigatewayv2_stage.websocket.invoke_url, "wss://", "https://")

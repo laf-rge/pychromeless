@@ -102,6 +102,12 @@ export const useFormHandler = <T extends FormValues>(
         if (values.allow_update) {
           formData.append("allow_update", values.allow_update);
         }
+        if (values.start_date) {
+          formData.append("start_date", values.start_date);
+        }
+        if (values.end_date) {
+          formData.append("end_date", values.end_date);
+        }
         logger.debug({
           year: values.mp?.year,
           month: values.mp ? values.mp.month + 1 : undefined,
