@@ -232,7 +232,19 @@ def parse_gusto_csv(csv_content: bytes) -> dict[str, PayrollData]:
 
     # Decode CSV content
     content = csv_content.decode("utf-8-sig")  # Handle BOM if present
-    reader = csv.DictReader(io.StringIO(content))
+
+    # The Gusto CSV has header lines before the actual data
+    # Find the line that starts with "Payroll," which is the real CSV header
+    lines = content.split("\n")
+    csv_start_index = 0
+    for i, line in enumerate(lines):
+        if line.startswith("Payroll,"):
+            csv_start_index = i
+            break
+
+    # Use only the CSV portion (from the header row onwards)
+    csv_content_clean = "\n".join(lines[csv_start_index:])
+    reader = csv.DictReader(io.StringIO(csv_content_clean))
 
     for row in reader:
         # Skip header rows and empty rows
