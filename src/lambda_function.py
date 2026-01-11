@@ -1756,7 +1756,7 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                 logger.info(
                     "Successfully processed FDMS statement",
                     extra={
-                        "filename": filename,
+                        "file_name": filename,
                         "store": data.store_number,
                         "statement_month": str(data.statement_month),
                         "total_fees": str(total),
@@ -1768,7 +1768,7 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                 failed += 1
                 logger.warning(
                     "Failed to parse FDMS statement",
-                    extra={"filename": filename, "error": str(e)},
+                    extra={"file_name": filename, "error": str(e)},
                 )
 
             except Exception as e:
@@ -1776,7 +1776,7 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                 failed += 1
                 logger.exception(
                     "Error processing FDMS statement",
-                    extra={"filename": filename},
+                    extra={"file_name": filename},
                 )
 
             results.append(result)
