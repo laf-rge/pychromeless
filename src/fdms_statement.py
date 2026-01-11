@@ -74,8 +74,8 @@ def parse_fdms_pdf(pdf_content: bytes) -> FDMSStatementData:
     if not text:
         raise FDMSParseError("Could not extract text from PDF")
 
-    # Extract store number from header (e.g., "JERSEY MIKES 20407")
-    store_match = re.search(r"JERSEY MIKES (\d{5})", text)
+    # Extract store number from header (e.g., "JERSEY MIKES 20407" or "JERSEY MIKE'S 20358")
+    store_match = re.search(r"JERSEY MIKE'?S (\d{5})", text)
     if not store_match:
         raise FDMSParseError("Could not find store number in PDF")
     store_number = store_match.group(1)
