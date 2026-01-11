@@ -15,10 +15,9 @@ from typing import Any
 import pdfplumber
 
 import qb
+from qb import TWO_PLACES
 
 logger = logging.getLogger(__name__)
-
-TWO_PLACES = Decimal(10) ** -2
 
 # Account reference for all FDMS fee line items
 FDMS_EXPENSE_ACCOUNT = 6210

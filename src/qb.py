@@ -191,7 +191,7 @@ def create_daily_sales(
 
     pattern = re.compile(r"\d+\.\d\d")
 
-    store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
+    store_refs = get_store_refs()
 
     existing_receipts = {
         x.DepartmentRef.name if x.DepartmentRef else "20025": x
@@ -350,7 +350,7 @@ def sync_third_party_deposit(
     """
     refresh_session()
 
-    store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
+    store_refs = get_store_refs()
 
     # check if one already exists
     query = Deposit.filter(TxnDate=qb_date_format(deposit_date), qb=CLIENT)
@@ -407,7 +407,7 @@ def sync_bill(
 ) -> None:
     refresh_session()
 
-    store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
+    store_refs = get_store_refs()
 
     # is this a credit
     if reduce(lambda x, y: x + atof(y[-1]), lines, 0.0) < -0.08:
@@ -468,7 +468,7 @@ def sync_third_party_transactions(
 ) -> None:
     refresh_session()
 
-    store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
+    store_refs = get_store_refs()
 
     for store, store_data in payment_data.items():
         entries = JournalEntry.where(
@@ -530,7 +530,7 @@ def sync_inventory(
 ) -> None:
     refresh_session()
 
-    store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
+    store_refs = get_store_refs()
 
     entries = JournalEntry.where(
         "DocNumber = 'inv-{0}-{2}-{1}'".format(department, str(month).zfill(2), year),
@@ -605,6 +605,16 @@ def wmc_account_ref(acctNum: int | str) -> Any:
             )
         )
     return account_ref[str(acctNum)]
+
+
+def get_store_refs() -> dict[str, Any]:
+    """Get mapping of store names to QuickBooks Department references.
+
+    Returns:
+        Dict mapping store name (e.g., "20407") to QB Ref object
+    """
+    refresh_session()
+    return {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
 
 
 def account_ref_lookup(gl_account_code: str) -> Any:
@@ -779,7 +789,7 @@ def bill_export() -> None:
 
 def fix_deposit() -> None:
     refresh_session()
-    store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
+    store_refs = get_store_refs()
     qb_data_type = Deposit
     modify_queue = []
     with open(
@@ -1072,7 +1082,7 @@ def split_bill(
         logger.error("Failed to calculate bill splits", extra={"error": str(e)})
         raise
 
-    store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
+    store_refs = get_store_refs()
 
     # Verify all locations exist
     for location in locations:

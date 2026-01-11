@@ -18,7 +18,6 @@ from decimal import Decimal
 from typing import Any
 
 from quickbooks.helpers import qb_date_format
-from quickbooks.objects import Department
 from quickbooks.objects.journalentry import (
     JournalEntry,
     JournalEntryLine,
@@ -26,7 +25,7 @@ from quickbooks.objects.journalentry import (
 )
 
 import qb
-from qb import TWO_PLACES, refresh_session, wmc_account_ref
+from qb import TWO_PLACES, get_store_refs, refresh_session, wmc_account_ref
 
 logger = logging.getLogger(__name__)
 
@@ -322,17 +321,6 @@ def parse_gusto_csv(csv_content: bytes) -> dict[str, PayrollData]:
         result[store_id].add(employee_data)
 
     return result
-
-
-def get_store_refs() -> dict[str, Any]:
-    """
-    Get QuickBooks department references for all stores.
-
-    Returns:
-        Dictionary mapping store name to DepartmentRef
-    """
-    refresh_session()
-    return {x.Name: x.to_ref() for x in Department.all(qb=qb.CLIENT)}
 
 
 def _add_account_lines(
