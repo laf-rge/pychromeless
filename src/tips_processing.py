@@ -79,7 +79,9 @@ def decode_upload(event: dict[str, Any]) -> dict[str, bytes]:
 
     # checking if the message is multipart
     logger.info(f"Multipart check : {msg.is_multipart()}")
-    multipart_content = {}
+    multipart_content: dict[str, bytes] = {}
+    # Track counts for duplicate field names (e.g., file[] sent multiple times)
+    name_counts: dict[str, int] = {}
     # if message is multipart
     if msg.is_multipart():
         # retrieving form-data
@@ -100,9 +102,18 @@ def decode_upload(event: dict[str, Any]) -> dict[str, bytes]:
                 if name_param:
                     payload = part.get_payload(decode=True)
                     if isinstance(payload, bytes):
-                        multipart_content[str(name_param)] = payload
-    result: dict[str, bytes] = multipart_content
-    return result
+                        base_key = str(name_param)
+                        # Handle duplicate field names by appending index
+                        count = name_counts.get(base_key, 0)
+                        if count > 0:
+                            # This is a duplicate, use indexed key
+                            key = f"{base_key}_{count}"
+                        else:
+                            # First occurrence, use original key
+                            key = base_key
+                        name_counts[base_key] = count + 1
+                        multipart_content[key] = payload
+    return multipart_content
 
 
 def transform_tips_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
