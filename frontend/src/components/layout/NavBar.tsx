@@ -19,7 +19,9 @@ export function NavBar() {
   const [imageUrl, setImageUrl] = useState<string>();
 
   useEffect(() => {
-    if (activeAccount && !imageUrl) {
+    // Wait for MSAL to finish any in-progress operations before fetching photo
+    // This prevents race conditions where activeAccount is set but auth isn't complete
+    if (activeAccount && !imageUrl && inProgress === "none") {
       const accessTokenRequest = {
         scopes: ["user.read"],
         account: activeAccount,
@@ -55,7 +57,7 @@ export function NavBar() {
         url.revokeObjectURL(imageUrl);
       }
     };
-  }, [activeAccount, instance, imageUrl]);
+  }, [activeAccount, instance, imageUrl, inProgress]);
 
   const handleLogin = async () => {
     try {
