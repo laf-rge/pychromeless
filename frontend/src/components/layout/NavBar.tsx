@@ -159,7 +159,7 @@ export function NavBar() {
                 leaveFrom="transform opacity-100 scale-100"
                 leaveTo="transform opacity-0 scale-95"
               >
-                <Menu.Items className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-popover shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                <Menu.Items className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-popover/95 shadow-lg ring-1 ring-black ring-opacity-5 backdrop-blur-sm focus:outline-none">
                   <div className="px-4 py-3">
                     <p className="text-sm font-medium">
                       {activeAccount.name || "Guest"}

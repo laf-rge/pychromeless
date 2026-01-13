@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
+import { Badge } from "../ui/badge";
 import { TaskInfo } from "../../stores/taskStore";
 import {
   getStatusIcon,
@@ -19,17 +20,7 @@ interface TaskHistoryCardProps {
  */
 export function TaskHistoryCard({ task }: TaskHistoryCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-
   const badgeVariant = getStatusBadgeVariant(task.status);
-  const badgeClasses = cn(
-    "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
-    {
-      "bg-green-100 text-green-800": badgeVariant === "success",
-      "bg-yellow-100 text-yellow-800": badgeVariant === "warning",
-      "bg-red-100 text-red-800": badgeVariant === "destructive",
-      "bg-blue-100 text-blue-800": badgeVariant === "default",
-    }
-  );
 
   return (
     <Card
@@ -53,7 +44,7 @@ export function TaskHistoryCard({ task }: TaskHistoryCardProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className={badgeClasses}>{task.status}</span>
+            <Badge variant={badgeVariant}>{task.status}</Badge>
             <ChevronDown
               className={cn(
                 "h-5 w-5 transition-transform text-muted-foreground",
@@ -121,7 +112,7 @@ export function TaskHistoryCard({ task }: TaskHistoryCardProps) {
                     )}
                   {task.result.successful_stores &&
                     task.result.successful_stores.length > 0 && (
-                      <p className="text-sm text-green-600 mt-1">
+                      <p className="text-sm text-success mt-1">
                         Successful stores:{" "}
                         {task.result.successful_stores.join(", ")}
                       </p>

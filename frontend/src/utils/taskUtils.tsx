@@ -64,12 +64,12 @@ export function getStatusIcon(status: TaskStatusType): ReactNode {
     case "processing":
       return <Loader2 className={`${iconClass} animate-spin`} />;
     case "completed":
-      return <CheckCircle className={`${iconClass} text-green-600`} />;
+      return <CheckCircle className={`${iconClass} text-success`} />;
     case "completed_with_errors":
-      return <AlertTriangle className={`${iconClass} text-yellow-600`} />;
+      return <AlertTriangle className={`${iconClass} text-warning`} />;
     case "failed":
     case "error":
-      return <XCircle className={`${iconClass} text-red-600`} />;
+      return <XCircle className={`${iconClass} text-destructive`} />;
     default:
       return null;
   }
