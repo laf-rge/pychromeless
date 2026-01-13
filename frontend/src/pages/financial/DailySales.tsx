@@ -13,8 +13,12 @@ import { JosiahAlert } from "../../components/features/JosiahAlert";
 import { HARD_CUTOFF_DATE } from "../../components/features/constants";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { API_BASE_URL, API_ENDPOINTS } from "../../config/api";
+import { useTaskStore } from "../../stores/taskStore";
+import { OperationType } from "../../services/WebSocketService";
 
 export function DailySales() {
+  const createImmediateTask = useTaskStore((state) => state.createImmediateTask);
+
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     logger.debug(values);
   };
@@ -40,7 +44,12 @@ export function DailySales() {
     defaultValues: {
       date: yesterday,
     },
-    // No onResponse needed - global WebSocket subscription handles all task updates
+    onSuccess: (data: { task_id?: string }) => {
+      // Create immediate notification when API returns task_id
+      if (data.task_id) {
+        createImmediateTask(data.task_id, OperationType.DAILY_SALES);
+      }
+    },
   });
 
   const selectedDate = watch("date");

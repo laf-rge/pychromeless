@@ -59,6 +59,9 @@ interface TaskActions {
   // WebSocket message handler
   handleTaskUpdate: (payload: TaskStatus & { operationDisplayName?: string }) => void;
 
+  // Create immediate task from API response (for async operations)
+  createImmediateTask: (taskId: string, operation: OperationType) => void;
+
   // Notification management
   dismissNotification: (taskId: string) => void;
   clearAllNotifications: () => void;
@@ -219,6 +222,43 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     });
   },
 
+  // Create an immediate task entry when API returns task_id (for async operations)
+  // This ensures the notification appears immediately without waiting for WebSocket
+  createImmediateTask: (taskId: string, operation: OperationType) => {
+    const now = Date.now();
+    const taskInfo: TaskInfo = {
+      task_id: taskId,
+      operation,
+      status: "started",
+      created_at: now,
+      updated_at: now,
+      operationDisplayName: OperationDisplayNames[operation] || operation,
+      color: generateTaskColor(taskId),
+    };
+
+    logger.debug(`Creating immediate task: ${taskId} - ${operation}`, taskInfo);
+
+    set((state) => {
+      // Don't overwrite if task already exists (WebSocket may have been faster)
+      if (
+        state.activeTasks.has(taskId) ||
+        state.completedTasks.has(taskId) ||
+        state.failedTasks.has(taskId)
+      ) {
+        logger.debug(`Task ${taskId} already exists, skipping immediate create`);
+        return state;
+      }
+
+      const activeTasks = new Map(state.activeTasks);
+      const visibleNotifications = new Set(state.visibleNotifications);
+
+      activeTasks.set(taskId, taskInfo);
+      visibleNotifications.add(taskId);
+
+      return { activeTasks, visibleNotifications };
+    });
+  },
+
   // Dismiss a notification (remove from visible notifications)
   dismissNotification: (taskId: string) => {
     set((state) => {
@@ -286,6 +326,22 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           const activeTasks = new Map(state.activeTasks);
           const completedTasks = new Map(state.completedTasks);
           const failedTasks = new Map(state.failedTasks);
+
+          // Check if we already have a newer version of this task
+          const existing =
+            activeTasks.get(task.task_id) ||
+            completedTasks.get(task.task_id) ||
+            failedTasks.get(task.task_id);
+
+          if (existing && existing.updated_at > taskInfo.updated_at) {
+            // Skip this older record
+            return state;
+          }
+
+          // Remove from all maps first (prevents duplicates)
+          activeTasks.delete(task.task_id);
+          completedTasks.delete(task.task_id);
+          failedTasks.delete(task.task_id);
 
           // Route based on status
           if (

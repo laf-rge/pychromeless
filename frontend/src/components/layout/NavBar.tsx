@@ -5,6 +5,7 @@ import { Fragment, useEffect, useState } from "react";
 import wmcLogo from "../../assets/WMC-logo.png";
 import { graphConfig, loginRequest } from "../../authConfig";
 import { Button } from "../ui/button";
+import { useTaskStore } from "../../stores/taskStore";
 
 const Links = [
   ["MyApps", "https://myapps.microsoft.com"],
@@ -17,6 +18,7 @@ export function NavBar() {
   const { instance, inProgress } = useMsal();
   const activeAccount = instance.getActiveAccount();
   const [imageUrl, setImageUrl] = useState<string>();
+  const isConnected = useTaskStore((state) => state.isConnected);
 
   useEffect(() => {
     // Wait for MSAL to finish any in-progress operations before fetching photo
@@ -134,22 +136,28 @@ export function NavBar() {
               Sign In
             </Button>
           ) : (
-            <Menu as="div" className="relative">
-              <Menu.Button
-                as={Button}
-                variant="ghost"
-                className="flex items-center space-x-2"
-              >
-                {imageUrl ? (
-                  <img
-                    src={imageUrl}
-                    alt={activeAccount.name || "User"}
-                    className="h-8 w-8 rounded-full"
-                  />
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-primary" />
-                )}
-              </Menu.Button>
+            <>
+              {/* WebSocket connection status indicator */}
+              <div
+                className={`h-2 w-2 rounded-full ${isConnected ? "bg-success" : "bg-destructive"}`}
+                title={isConnected ? "Real-time updates connected" : "Real-time updates disconnected"}
+              />
+              <Menu as="div" className="relative">
+                <Menu.Button
+                  as={Button}
+                  variant="ghost"
+                  className="flex items-center space-x-2"
+                >
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={activeAccount.name || "User"}
+                      className="h-8 w-8 rounded-full"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-primary" />
+                  )}
+                </Menu.Button>
               <Transition
                 as={Fragment}
                 enter="transition ease-out duration-100"
@@ -196,6 +204,7 @@ export function NavBar() {
                 </Menu.Items>
               </Transition>
             </Menu>
+            </>
           )}
         </div>
       </div>

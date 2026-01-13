@@ -294,4 +294,63 @@ describe('taskStore', () => {
       expect(dailySalesTasks[0].task_id).toBe('task-1');
     });
   });
+
+  describe('createImmediateTask', () => {
+    it('creates a task with started status', () => {
+      useTaskStore.getState().createImmediateTask('task-123', OperationType.DAILY_SALES);
+
+      const { activeTasks, visibleNotifications } = useTaskStore.getState();
+      expect(activeTasks.has('task-123')).toBe(true);
+      expect(visibleNotifications.has('task-123')).toBe(true);
+
+      const task = activeTasks.get('task-123');
+      expect(task?.status).toBe('started');
+      expect(task?.operation).toBe(OperationType.DAILY_SALES);
+      expect(task?.operationDisplayName).toBe('Daily Sales Processing');
+    });
+
+    it('does not overwrite existing task', () => {
+      // First, create a task via handleTaskUpdate with processing status
+      const existingPayload: TaskStatus & { operationDisplayName?: string } = {
+        task_id: 'task-123',
+        operation: OperationType.DAILY_SALES,
+        status: 'processing',
+        created_at: Math.floor(Date.now() / 1000),
+        updated_at: Math.floor(Date.now() / 1000),
+        progress: { current: 2, total: 4, message: 'Processing...' },
+        operationDisplayName: 'Daily Sales',
+      };
+      useTaskStore.getState().handleTaskUpdate(existingPayload);
+
+      // Now try to create immediate task with same ID
+      useTaskStore.getState().createImmediateTask('task-123', OperationType.DAILY_SALES);
+
+      // Should still have the processing status, not started
+      const { activeTasks } = useTaskStore.getState();
+      const task = activeTasks.get('task-123');
+      expect(task?.status).toBe('processing');
+      expect(task?.progress?.current).toBe(2);
+    });
+
+    it('does not overwrite completed task', () => {
+      // Create a completed task
+      const completedPayload: TaskStatus & { operationDisplayName?: string } = {
+        task_id: 'task-123',
+        operation: OperationType.DAILY_SALES,
+        status: 'completed',
+        created_at: Math.floor(Date.now() / 1000),
+        updated_at: Math.floor(Date.now() / 1000),
+        operationDisplayName: 'Daily Sales',
+      };
+      useTaskStore.getState().handleTaskUpdate(completedPayload);
+
+      // Try to create immediate task
+      useTaskStore.getState().createImmediateTask('task-123', OperationType.DAILY_SALES);
+
+      // Should still be in completedTasks, not activeTasks
+      const { activeTasks, completedTasks } = useTaskStore.getState();
+      expect(activeTasks.has('task-123')).toBe(false);
+      expect(completedTasks.has('task-123')).toBe(true);
+    });
+  });
 });
