@@ -187,5 +187,145 @@ class TestQuickBooksExceptionHandling(unittest.TestCase):
                 pass  # This should not catch ValueError
 
 
+class TestQuickBooksOAuth(unittest.TestCase):
+    """Test QuickBooks OAuth functions."""
+
+    @patch("qb.get_secret")
+    @patch("qb.AuthClient")
+    def test_get_auth_url_returns_url_and_state(
+        self,
+        mock_auth_client_class: MagicMock,
+        mock_get_secret: MagicMock,
+    ) -> None:
+        """Test that get_auth_url returns a valid URL and state."""
+        from qb import get_auth_url
+
+        # Set up mocks
+        mock_get_secret.return_value = '{"client_id": "test_id", "client_secret": "test_secret", "redirect_url": "https://example.com/callback"}'
+        mock_auth_client = MagicMock()
+        mock_auth_client.get_authorization_url.return_value = (
+            "https://appcenter.intuit.com/authorize?state=test_state"
+        )
+        mock_auth_client_class.return_value = mock_auth_client
+
+        result = get_auth_url("test_state")
+
+        self.assertIn("url", result)
+        self.assertIn("state", result)
+        self.assertEqual(result["state"], "test_state")
+        self.assertIn("appcenter.intuit.com", result["url"])
+        mock_auth_client_class.assert_called_once()
+
+    @patch("qb.get_secret")
+    @patch("qb.put_secret")
+    @patch("qb.AuthClient")
+    def test_exchange_auth_code_success(
+        self,
+        mock_auth_client_class: MagicMock,
+        mock_put_secret: MagicMock,
+        mock_get_secret: MagicMock,
+    ) -> None:
+        """Test successful OAuth code exchange."""
+        from qb import exchange_auth_code
+
+        # Set up mocks
+        mock_get_secret.return_value = '{"client_id": "test_id", "client_secret": "test_secret", "redirect_url": "https://example.com/callback"}'
+        mock_auth_client = MagicMock()
+        mock_auth_client.access_token = "new_access_token"
+        mock_auth_client.refresh_token = "new_refresh_token"
+        mock_auth_client_class.return_value = mock_auth_client
+
+        result = exchange_auth_code("auth_code_123", "realm_id_456")
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["realm_id"], "realm_id_456")
+        mock_auth_client.get_bearer_token.assert_called_once_with(
+            "auth_code_123", realm_id="realm_id_456"
+        )
+        mock_put_secret.assert_called_once()
+
+    @patch("qb.get_secret")
+    @patch("qb.AuthClient")
+    def test_exchange_auth_code_failure(
+        self,
+        mock_auth_client_class: MagicMock,
+        mock_get_secret: MagicMock,
+    ) -> None:
+        """Test OAuth code exchange failure."""
+        from qb import exchange_auth_code
+
+        # Set up mocks
+        mock_get_secret.return_value = '{"client_id": "test_id", "client_secret": "test_secret", "redirect_url": "https://example.com/callback"}'
+        mock_auth_client = MagicMock()
+        mock_auth_client.get_bearer_token.side_effect = Exception("Invalid code")
+        mock_auth_client_class.return_value = mock_auth_client
+
+        result = exchange_auth_code("bad_code", "realm_id")
+
+        self.assertFalse(result["success"])
+        self.assertIn("error", result)
+        self.assertIn("Invalid code", result["error"])
+
+    @patch("qb.get_secret")
+    @patch("qb.refresh_session")
+    @patch("qb._qbo_params")
+    def test_get_connection_status_connected(
+        self,
+        mock_qbo_params: MagicMock,
+        mock_refresh: MagicMock,
+        mock_get_secret: MagicMock,
+    ) -> None:
+        """Test connection status when connected."""
+        from qb import get_connection_status
+
+        mock_get_secret.return_value = '{"access_token": "token", "refresh_token": "refresh"}'
+        mock_qbo_params.get.return_value = "123456789"
+
+        result = get_connection_status()
+
+        self.assertTrue(result["connected"])
+        self.assertEqual(result["company_id"], "123456789")
+        mock_refresh.assert_called_once()
+
+    @patch("qb.get_secret")
+    @patch("qb._qbo_params")
+    def test_get_connection_status_no_tokens(
+        self,
+        mock_qbo_params: MagicMock,
+        mock_get_secret: MagicMock,
+    ) -> None:
+        """Test connection status when no tokens configured."""
+        from qb import get_connection_status
+
+        mock_get_secret.return_value = '{"client_id": "test_id"}'
+        mock_qbo_params.get.return_value = ""
+
+        result = get_connection_status()
+
+        self.assertFalse(result["connected"])
+        self.assertIn("No tokens", result["message"])
+
+    @patch("qb.get_secret")
+    @patch("qb.refresh_session")
+    @patch("qb._qbo_params")
+    def test_get_connection_status_refresh_failure(
+        self,
+        mock_qbo_params: MagicMock,
+        mock_refresh: MagicMock,
+        mock_get_secret: MagicMock,
+    ) -> None:
+        """Test connection status when refresh fails."""
+        from qb import get_connection_status
+
+        mock_get_secret.return_value = '{"access_token": "token", "refresh_token": "refresh"}'
+        mock_qbo_params.get.return_value = "123456789"
+        mock_refresh.side_effect = Exception("Token expired")
+
+        result = get_connection_status()
+
+        self.assertFalse(result["connected"])
+        self.assertIn("Token expired", result["message"])
+
+
 if __name__ == "__main__":
     unittest.main()

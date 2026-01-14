@@ -142,6 +142,30 @@ locals {
       timeout     = 300 # 5 minutes
       memory      = 10240
       env_vars    = local.lambda_env_fdms_statement_import
+    },
+    qb_auth_url = {
+      name        = "qb-auth-url"
+      description = "Generate QuickBooks OAuth authorization URL"
+      handler     = "lambda_function.qb_auth_url_handler"
+      timeout     = 30
+      memory      = 10240
+      env_vars    = local.lambda_env_qb_auth_url
+    },
+    qb_callback = {
+      name        = "qb-callback"
+      description = "Handle QuickBooks OAuth callback"
+      handler     = "lambda_function.qb_callback_handler"
+      timeout     = 30
+      memory      = 10240
+      env_vars    = local.lambda_env_qb_callback
+    },
+    qb_connection_status = {
+      name        = "qb-connection-status"
+      description = "Get QuickBooks connection status"
+      handler     = "lambda_function.qb_connection_status_handler"
+      timeout     = 30
+      memory      = 10240
+      env_vars    = local.lambda_env_qb_connection_status
     }
   }
 

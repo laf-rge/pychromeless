@@ -104,6 +104,31 @@ Third-party Services (FlexePOS, DoorDash, etc.)
 - **SSM Parameter Store** (`ssm_parameter_store.py`): Centralized secrets/config management
 - **Operation Types** (`operation_types.py`): Enum-based operation definitions with TTL and display names
 
+### QuickBooks OAuth Integration
+
+The system uses OAuth 2.0 for QuickBooks authentication. Tokens are stored in AWS Secrets Manager (`prod/qbo` in us-east-2).
+
+**OAuth Flow:**
+1. Frontend calls `/qb/auth-url` to get Intuit authorization URL
+2. User authenticates in popup window on Intuit's site
+3. Intuit redirects to `/qb/callback` with authorization code
+4. Backend exchanges code for tokens and stores in Secrets Manager
+5. Popup sends postMessage to parent window and closes
+
+**API Endpoints:**
+- `GET /qb/auth-url` - Generate OAuth authorization URL (authenticated)
+- `GET /qb/callback` - Handle Intuit redirect, exchange code (unauthenticated)
+- `GET /qb/connection-status` - Check current connection status (authenticated)
+
+**Key Functions in `src/qb.py`:**
+- `get_auth_url(state)` - Generate authorization URL with state token
+- `exchange_auth_code(code, realm_id)` - Exchange code for tokens
+- `get_connection_status()` - Verify connection by attempting token refresh
+
+**Frontend:**
+- Settings page at `/settings/quickbooks` (restricted to admin user)
+- Callback page at `/qb-callback` handles OAuth redirect
+
 ### State Management
 
 - **DynamoDB Tables**:

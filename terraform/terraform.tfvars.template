@@ -105,3 +105,6 @@ namecheap_frontend_config = {
 CHANGEME
 EOT
 }
+
+# Frontend URL for OAuth callback redirects
+frontend_url = "https://your-frontend-domain.com"

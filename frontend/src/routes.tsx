@@ -15,6 +15,8 @@ import { MPVs } from "./pages/payroll/MPVs";
 import { PayrollAllocation } from "./pages/payroll/PayrollAllocation";
 import { FoodHandlerLinks } from "./pages/utilities/FoodHandlerLinks";
 import { ErrorTester } from "./pages/utilities/ErrorTester";
+import { QuickBooksConnection } from "./pages/settings/QuickBooksConnection";
+import { QBCallback } from "./pages/settings/QBCallback";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { PageLayout, AppShell } from "./components/layout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -234,6 +236,28 @@ export function AppRoutes() {
             }
           />
         )}
+        <Route
+          path="/settings/quickbooks"
+          element={
+            <PageLayout>
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <AppShell showSidebar={true}>
+                    <QuickBooksConnection />
+                  </AppShell>
+                </ErrorBoundary>
+              </ProtectedRoute>
+            </PageLayout>
+          }
+        />
+        <Route
+          path="/qb-callback"
+          element={
+            <ErrorBoundary>
+              <QBCallback />
+            </ErrorBoundary>
+          }
+        />
       </Routes>
     </ErrorBoundary>
   );

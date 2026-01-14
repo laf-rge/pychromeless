@@ -13,6 +13,7 @@ from typing import Any, cast
 from boto3.session import Session
 from botocore.exceptions import ClientError
 from intuitlib.client import AuthClient
+from intuitlib.enums import Scopes
 from quickbooks import QuickBooks
 from quickbooks.exceptions import QuickbooksException
 from quickbooks.helpers import qb_date_format
@@ -750,6 +751,97 @@ def put_secret(secret_string: str) -> dict[str, Any]:
         SecretId=secret_name, SecretString=secret_string
     )
     return cast(dict[str, Any], put_secret_value_response)
+
+
+def get_auth_url(state: str) -> dict[str, str]:
+    """Generate QuickBooks OAuth authorization URL.
+
+    Args:
+        state: CSRF protection state parameter to validate on callback
+
+    Returns:
+        Dict with 'url' containing the authorization URL
+    """
+    s = json.loads(get_secret())
+    auth_client = AuthClient(
+        client_id=s["client_id"],
+        client_secret=s["client_secret"],
+        redirect_uri=s["redirect_url"],
+        environment="production",
+    )
+    url = auth_client.get_authorization_url(
+        scopes=[Scopes.ACCOUNTING], state_token=state
+    )
+    return {"url": url, "state": state}
+
+
+def exchange_auth_code(code: str, realm_id: str) -> dict[str, Any]:
+    """Exchange OAuth authorization code for access tokens.
+
+    Args:
+        code: Authorization code from Intuit callback
+        realm_id: QuickBooks company ID from callback
+
+    Returns:
+        Dict with success status and any error message
+    """
+    s = json.loads(get_secret())
+    auth_client = AuthClient(
+        client_id=s["client_id"],
+        client_secret=s["client_secret"],
+        redirect_uri=s["redirect_url"],
+        environment="production",
+    )
+
+    try:
+        auth_client.get_bearer_token(code, realm_id=realm_id)
+
+        # Update secret with new tokens
+        s["access_token"] = auth_client.access_token
+        s["refresh_token"] = auth_client.refresh_token
+        put_secret(json.dumps(s))
+
+        # Update company_id in SSM if different
+        current_company_id = _qbo_params.get("company_id", default="")
+        if realm_id and realm_id != current_company_id:
+            logger.info(
+                "QuickBooks company ID changed",
+                extra={"old": current_company_id, "new": realm_id},
+            )
+            # Note: SSM update would require additional permissions
+            # For now, log the change - manual SSM update may be needed
+
+        return {"success": True, "realm_id": realm_id}
+    except Exception as e:
+        logger.exception("Failed to exchange auth code for tokens")
+        return {"success": False, "error": str(e)}
+
+
+def get_connection_status() -> dict[str, Any]:
+    """Check QuickBooks OAuth connection status.
+
+    Returns:
+        Dict with connection status and company info
+    """
+    try:
+        s = json.loads(get_secret())
+        has_tokens = bool(s.get("access_token") and s.get("refresh_token"))
+        company_id = _qbo_params.get("company_id", default="")
+
+        if not has_tokens:
+            return {"connected": False, "message": "No tokens configured"}
+
+        # Try to refresh to verify tokens are valid
+        refresh_session()
+
+        return {
+            "connected": True,
+            "company_id": company_id,
+            "message": "Connected to QuickBooks",
+        }
+    except Exception as e:
+        logger.exception("Failed to verify QuickBooks connection")
+        return {"connected": False, "message": f"Connection error: {str(e)}"}
 
 
 def bill_export() -> None:

@@ -97,6 +97,11 @@ variable "namecheap_frontend_config" {
   sensitive = true
 }
 
+variable "frontend_url" {
+  description = "Frontend URL for OAuth callback redirects (e.g., https://josiah.wagonermanagement.com)"
+  type        = string
+}
+
 # Environment configurations
 locals {
   # Base environment configuration template
@@ -123,6 +128,13 @@ locals {
   grubhub_csv_import       = { prod = local.base_env_config }
   fdms_statement_import    = { prod = local.base_env_config }
   authorizer               = { prod = local.base_env_config }
+  qb_auth_url              = { prod = local.base_env_config }
+  qb_callback = {
+    prod = merge(local.base_env_config, {
+      FRONTEND_URL = var.frontend_url
+    })
+  }
+  qb_connection_status = { prod = local.base_env_config }
 
   # Websocket configuration with additional DynamoDB settings
   websocket = {
@@ -143,6 +155,9 @@ locals {
   lambda_env_payroll_allocation       = local.payroll_allocation[terraform.workspace]
   lambda_env_grubhub_csv_import       = local.grubhub_csv_import[terraform.workspace]
   lambda_env_fdms_statement_import    = local.fdms_statement_import[terraform.workspace]
+  lambda_env_qb_auth_url              = local.qb_auth_url[terraform.workspace]
+  lambda_env_qb_callback              = local.qb_callback[terraform.workspace]
+  lambda_env_qb_connection_status     = local.qb_connection_status[terraform.workspace]
   lambda_env_websocket = {
     CONNECTIONS_TABLE  = aws_dynamodb_table.websocket_connections.name
     WEBSOCKET_ENDPOINT = replace(aws_apigatewayv2_stage.websocket.invoke_url, "wss://", "https://")

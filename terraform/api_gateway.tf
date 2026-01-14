@@ -19,6 +19,11 @@ output "base_url" {
   value = aws_api_gateway_stage.test.invoke_url
 }
 
+output "qb_callback_url" {
+  description = "QuickBooks OAuth callback URL - register this in your Intuit Developer App"
+  value       = "${aws_api_gateway_stage.test.invoke_url}/qb/callback"
+}
+
 resource "aws_api_gateway_method" "proxy_root" {
   rest_api_id   = aws_api_gateway_rest_api.josiah.id
   resource_id   = aws_api_gateway_rest_api.josiah.root_resource_id
@@ -564,7 +569,12 @@ resource "aws_api_gateway_deployment" "josiah" {
     aws_api_gateway_integration.lambda_grubhub_csv_import,
     aws_api_gateway_integration.integration_grubhub_csv_import_OPTIONS,
     aws_api_gateway_integration.lambda_fdms_statement_import,
-    aws_api_gateway_integration.integration_fdms_statement_import_OPTIONS
+    aws_api_gateway_integration.integration_fdms_statement_import_OPTIONS,
+    aws_api_gateway_integration.lambda_qb_auth_url,
+    aws_api_gateway_integration.integration_qb_auth_url_OPTIONS,
+    aws_api_gateway_integration.lambda_qb_callback,
+    aws_api_gateway_integration.lambda_qb_connection_status,
+    aws_api_gateway_integration.integration_qb_connection_status_OPTIONS
   ]
 
   rest_api_id = aws_api_gateway_rest_api.josiah.id
@@ -598,6 +608,17 @@ resource "aws_api_gateway_deployment" "josiah" {
       fdms_statement_import_method         = aws_api_gateway_method.proxy_fdms_statement_import.id
       fdms_statement_import_response       = aws_api_gateway_method_response.fdms_statement_import_method_response_200.id
       fdms_statement_import_options        = aws_api_gateway_integration.integration_fdms_statement_import_OPTIONS.id
+      qb_auth_url_integration              = aws_api_gateway_integration.lambda_qb_auth_url.id
+      qb_auth_url_method                   = aws_api_gateway_method.proxy_qb_auth_url.id
+      qb_auth_url_response                 = aws_api_gateway_method_response.qb_auth_url_method_response_200.id
+      qb_auth_url_options                  = aws_api_gateway_integration.integration_qb_auth_url_OPTIONS.id
+      qb_callback_integration              = aws_api_gateway_integration.lambda_qb_callback.id
+      qb_callback_method                   = aws_api_gateway_method.proxy_qb_callback.id
+      qb_callback_response                 = aws_api_gateway_method_response.qb_callback_method_response_302.id
+      qb_connection_status_integration     = aws_api_gateway_integration.lambda_qb_connection_status.id
+      qb_connection_status_method          = aws_api_gateway_method.proxy_qb_connection_status.id
+      qb_connection_status_response        = aws_api_gateway_method_response.qb_connection_status_method_response_200.id
+      qb_connection_status_options         = aws_api_gateway_integration.integration_qb_connection_status_OPTIONS.id
     }))
   }
 
@@ -1384,5 +1405,240 @@ resource "aws_api_gateway_integration_response" "fdms_statement_import_options-2
   depends_on = [
     aws_api_gateway_integration.integration_fdms_statement_import_OPTIONS,
     aws_api_gateway_method_response.fdms_statement_import_method_response_options
+  ]
+}
+
+# =============================================================================
+# QuickBooks OAuth Endpoints
+# =============================================================================
+
+# Parent resource for /qb/*
+resource "aws_api_gateway_resource" "qb_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_rest_api.josiah.root_resource_id
+  path_part   = "qb"
+}
+
+# -----------------------------------------------------------------------------
+# /qb/auth-url - Generate QuickBooks OAuth authorization URL (authenticated)
+# -----------------------------------------------------------------------------
+resource "aws_api_gateway_resource" "qb_auth_url_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_resource.qb_resource.id
+  path_part   = "auth-url"
+}
+
+resource "aws_api_gateway_method" "proxy_qb_auth_url" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.qb_auth_url_resource.id
+  http_method   = "GET"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+}
+
+resource "aws_api_gateway_integration" "lambda_qb_auth_url" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_method.proxy_qb_auth_url.resource_id
+  http_method = aws_api_gateway_method.proxy_qb_auth_url.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.functions["qb_auth_url"].invoke_arn
+  timeout_milliseconds    = 29000
+}
+
+resource "aws_api_gateway_method_response" "qb_auth_url_method_response_200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.qb_auth_url_resource.id
+  http_method = aws_api_gateway_method.proxy_qb_auth_url.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+resource "aws_api_gateway_method" "method_qb_auth_url_options" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.qb_auth_url_resource.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "integration_qb_auth_url_OPTIONS" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.qb_auth_url_resource.id
+  http_method = aws_api_gateway_method.method_qb_auth_url_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+
+  depends_on = [
+    aws_api_gateway_method.method_qb_auth_url_options
+  ]
+}
+
+resource "aws_api_gateway_method_response" "qb_auth_url_method_response_options" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.qb_auth_url_resource.id
+  http_method = aws_api_gateway_method.method_qb_auth_url_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "qb_auth_url_options-200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.qb_auth_url_resource.id
+  http_method = aws_api_gateway_method.method_qb_auth_url_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.integration_qb_auth_url_OPTIONS,
+    aws_api_gateway_method_response.qb_auth_url_method_response_options
+  ]
+}
+
+# -----------------------------------------------------------------------------
+# /qb/callback - Handle QuickBooks OAuth callback (NOT authenticated)
+# -----------------------------------------------------------------------------
+resource "aws_api_gateway_resource" "qb_callback_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_resource.qb_resource.id
+  path_part   = "callback"
+}
+
+resource "aws_api_gateway_method" "proxy_qb_callback" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.qb_callback_resource.id
+  http_method   = "GET"
+  authorization = "NONE" # Intuit redirects here, cannot be authenticated
+}
+
+resource "aws_api_gateway_integration" "lambda_qb_callback" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_method.proxy_qb_callback.resource_id
+  http_method = aws_api_gateway_method.proxy_qb_callback.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.functions["qb_callback"].invoke_arn
+  timeout_milliseconds    = 29000
+}
+
+resource "aws_api_gateway_method_response" "qb_callback_method_response_302" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.qb_callback_resource.id
+  http_method = aws_api_gateway_method.proxy_qb_callback.http_method
+  status_code = "302"
+  response_parameters = {
+    "method.response.header.Location"                     = true,
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+# -----------------------------------------------------------------------------
+# /qb/connection-status - Get QuickBooks connection status (authenticated)
+# -----------------------------------------------------------------------------
+resource "aws_api_gateway_resource" "qb_connection_status_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_resource.qb_resource.id
+  path_part   = "connection-status"
+}
+
+resource "aws_api_gateway_method" "proxy_qb_connection_status" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.qb_connection_status_resource.id
+  http_method   = "GET"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+}
+
+resource "aws_api_gateway_integration" "lambda_qb_connection_status" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_method.proxy_qb_connection_status.resource_id
+  http_method = aws_api_gateway_method.proxy_qb_connection_status.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.functions["qb_connection_status"].invoke_arn
+  timeout_milliseconds    = 29000
+}
+
+resource "aws_api_gateway_method_response" "qb_connection_status_method_response_200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.qb_connection_status_resource.id
+  http_method = aws_api_gateway_method.proxy_qb_connection_status.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+resource "aws_api_gateway_method" "method_qb_connection_status_options" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.qb_connection_status_resource.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "integration_qb_connection_status_OPTIONS" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.qb_connection_status_resource.id
+  http_method = aws_api_gateway_method.method_qb_connection_status_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+
+  depends_on = [
+    aws_api_gateway_method.method_qb_connection_status_options
+  ]
+}
+
+resource "aws_api_gateway_method_response" "qb_connection_status_method_response_options" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.qb_connection_status_resource.id
+  http_method = aws_api_gateway_method.method_qb_connection_status_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "qb_connection_status_options-200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.qb_connection_status_resource.id
+  http_method = aws_api_gateway_method.method_qb_connection_status_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.integration_qb_connection_status_OPTIONS,
+    aws_api_gateway_method_response.qb_connection_status_method_response_options
   ]
 }

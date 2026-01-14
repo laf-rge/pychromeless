@@ -1832,3 +1832,145 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
             error=str(e),
         )
         return create_response(500, {"message": f"Error: {str(e)}"})
+
+
+def qb_auth_url_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
+    """
+    Generate QuickBooks OAuth authorization URL.
+
+    Lambda invocation:
+        - HTTP Method: GET
+        - Authenticated: Yes (Azure MSAL)
+
+    Returns:
+        JSON response with:
+            - url: str (Intuit OAuth authorization URL)
+            - state: str (CSRF protection state token)
+    """
+    try:
+        # Generate a unique state token for CSRF protection
+        state = str(uuid.uuid4())
+
+        # Get authorization URL from qb module
+        result = qb.get_auth_url(state)
+
+        logger.info("Generated QuickBooks auth URL", extra={"state": state})
+
+        return create_response(200, result)
+
+    except Exception as e:
+        logger.exception("Error generating QuickBooks auth URL")
+        return create_response(500, {"message": f"Error: {str(e)}"})
+
+
+def qb_callback_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
+    """
+    Handle QuickBooks OAuth callback.
+
+    Lambda invocation:
+        - HTTP Method: GET
+        - Authenticated: No (called by Intuit OAuth redirect)
+        - Query params: code, realmId, state
+
+    Returns:
+        302 redirect to frontend callback page with success/error status
+    """
+    frontend_url = os.environ.get("FRONTEND_URL", "")
+    callback_path = "/qb-callback"
+
+    try:
+        event = args[0] if args and len(args) > 0 else {}
+
+        # Get query parameters
+        params = event.get("queryStringParameters", {}) or {}
+        code = params.get("code", "")
+        realm_id = params.get("realmId", "")
+        state = params.get("state", "")
+
+        # Log callback receipt (without sensitive data)
+        logger.info(
+            "Received QuickBooks OAuth callback",
+            extra={
+                "has_code": bool(code),
+                "has_realm_id": bool(realm_id),
+                "state": state,
+            },
+        )
+
+        if not code:
+            error_msg = params.get(
+                "error_description",
+                params.get("error", "No authorization code received"),
+            )
+            logger.warning(
+                "QuickBooks OAuth callback missing code", extra={"error": error_msg}
+            )
+            redirect_url = f"{frontend_url}{callback_path}?error={error_msg}"
+            return {
+                "statusCode": 302,
+                "headers": {
+                    "Location": redirect_url,
+                    "Access-Control-Allow-Origin": "*",
+                },
+                "body": "",
+            }
+
+        # Exchange code for tokens
+        result = qb.exchange_auth_code(code, realm_id)
+
+        if result.get("success"):
+            logger.info(
+                "QuickBooks OAuth token exchange successful",
+                extra={"realm_id": realm_id},
+            )
+            redirect_url = f"{frontend_url}{callback_path}?success=true"
+        else:
+            error_msg = result.get("error", "Token exchange failed")
+            logger.error(
+                "QuickBooks OAuth token exchange failed", extra={"error": error_msg}
+            )
+            redirect_url = f"{frontend_url}{callback_path}?error={error_msg}"
+
+        return {
+            "statusCode": 302,
+            "headers": {
+                "Location": redirect_url,
+                "Access-Control-Allow-Origin": "*",
+            },
+            "body": "",
+        }
+
+    except Exception as e:
+        logger.exception("Error processing QuickBooks OAuth callback")
+        error_msg = str(e)
+        redirect_url = f"{frontend_url}{callback_path}?error={error_msg}"
+        return {
+            "statusCode": 302,
+            "headers": {
+                "Location": redirect_url,
+                "Access-Control-Allow-Origin": "*",
+            },
+            "body": "",
+        }
+
+
+def qb_connection_status_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
+    """
+    Get QuickBooks connection status.
+
+    Lambda invocation:
+        - HTTP Method: GET
+        - Authenticated: Yes (Azure MSAL)
+
+    Returns:
+        JSON response with:
+            - connected: bool
+            - company_id: str (if connected)
+            - message: str
+    """
+    try:
+        result = qb.get_connection_status()
+        return create_response(200, result)
+    except Exception as e:
+        logger.exception("Error checking QuickBooks connection status")
+        return create_response(500, {"message": f"Error: {str(e)}"})

@@ -38,4 +38,9 @@ export const API_ENDPOINTS = {
 
   // Task Status
   TASK_STATUS: "/task-status",
+
+  // QuickBooks OAuth
+  QB_AUTH_URL: "/qb/auth-url",
+  QB_CALLBACK: "/qb/callback",
+  QB_CONNECTION_STATUS: "/qb/connection-status",
 } as const;
