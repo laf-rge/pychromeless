@@ -209,18 +209,18 @@ describe('UnlinkedDepositsSection', () => {
     const rerunButton = screen.getByRole('button', { name: 'Re-run' });
     await user.click(rerunButton);
 
-    // Should call POST to daily_sales endpoint
+    // Should call POST to daily_sales endpoint with query params
     await waitFor(() => {
       expect(mockPost).toHaveBeenCalled();
       const postCall = mockPost.mock.calls[0];
-      // Check the endpoint and payload
-      expect(postCall[0]).toContain(''); // Root endpoint for daily_sales
-      expect(postCall[1]).toMatchObject({
-        year: '2025',
-        month: '01',
-        day: '15',
-        store: '20358',
-      });
+      // Check the endpoint URL contains query parameters
+      const url = postCall[0] as string;
+      expect(url).toContain('year=2025');
+      expect(url).toContain('month=01');
+      expect(url).toContain('day=15');
+      expect(url).toContain('store=20358');
+      // Body should be empty string (params are in URL)
+      expect(postCall[1]).toBe('');
     });
   });
 });

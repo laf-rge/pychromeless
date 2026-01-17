@@ -134,14 +134,17 @@ export function UnlinkedDepositsSection() {
         },
       };
 
+      // Use query parameters like the Daily Sales form does
+      const params = new URLSearchParams({
+        year,
+        month,
+        day,
+        store: deposit.store,
+      });
+
       const response = await client.post<{ task_id?: string }>(
-        API_ENDPOINTS.DAILY_SALES,
-        {
-          year,
-          month,
-          day,
-          store: deposit.store,
-        },
+        `${API_ENDPOINTS.DAILY_SALES}?${params}`,
+        "",
         config
       );
 

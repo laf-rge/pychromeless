@@ -300,17 +300,23 @@ def daily_sales_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         or (context.aws_request_id if context else None)
         or f"local-{str(uuid.uuid4())}"
     )
+
+    # Get parameters from either direct event (scheduled/local) or query params (API Gateway)
+    params = event.get("queryStringParameters") or event
+    if not params:
+        params = {}
+
     ws_manager = WebSocketManager()
     txdates = []
     txdate = date.today()
 
     try:
-        if "year" in event:
+        if "year" in params:
             txdates = [
                 date(
-                    year=int(event["year"]),
-                    month=int(event["month"]),
-                    day=int(event["day"]),
+                    year=int(params["year"]),
+                    month=int(params["month"]),
+                    day=int(params["day"]),
                 )
             ]
         else:
@@ -357,7 +363,7 @@ def daily_sales_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         failed_stores: list[str] = []
 
         # Check for optional single store parameter
-        single_store = event.get("store")
+        single_store = params.get("store")
 
         for txdate in txdates:
             # If single store specified, use only that store; otherwise get all active
