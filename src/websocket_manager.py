@@ -8,6 +8,7 @@ import boto3
 from mypy_boto3_apigatewaymanagementapi.client import ApiGatewayManagementApiClient
 from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
 
+from logging_utils import CustomJsonEncoder
 from operation_types import OperationType
 
 logger = logging.getLogger(__name__)
@@ -166,7 +167,7 @@ class WebSocketManager:
             try:
                 self.apigateway.post_to_connection(
                     ConnectionId=str(connection["connection_id"]),
-                    Data=json.dumps(message),
+                    Data=json.dumps(message, cls=CustomJsonEncoder),
                 )
             except self.apigateway.exceptions.GoneException:
                 # Connection is no longer valid, remove it
@@ -412,7 +413,9 @@ class TaskManager:
                 try:
                     self.gatewayapi.post_to_connection(
                         ConnectionId=connection_id,
-                        Data=json.dumps({"type": "task_update", "task": task}),
+                        Data=json.dumps(
+                            {"type": "task_update", "task": task}, cls=CustomJsonEncoder
+                        ),
                     )
                 except Exception as e:
                     print(f"Error broadcasting to {connection_id}: {str(e)}")

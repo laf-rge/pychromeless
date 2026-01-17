@@ -38,6 +38,41 @@ resource "aws_lambda_function" "authorizer" {
 }
 
 locals {
+  # Lambda timeout values (in seconds) - single source of truth
+  lambda_timeouts = {
+    invoice_sync             = 600
+    daily_journal            = 480
+    daily_sales              = 540
+    email_tips               = 480
+    transform_tips           = 480
+    get_mpvs                 = 480
+    split_bill               = 300
+    get_food_handler_links   = 120
+    update_food_handler_pdfs = 480
+    payroll_allocation       = 300
+    grubhub_csv_import       = 300
+    fdms_statement_import    = 300
+    qb_auth_url              = 30
+    qb_callback              = 30
+    qb_connection_status     = 30
+    unlinked_deposits        = 30
+    timeout_detector         = 60
+  }
+
+  # Map operation_type enum values to Lambda timeouts with 60s buffer
+  # Used by timeout_detector to identify stale tasks
+  operation_timeouts = {
+    daily_sales              = local.lambda_timeouts.daily_sales + 60
+    invoice_sync             = local.lambda_timeouts.invoice_sync + 60
+    email_tips               = local.lambda_timeouts.email_tips + 60
+    daily_journal            = local.lambda_timeouts.daily_journal + 60
+    update_food_handler_pdfs = local.lambda_timeouts.update_food_handler_pdfs + 60
+    payroll_allocation       = local.lambda_timeouts.payroll_allocation + 60
+    grubhub_csv_import       = local.lambda_timeouts.grubhub_csv_import + 60
+    fdms_statement_import    = local.lambda_timeouts.fdms_statement_import + 60
+    third_party_deposit      = 360 # Not a direct Lambda, default 6 min
+  }
+
   lambda_functions = {
     invoice_sync = {
       name        = "invoice-sync"
@@ -174,6 +209,14 @@ locals {
       timeout     = 30
       memory      = 10240
       env_vars    = local.lambda_env_unlinked_deposits
+    },
+    timeout_detector = {
+      name        = "timeout-detector"
+      description = "Detects and marks stale tasks as failed"
+      handler     = "lambda_function.timeout_detector_handler"
+      timeout     = 60
+      memory      = 256
+      env_vars    = local.lambda_env_timeout_detector
     }
   }
 

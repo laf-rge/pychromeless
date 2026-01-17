@@ -2050,3 +2050,128 @@ def unlinked_deposits_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
     except Exception as e:
         logger.exception("Error fetching unlinked deposits")
         return create_response(500, {"message": f"Error: {str(e)}"})
+
+
+def timeout_detector_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+    """
+    Scan for stale tasks and mark them as failed.
+
+    Lambda invocation:
+        - Schedule: Every 5 minutes via CloudWatch Events
+        - No event parameters required
+
+    This function scans the task_states DynamoDB table for tasks that are
+    in 'started' or 'processing' state but haven't been updated within
+    the expected timeout period for their operation type.
+    """
+    import time
+
+    # Read timeouts from environment (set by Terraform)
+    operation_timeouts_json = os.environ.get("OPERATION_TIMEOUTS", "{}")
+    try:
+        operation_timeouts = json.loads(operation_timeouts_json)
+    except json.JSONDecodeError:
+        logger.error(
+            "Failed to parse OPERATION_TIMEOUTS environment variable",
+            extra={"value": operation_timeouts_json},
+        )
+        operation_timeouts = {}
+
+    task_states_table = dynamodb.Table(os.environ["TASK_STATES_TABLE"])
+    ws_manager = WebSocketManager()
+
+    now = time.time()
+    marked_count = 0
+    scanned_operations = []
+
+    for op in OperationType:
+        # Get timeout for this operation (default to 10 min if not specified)
+        timeout_seconds = operation_timeouts.get(op.value, 600)
+        scanned_operations.append(op.value)
+
+        try:
+            # Query tasks for this operation that are in started/processing state
+            # Using the operation_type-index GSI
+            response = task_states_table.query(
+                IndexName="operation_type-index",
+                KeyConditionExpression="operation = :op",
+                FilterExpression="#status IN (:s1, :s2)",
+                ExpressionAttributeNames={"#status": "status"},
+                ExpressionAttributeValues={
+                    ":op": op.value,
+                    ":s1": "started",
+                    ":s2": "processing",
+                },
+            )
+
+            items = response.get("Items", [])
+
+            # Deduplicate by task_id (keep most recent entry per task)
+            tasks_by_id: dict[str, dict[str, Any]] = {}
+            for item in items:
+                task_id = item["task_id"]
+                if (
+                    task_id not in tasks_by_id
+                    or item["timestamp"] > tasks_by_id[task_id]["timestamp"]
+                ):
+                    tasks_by_id[task_id] = item
+
+            for task_id, item in tasks_by_id.items():
+                # Use updated_at if available, otherwise fall back to created_at or timestamp
+                updated_at = float(
+                    item.get(
+                        "updated_at", item.get("created_at", item.get("timestamp", 0))
+                    )
+                )
+
+                if now - updated_at > timeout_seconds:
+                    current_time = int(time.time())
+
+                    # Create a new record marking the task as failed
+                    task_states_table.put_item(
+                        Item={
+                            "task_id": task_id,
+                            "timestamp": current_time,
+                            "operation": op.value,
+                            "status": "failed",
+                            "error": "Task timed out (no response received)",
+                            "created_at": item.get("created_at", current_time),
+                            "updated_at": current_time,
+                            "ttl": current_time + op.ttl_seconds,
+                        }
+                    )
+
+                    # Broadcast to connected clients
+                    ws_manager.broadcast_status(
+                        task_id=task_id,
+                        operation=op.value,
+                        status="failed",
+                        error="Task timed out (no response received)",
+                    )
+
+                    marked_count += 1
+                    logger.info(
+                        "Marked stale task as failed",
+                        extra={
+                            "task_id": task_id,
+                            "operation": op.value,
+                            "age_seconds": now - updated_at,
+                            "timeout_seconds": timeout_seconds,
+                        },
+                    )
+
+        except Exception as e:
+            logger.exception(
+                "Error scanning tasks for operation",
+                extra={"operation": op.value, "error": str(e)},
+            )
+
+    logger.info(
+        "Timeout detector completed",
+        extra={
+            "marked_failed": marked_count,
+            "scanned_operations": scanned_operations,
+        },
+    )
+
+    return {"marked_failed": marked_count}

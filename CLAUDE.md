@@ -173,6 +173,11 @@ The `daily_sales_handler` accepts an optional `store` parameter to process only 
 
 - **TTL Strategy**: Each operation type has custom TTL (12-48 hours) to auto-cleanup old task states
 
+- **Stale Task Detection**: The `timeout_detector` Lambda runs every 5 minutes (via CloudWatch Events) to scan for tasks stuck in `started` or `processing` state. Tasks exceeding their operation's timeout (Lambda timeout + 60s buffer) are automatically marked as `failed` with error "Task timed out (no response received)". This handles Lambda crashes, unhandled exceptions, and other scenarios where tasks fail before sending a completion status.
+  - Timeouts are defined in `terraform/lambda.tf` (`local.operation_timeouts`)
+  - Uses the `operation_type-index` GSI on `task_states` table for efficient querying
+  - Broadcasts failures to connected WebSocket clients
+
 ### Frontend Architecture
 
 - **Framework**: React 19 with TypeScript
@@ -291,6 +296,7 @@ Located in `terraform/` directory with 12 .tf files:
 - `iam.tf`: IAM roles and policies
 - `ssm.tf`: Parameter Store resources (includes Namecheap deployment credentials)
 - `monitoring.tf`: CloudWatch alarms and metrics
+- `cloudwatch_event.tf`: Scheduled Lambda triggers (daily jobs, timeout detector)
 
 **Frontend deployment**: Handled directly via `make frontend-deploy` (rsync), not Terraform. Credentials stored in SSM under `/${workspace}/frontend/namecheap/*`.
 

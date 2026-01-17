@@ -1,4 +1,5 @@
 """Tests for the unlinked_deposits_handler in lambda_function.py"""
+
 import json
 import unittest
 from decimal import Decimal
@@ -132,7 +133,9 @@ class TestUnlinkedDepositsHandler(unittest.TestCase):
         """Test that handler handles QuickBooks exceptions."""
         from lambda_function import unlinked_deposits_handler
 
-        mock_qb.get_unlinked_sales_receipts.side_effect = Exception("QB connection failed")
+        mock_qb.get_unlinked_sales_receipts.side_effect = Exception(
+            "QB connection failed"
+        )
 
         event = {}
 

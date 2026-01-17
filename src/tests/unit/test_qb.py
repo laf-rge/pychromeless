@@ -278,7 +278,9 @@ class TestQuickBooksOAuth(unittest.TestCase):
         """Test connection status when connected."""
         from qb import get_connection_status
 
-        mock_get_secret.return_value = '{"access_token": "token", "refresh_token": "refresh"}'
+        mock_get_secret.return_value = (
+            '{"access_token": "token", "refresh_token": "refresh"}'
+        )
         mock_qbo_params.get.return_value = "123456789"
 
         result = get_connection_status()
@@ -317,7 +319,9 @@ class TestQuickBooksOAuth(unittest.TestCase):
         """Test connection status when refresh fails."""
         from qb import get_connection_status
 
-        mock_get_secret.return_value = '{"access_token": "token", "refresh_token": "refresh"}'
+        mock_get_secret.return_value = (
+            '{"access_token": "token", "refresh_token": "refresh"}'
+        )
         mock_qbo_params.get.return_value = "123456789"
         mock_refresh.side_effect = Exception("Token expired")
 

@@ -601,6 +601,10 @@ resource "aws_api_gateway_deployment" "josiah" {
 
   triggers = {
     redeployment = sha1(jsonencode({
+      # Root endpoint (daily_sales)
+      root_integration = aws_api_gateway_integration.lambda_root.id
+      root_method      = aws_api_gateway_method.proxy_root.id
+      # Other endpoints
       get_food_handler_links_integration   = aws_api_gateway_integration.lambda_get_food_handler_links.id
       get_food_handler_links_method        = aws_api_gateway_method.proxy_get_food_handler_links.id
       get_food_handler_links_response      = aws_api_gateway_method_response.get_food_handler_links_method_response_200.id
