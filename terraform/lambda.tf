@@ -166,6 +166,14 @@ locals {
       timeout     = 30
       memory      = 10240
       env_vars    = local.lambda_env_qb_connection_status
+    },
+    unlinked_deposits = {
+      name        = "unlinked-deposits"
+      description = "Get unlinked sales receipts (deposits without linked bank transactions)"
+      handler     = "lambda_function.unlinked_deposits_handler"
+      timeout     = 30
+      memory      = 10240
+      env_vars    = local.lambda_env_unlinked_deposits
     }
   }
 

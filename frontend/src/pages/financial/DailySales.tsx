@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "../../components/ui/alert";
 import { API_BASE_URL, API_ENDPOINTS } from "../../config/api";
 import { useTaskStore } from "../../stores/taskStore";
 import { OperationType } from "../../services/WebSocketService";
+import { UnlinkedDepositsSection } from "../../components/features/UnlinkedDepositsSection";
 
 export function DailySales() {
   const createImmediateTask = useTaskStore((state) => state.createImmediateTask);
@@ -73,7 +74,8 @@ export function DailySales() {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <div className="space-y-6">
+      <form onSubmit={handleSubmit}>
         <Feature
           title="Daily Sales"
           desc="Enter a valid date below and Josiah will update a days deposit and sales that you specify below. This is useful if you need to correct a deposit or payout/payin for a specific day in Quickbooks."
@@ -125,5 +127,7 @@ export function DailySales() {
             )}
         </Feature>
       </form>
+      <UnlinkedDepositsSection />
+    </div>
   );
 }

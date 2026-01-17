@@ -119,15 +119,50 @@ The system uses OAuth 2.0 for QuickBooks authentication. Tokens are stored in AW
 - `GET /qb/auth-url` - Generate OAuth authorization URL (authenticated)
 - `GET /qb/callback` - Handle Intuit redirect, exchange code (unauthenticated)
 - `GET /qb/connection-status` - Check current connection status (authenticated)
+- `GET /unlinked_deposits` - Get sales receipts without linked bank deposits (authenticated)
 
 **Key Functions in `src/qb.py`:**
 - `get_auth_url(state)` - Generate authorization URL with state token
 - `exchange_auth_code(code, realm_id)` - Exchange code for tokens
 - `get_connection_status()` - Verify connection by attempting token refresh
+- `get_unlinked_sales_receipts(start_date, end_date)` - Query unlinked sales receipts
 
 **Frontend:**
 - Settings page at `/settings/quickbooks` (restricted to admin user)
 - Callback page at `/qb-callback` handles OAuth redirect
+
+### Unlinked Deposits Feature
+
+Shows QuickBooks SalesReceipts that have no linked deposit transactions (deposits that haven't hit the bank yet).
+
+**API Endpoint:**
+- `GET /unlinked_deposits` - Returns unlinked sales receipts
+  - Query params: `start_date`, `end_date` (optional, defaults to 2025-01-01 through today)
+  - Returns: `{ deposits: [...], summary: { count, total_amount } }`
+
+**Backend (`src/qb.py`):**
+- `get_unlinked_sales_receipts(start_date, end_date)` queries SalesReceipts where `TotalAmt > 0` and `LinkedTxn` is empty
+- Returns: id, store, date, amount, doc_number, qb_url, `has_cents` (boolean)
+- `has_cents=true` indicates the amount has non-zero cents, suggesting a likely missing FlexePOS entry (actionable via re-run)
+
+**Frontend (`UnlinkedDepositsSection.tsx`):**
+- Displayed on the Daily Sales page below the form
+- Table columns: Date, Store, Amount, Doc#, Actions
+- Warning badge for amounts with cents (these are actionable)
+- "View in QB" link opens `https://app.qbo.intuit.com/app/salesreceipt?txnId={id}`
+- "Re-run" button triggers daily_sales for that specific date + store
+
+**Daily Sales Single-Store Re-run:**
+The `daily_sales_handler` accepts an optional `store` parameter to process only one store:
+```python
+# Event format for single-store re-run
+{
+    "year": "2025",
+    "month": "01",
+    "day": "15",
+    "store": "20358"  # Optional: process only this store
+}
+```
 
 ### State Management
 
@@ -430,3 +465,6 @@ progress.update(step_name="Scraping data", current_step=1)
 - Operation definitions: `src/operation_types.py`
 - Infrastructure: `terraform/` directory
 - Frontend: `frontend/` directory with separate README.md
+- QuickBooks utilities: `src/qb.py` (OAuth, deposits, sales receipts, bill sync)
+- Unit tests: `src/tests/unit/` (test_qb.py, test_unlinked_deposits_handler.py, etc.)
+- Frontend tests: `frontend/src/**/__tests__/` (Vitest)

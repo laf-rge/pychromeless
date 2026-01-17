@@ -43,4 +43,7 @@ export const API_ENDPOINTS = {
   QB_AUTH_URL: "/qb/auth-url",
   QB_CALLBACK: "/qb/callback",
   QB_CONNECTION_STATUS: "/qb/connection-status",
+
+  // QuickBooks Data
+  UNLINKED_DEPOSITS: "/unlinked_deposits",
 } as const;

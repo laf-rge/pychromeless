@@ -1300,3 +1300,89 @@ def split_bill(
                     },
                 )
         raise
+
+
+def get_unlinked_sales_receipts(
+    start_date: datetime.date, end_date: datetime.date
+) -> list[dict[str, Any]]:
+    """
+    Get SalesReceipts that have no linked deposit transactions.
+
+    These are deposits that exist in QuickBooks but haven't been matched
+    to bank deposits yet.
+
+    Args:
+        start_date: Start date for the query (inclusive)
+        end_date: End date for the query (inclusive)
+
+    Returns:
+        List of dicts with:
+            - id: QuickBooks transaction ID
+            - store: Store name from DepartmentRef
+            - date: Transaction date (ISO format string)
+            - amount: Total amount as string
+            - doc_number: DocNumber from QuickBooks
+            - qb_url: URL to view in QuickBooks
+            - has_cents: True if amount has non-zero cents (indicates likely
+              missing FlexePOS entry - these are actionable via re-run)
+    """
+    refresh_session()
+
+    where_clause = (
+        f"TxnDate >= '{start_date.isoformat()}' AND TxnDate <= '{end_date.isoformat()}'"
+    )
+
+    results: list[dict[str, Any]] = []
+    query_count = SalesReceipt.count(where_clause=where_clause, qb=CLIENT)
+    r_count = 1
+
+    logger.info(
+        "Querying unlinked sales receipts",
+        extra={
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "total_count": query_count,
+        },
+    )
+
+    while r_count <= query_count:
+        sales_receipts = SalesReceipt.where(
+            where_clause=where_clause,
+            order_by="TxnDate",
+            start_position=r_count,
+            max_results=1000,
+            qb=CLIENT,
+        )
+
+        for sales_receipt in sales_receipts:
+            # Filter: positive amount and no linked transactions
+            if sales_receipt.TotalAmt > 0 and len(sales_receipt.LinkedTxn) == 0:
+                amount = Decimal(str(sales_receipt.TotalAmt))
+                # Check if amount has non-zero cents (fractional part)
+                has_cents = amount % 1 != 0
+
+                store_name = (
+                    sales_receipt.DepartmentRef.name
+                    if sales_receipt.DepartmentRef
+                    else "Unknown"
+                )
+
+                results.append(
+                    {
+                        "id": sales_receipt.Id,
+                        "store": store_name,
+                        "date": sales_receipt.TxnDate,
+                        "amount": str(amount.quantize(TWO_PLACES)),
+                        "doc_number": sales_receipt.DocNumber or "",
+                        "qb_url": f"https://app.qbo.intuit.com/app/salesreceipt?txnId={sales_receipt.Id}",
+                        "has_cents": has_cents,
+                    }
+                )
+            r_count += 1
+
+    logger.info(
+        "Found unlinked sales receipts",
+        extra={"count": len(results)},
+    )
+
+    return results

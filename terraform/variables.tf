@@ -135,6 +135,7 @@ locals {
     })
   }
   qb_connection_status = { prod = local.base_env_config }
+  unlinked_deposits    = { prod = local.base_env_config }
 
   # Websocket configuration with additional DynamoDB settings
   websocket = {
@@ -158,6 +159,7 @@ locals {
   lambda_env_qb_auth_url              = local.qb_auth_url[terraform.workspace]
   lambda_env_qb_callback              = local.qb_callback[terraform.workspace]
   lambda_env_qb_connection_status     = local.qb_connection_status[terraform.workspace]
+  lambda_env_unlinked_deposits        = local.unlinked_deposits[terraform.workspace]
   lambda_env_websocket = {
     CONNECTIONS_TABLE  = aws_dynamodb_table.websocket_connections.name
     WEBSOCKET_ENDPOINT = replace(aws_apigatewayv2_stage.websocket.invoke_url, "wss://", "https://")

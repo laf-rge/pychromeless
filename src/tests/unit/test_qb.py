@@ -327,5 +327,168 @@ class TestQuickBooksOAuth(unittest.TestCase):
         self.assertIn("Token expired", result["message"])
 
 
+class TestUnlinkedSalesReceipts(unittest.TestCase):
+    """Test get_unlinked_sales_receipts function."""
+
+    @patch("qb.CLIENT")
+    @patch("qb.refresh_session")
+    @patch("qb.SalesReceipt")
+    def test_get_unlinked_sales_receipts_returns_unlinked(
+        self,
+        mock_sales_receipt: MagicMock,
+        mock_refresh: MagicMock,
+        mock_client: MagicMock,
+    ) -> None:
+        """Test that get_unlinked_sales_receipts returns receipts without linked transactions."""
+        from datetime import date
+
+        from qb import get_unlinked_sales_receipts
+
+        # Create mock sales receipts
+        mock_unlinked = MagicMock()
+        mock_unlinked.Id = "1234"
+        mock_unlinked.TotalAmt = Decimal("100.50")
+        mock_unlinked.LinkedTxn = []  # No linked transactions
+        mock_unlinked.DepartmentRef = MagicMock()
+        mock_unlinked.DepartmentRef.name = "20358"
+        mock_unlinked.TxnDate = "2025-01-15"
+        mock_unlinked.DocNumber = "DS-20358-20250115"
+
+        mock_linked = MagicMock()
+        mock_linked.Id = "5678"
+        mock_linked.TotalAmt = Decimal("200.00")
+        mock_linked.LinkedTxn = [MagicMock()]  # Has linked transaction
+        mock_linked.DepartmentRef = MagicMock()
+        mock_linked.DepartmentRef.name = "20367"
+        mock_linked.TxnDate = "2025-01-15"
+        mock_linked.DocNumber = "DS-20367-20250115"
+
+        mock_sales_receipt.count.return_value = 2
+        mock_sales_receipt.where.return_value = [mock_unlinked, mock_linked]
+
+        result = get_unlinked_sales_receipts(date(2025, 1, 1), date(2025, 1, 31))
+
+        # Should only return the unlinked receipt
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["id"], "1234")
+        self.assertEqual(result[0]["store"], "20358")
+        self.assertEqual(result[0]["amount"], "100.50")
+        self.assertTrue(result[0]["has_cents"])  # 100.50 has cents
+        self.assertIn("salesreceipt?txnId=1234", result[0]["qb_url"])
+        mock_refresh.assert_called_once()
+
+    @patch("qb.CLIENT")
+    @patch("qb.refresh_session")
+    @patch("qb.SalesReceipt")
+    def test_get_unlinked_sales_receipts_empty_list(
+        self,
+        mock_sales_receipt: MagicMock,
+        mock_refresh: MagicMock,
+        mock_client: MagicMock,
+    ) -> None:
+        """Test that get_unlinked_sales_receipts returns empty list when no unlinked found."""
+        from datetime import date
+
+        from qb import get_unlinked_sales_receipts
+
+        mock_sales_receipt.count.return_value = 0
+        mock_sales_receipt.where.return_value = []
+
+        result = get_unlinked_sales_receipts(date(2025, 1, 1), date(2025, 1, 31))
+
+        self.assertEqual(len(result), 0)
+        mock_refresh.assert_called_once()
+
+    @patch("qb.CLIENT")
+    @patch("qb.refresh_session")
+    @patch("qb.SalesReceipt")
+    def test_get_unlinked_sales_receipts_has_cents_detection(
+        self,
+        mock_sales_receipt: MagicMock,
+        mock_refresh: MagicMock,
+        mock_client: MagicMock,
+    ) -> None:
+        """Test that has_cents correctly detects fractional amounts."""
+        from datetime import date
+
+        from qb import get_unlinked_sales_receipts
+
+        # Receipt with whole dollar amount (no cents)
+        mock_whole_dollar = MagicMock()
+        mock_whole_dollar.Id = "1111"
+        mock_whole_dollar.TotalAmt = Decimal("500.00")
+        mock_whole_dollar.LinkedTxn = []
+        mock_whole_dollar.DepartmentRef = MagicMock()
+        mock_whole_dollar.DepartmentRef.name = "20358"
+        mock_whole_dollar.TxnDate = "2025-01-15"
+        mock_whole_dollar.DocNumber = "DS-20358-20250115"
+
+        # Receipt with cents
+        mock_with_cents = MagicMock()
+        mock_with_cents.Id = "2222"
+        mock_with_cents.TotalAmt = Decimal("499.99")
+        mock_with_cents.LinkedTxn = []
+        mock_with_cents.DepartmentRef = MagicMock()
+        mock_with_cents.DepartmentRef.name = "20367"
+        mock_with_cents.TxnDate = "2025-01-15"
+        mock_with_cents.DocNumber = "DS-20367-20250115"
+
+        mock_sales_receipt.count.return_value = 2
+        mock_sales_receipt.where.return_value = [mock_whole_dollar, mock_with_cents]
+
+        result = get_unlinked_sales_receipts(date(2025, 1, 1), date(2025, 1, 31))
+
+        self.assertEqual(len(result), 2)
+        # Whole dollar should not have has_cents
+        whole_dollar_result = next(r for r in result if r["id"] == "1111")
+        self.assertFalse(whole_dollar_result["has_cents"])
+        # Amount with cents should have has_cents
+        with_cents_result = next(r for r in result if r["id"] == "2222")
+        self.assertTrue(with_cents_result["has_cents"])
+
+    @patch("qb.CLIENT")
+    @patch("qb.refresh_session")
+    @patch("qb.SalesReceipt")
+    def test_get_unlinked_sales_receipts_excludes_zero_amounts(
+        self,
+        mock_sales_receipt: MagicMock,
+        mock_refresh: MagicMock,
+        mock_client: MagicMock,
+    ) -> None:
+        """Test that receipts with zero or negative amounts are excluded."""
+        from datetime import date
+
+        from qb import get_unlinked_sales_receipts
+
+        # Receipt with zero amount
+        mock_zero = MagicMock()
+        mock_zero.Id = "0000"
+        mock_zero.TotalAmt = Decimal("0.00")
+        mock_zero.LinkedTxn = []
+        mock_zero.DepartmentRef = MagicMock()
+        mock_zero.DepartmentRef.name = "20358"
+        mock_zero.TxnDate = "2025-01-15"
+        mock_zero.DocNumber = "DS-20358-20250115"
+
+        # Receipt with positive amount
+        mock_positive = MagicMock()
+        mock_positive.Id = "1111"
+        mock_positive.TotalAmt = Decimal("100.00")
+        mock_positive.LinkedTxn = []
+        mock_positive.DepartmentRef = MagicMock()
+        mock_positive.DepartmentRef.name = "20367"
+        mock_positive.TxnDate = "2025-01-15"
+        mock_positive.DocNumber = "DS-20367-20250115"
+
+        mock_sales_receipt.count.return_value = 2
+        mock_sales_receipt.where.return_value = [mock_zero, mock_positive]
+
+        result = get_unlinked_sales_receipts(date(2025, 1, 1), date(2025, 1, 31))
+
+        # Should only return the positive amount receipt
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["id"], "1111")
+
+
 if __name__ == "__main__":
     unittest.main()

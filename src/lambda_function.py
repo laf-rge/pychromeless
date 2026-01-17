@@ -283,13 +283,15 @@ def daily_sales_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
             {
                 "year": "YYYY",    # Optional: defaults to yesterday
                 "month": "MM",     # Optional: defaults to yesterday
-                "day": "DD"        # Optional: defaults to yesterday
+                "day": "DD",       # Optional: defaults to yesterday
+                "store": "XXXXX"   # Optional: process only this store
             }
 
     Local development:
         >>> from lambda_function import daily_sales_handler
         >>> daily_sales_handler()  # Process yesterday's sales
         >>> daily_sales_handler({"year": "2024", "month": "01", "day": "15"})
+        >>> daily_sales_handler({"year": "2024", "month": "01", "day": "15", "store": "20358"})
     """
     event = _args[0] if _args and len(_args) > 0 else {}
     context = _args[1] if _args and len(_args) > 1 else None
@@ -354,8 +356,15 @@ def daily_sales_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         all_journal_data: dict[str, dict[str, Any]] = {}
         failed_stores: list[str] = []
 
+        # Check for optional single store parameter
+        single_store = event.get("store")
+
         for txdate in txdates:
-            stores = store_config.get_active_stores(txdate)
+            # If single store specified, use only that store; otherwise get all active
+            if single_store:
+                stores = [single_store]
+            else:
+                stores = store_config.get_active_stores(txdate)
 
             # Process stores - parallel Lambda invocations in AWS, sequential calls locally
             is_local = "AWS_LAMBDA_FUNCTION_NAME" not in os.environ
@@ -1973,4 +1982,70 @@ def qb_connection_status_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
         return create_response(200, result)
     except Exception as e:
         logger.exception("Error checking QuickBooks connection status")
+        return create_response(500, {"message": f"Error: {str(e)}"})
+
+
+def unlinked_deposits_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
+    """
+    Get unlinked sales receipts (deposits without linked bank transactions).
+
+    Lambda invocation:
+        - HTTP Method: GET
+        - Authenticated: Yes (Azure MSAL)
+        - Query params:
+            - start_date: YYYY-MM-DD (optional, defaults to 2025-01-01)
+            - end_date: YYYY-MM-DD (optional, defaults to today)
+
+    Returns:
+        JSON response with:
+            - deposits: list of unlinked deposits with id, store, date, amount,
+              doc_number, qb_url, has_cents
+            - summary: dict with count and total_amount
+    """
+    try:
+        event = args[0] if args and len(args) > 0 else {}
+        context = args[1] if args and len(args) > 1 else None
+        request_id = (context.aws_request_id if context else None) or None
+
+        # Get query parameters with defaults
+        params = event.get("queryStringParameters", {}) or {}
+
+        # Default start date is 2025-01-01
+        start_date_str = params.get("start_date", "2025-01-01")
+        start_date = date.fromisoformat(start_date_str)
+
+        # Default end date is today
+        end_date_str = params.get("end_date", date.today().isoformat())
+        end_date = date.fromisoformat(end_date_str)
+
+        logger.info(
+            "Fetching unlinked deposits",
+            extra={
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+                "request_id": request_id,
+            },
+        )
+
+        # Query QuickBooks for unlinked sales receipts
+        deposits = qb.get_unlinked_sales_receipts(start_date, end_date)
+
+        # Calculate summary
+        total_amount = sum((Decimal(d["amount"]) for d in deposits), Decimal(0))
+
+        result = {
+            "deposits": deposits,
+            "summary": {
+                "count": len(deposits),
+                "total_amount": str(total_amount.quantize(TWO_PLACES)),
+            },
+        }
+
+        return create_response(200, result, request_id=request_id)
+
+    except ValueError as e:
+        logger.warning("Invalid date format in request", extra={"error": str(e)})
+        return create_response(400, {"message": f"Invalid date format: {str(e)}"})
+    except Exception as e:
+        logger.exception("Error fetching unlinked deposits")
         return create_response(500, {"message": f"Error: {str(e)}"})
