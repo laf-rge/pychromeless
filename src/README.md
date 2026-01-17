@@ -109,6 +109,14 @@ Gets meal period violations data.
   - month: MM (optional)
   - pay_period: N (optional)
 
+### timeout_detector_handler
+
+Detects and marks stale tasks as failed. Tasks stuck in 'started' or 'processing' state beyond their operation's timeout are automatically marked as failed.
+
+- Schedule: Every 5 minutes (CloudWatch Events)
+- No event parameters required
+- Broadcasts failure status to connected WebSocket clients
+
 ## Testing
 
 ```bash
