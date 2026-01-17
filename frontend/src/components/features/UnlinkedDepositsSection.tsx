@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useMsal } from "@azure/msal-react";
 import { InteractionRequiredAuthError } from "@azure/msal-browser";
 import axios from "axios";
@@ -37,6 +37,11 @@ export function UnlinkedDepositsSection() {
   const [rerunningStore, setRerunningStore] = useState<string | null>(null);
   const { instance } = useMsal();
   const createImmediateTask = useTaskStore((state) => state.createImmediateTask);
+  const completedTasks = useTaskStore((state) => state.completedTasks);
+  const failedTasks = useTaskStore((state) => state.failedTasks);
+
+  // Track task_ids we're waiting on for refresh
+  const pendingRefreshTasks = useRef<Set<string>>(new Set());
 
   const getAccessToken = useCallback(async () => {
     const account = instance.getActiveAccount();
@@ -151,12 +156,9 @@ export function UnlinkedDepositsSection() {
       // Create immediate task notification if task_id is returned
       if (response.data.task_id) {
         createImmediateTask(response.data.task_id, OperationType.DAILY_SALES);
+        // Track this task for refresh when it completes
+        pendingRefreshTasks.current.add(response.data.task_id);
       }
-
-      // Refresh the list after a short delay to allow processing
-      setTimeout(() => {
-        fetchDeposits();
-      }, 5000);
     } catch (err) {
       console.error("Error re-running daily sales:", err);
       setError(`Failed to re-run daily sales for store ${deposit.store}`);
@@ -168,6 +170,20 @@ export function UnlinkedDepositsSection() {
   useEffect(() => {
     fetchDeposits();
   }, [fetchDeposits]);
+
+  // Watch for task completion to refresh the list
+  useEffect(() => {
+    // Check if any of our pending tasks have completed
+    const pendingTasks = Array.from(pendingRefreshTasks.current);
+    for (const taskId of pendingTasks) {
+      if (completedTasks.has(taskId) || failedTasks.has(taskId)) {
+        // Task completed - remove from pending and refresh
+        pendingRefreshTasks.current.delete(taskId);
+        fetchDeposits();
+        break; // Only refresh once per update
+      }
+    }
+  }, [completedTasks, failedTasks, fetchDeposits]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + "T00:00:00");

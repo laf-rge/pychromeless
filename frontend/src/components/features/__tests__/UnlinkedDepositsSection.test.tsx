@@ -15,6 +15,26 @@ vi.mock('@azure/msal-react', () => ({
   MsalProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+// Define taskStore mock values using vi.hoisted for proper hoisting
+const { mockCreateImmediateTask, mockCompletedTasks, mockFailedTasks, mockTaskStoreState } = vi.hoisted(() => {
+  const mockCreateImmediateTask = vi.fn();
+  const mockCompletedTasks = new Map();
+  const mockFailedTasks = new Map();
+  const mockTaskStoreState = {
+    createImmediateTask: mockCreateImmediateTask,
+    completedTasks: mockCompletedTasks,
+    failedTasks: mockFailedTasks,
+  };
+  return { mockCreateImmediateTask, mockCompletedTasks, mockFailedTasks, mockTaskStoreState };
+});
+
+// Mock taskStore
+vi.mock('../../../stores/taskStore', () => ({
+  useTaskStore: (selector: (state: typeof mockTaskStoreState) => unknown) => {
+    return selector(mockTaskStoreState);
+  },
+}));
+
 // Create mock axios response data
 const mockDepositsResponse = {
   deposits: [
@@ -69,6 +89,8 @@ describe('UnlinkedDepositsSection', () => {
     vi.clearAllMocks();
     mockGet.mockResolvedValue({ data: mockDepositsResponse });
     mockPost.mockResolvedValue({ data: { task_id: 'test-task-123' } });
+    mockCompletedTasks.clear();
+    mockFailedTasks.clear();
   });
 
   it('renders the section title and description', async () => {
@@ -221,6 +243,11 @@ describe('UnlinkedDepositsSection', () => {
       expect(url).toContain('store=20358');
       // Body should be empty string (params are in URL)
       expect(postCall[1]).toBe('');
+    });
+
+    // Should create immediate task for notification
+    await waitFor(() => {
+      expect(mockCreateImmediateTask).toHaveBeenCalledWith('test-task-123', 'daily_sales');
     });
   });
 });
