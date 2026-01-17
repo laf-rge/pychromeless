@@ -33,7 +33,8 @@ resource "aws_api_gateway_method" "proxy_root" {
   request_parameters = {
     "method.request.querystring.day"   = true,
     "method.request.querystring.month" = true,
-    "method.request.querystring.year"  = true
+    "method.request.querystring.year"  = true,
+    "method.request.querystring.store" = false # Optional: for single-store re-runs
   }
   request_validator_id = aws_api_gateway_request_validator.parameters.id
 }
@@ -51,15 +52,32 @@ resource "aws_api_gateway_integration" "lambda_root" {
     "integration.request.header.X-Amz-Invocation-Type" = "'Event'",
     "integration.request.querystring.day"              = "method.request.querystring.day",
     "integration.request.querystring.month"            = "method.request.querystring.month",
-    "integration.request.querystring.year"             = "method.request.querystring.year"
+    "integration.request.querystring.year"             = "method.request.querystring.year",
+    "integration.request.querystring.store"            = "method.request.querystring.store"
   }
   request_templates = {
+    "application/json" = <<-EOT
+                {
+                "year": "$input.params('year')",
+                "month": "$input.params('month')",
+                "day": "$input.params('day')",
+                #if($input.params('store') != "")
+                "store": "$input.params('store')",
+                #end
+                "requestContext": {
+                    "requestId": "$context.requestId"
+                }
+                }
+            EOT
     "multipart/form-data" = <<-EOT
                 #set($inputRoot = $input.path('$'))
                 {
                 "year": "$input.params('year')",
                 "month": "$input.params('month')",
                 "day": "$input.params('day')",
+                #if($input.params('store') != "")
+                "store": "$input.params('store')",
+                #end
                 "requestContext": {
                     "requestId": "$context.requestId"
                 }
