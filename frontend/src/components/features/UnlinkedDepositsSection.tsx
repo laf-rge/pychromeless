@@ -264,17 +264,17 @@ export function UnlinkedDepositsSection() {
                         <td className="py-2 px-2">{deposit.store}</td>
                         <td className="py-2 px-2 text-right">
                           <span className="flex items-center justify-end gap-2">
-                            {formatCurrency(deposit.amount)}
                             {deposit.has_cents && (
                               <Badge variant="warning" title="Amount has cents - likely missing FlexePOS entry">
                                 !
                               </Badge>
                             )}
+                            {formatCurrency(deposit.amount)}
                           </span>
                         </td>
                         <td className="py-2 px-2 font-mono text-xs">{deposit.doc_number}</td>
                         <td className="py-2 px-2 text-right">
-                          <div className="flex gap-1 justify-end">
+                          <div className="flex gap-1 justify-end items-center">
                             <a
                               href={deposit.qb_url}
                               target="_blank"
@@ -283,17 +283,19 @@ export function UnlinkedDepositsSection() {
                             >
                               View in QB
                             </a>
-                            {deposit.has_cents && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-6 px-2 text-xs"
-                                onClick={() => handleRerun(deposit)}
-                                disabled={isRerunning}
-                              >
-                                {isRerunning ? <Spinner className="h-3 w-3" /> : "Re-run"}
-                              </Button>
-                            )}
+                            <div className="w-14">
+                              {deposit.has_cents && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  onClick={() => handleRerun(deposit)}
+                                  disabled={isRerunning}
+                                >
+                                  {isRerunning ? <Spinner className="h-3 w-3" /> : "Re-run"}
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </td>
                       </tr>
