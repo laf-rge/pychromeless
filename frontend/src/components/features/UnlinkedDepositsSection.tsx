@@ -245,7 +245,7 @@ export function UnlinkedDepositsSection() {
 
             <div className="overflow-auto max-h-96">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-card border-b shadow-sm">
+                <thead className="sticky top-0 z-10 bg-white dark:bg-zinc-900 border-b shadow-sm">
                   <tr>
                     <th className="text-left py-2 px-2">Date</th>
                     <th className="text-left py-2 px-2">Store</th>
