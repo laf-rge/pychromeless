@@ -245,7 +245,7 @@ export function UnlinkedDepositsSection() {
 
             <div className="overflow-auto max-h-96">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-background border-b">
+                <thead className="sticky top-0 bg-card border-b shadow-sm">
                   <tr>
                     <th className="text-left py-2 px-2">Date</th>
                     <th className="text-left py-2 px-2">Store</th>
@@ -275,14 +275,6 @@ export function UnlinkedDepositsSection() {
                         <td className="py-2 px-2 font-mono text-xs">{deposit.doc_number}</td>
                         <td className="py-2 px-2 text-right">
                           <div className="flex gap-1 justify-end items-center">
-                            <a
-                              href={deposit.qb_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-primary hover:underline"
-                            >
-                              View in QB
-                            </a>
                             <div className="w-14">
                               {deposit.has_cents && (
                                 <Button
@@ -296,6 +288,14 @@ export function UnlinkedDepositsSection() {
                                 </Button>
                               )}
                             </div>
+                            <a
+                              href={deposit.qb_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline"
+                            >
+                              View in QB
+                            </a>
                           </div>
                         </td>
                       </tr>
