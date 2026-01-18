@@ -15,7 +15,7 @@ from typing import Any
 import pdfplumber
 
 import qb
-from qb import TWO_PLACES
+from decimal_utils import TWO_PLACES
 
 logger = logging.getLogger(__name__)
 

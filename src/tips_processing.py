@@ -16,6 +16,7 @@ from typing import Any
 
 import pandas as pd
 
+from decimal_utils import FinancialJsonEncoder
 from store_config import StoreConfig
 from tips import Tips
 
@@ -47,7 +48,11 @@ def create_response(
 
     return {
         "statusCode": status_code,
-        "body": json.dumps(body) if content_type == "application/json" else body,
+        "body": (
+            json.dumps(body, cls=FinancialJsonEncoder)
+            if content_type == "application/json"
+            else body
+        ),
         "headers": headers,
     }
 

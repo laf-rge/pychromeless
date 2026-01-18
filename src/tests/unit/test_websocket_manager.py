@@ -96,11 +96,11 @@ class TestWebSocketManagerDecimalSerialization(unittest.TestCase):
         self.assertEqual(parsed["payload"]["status"], "completed")
 
     @patch("websocket_manager.boto3")
-    def test_broadcast_status_converts_decimal_to_number(
+    def test_broadcast_status_converts_decimal_to_string(
         self,
         mock_boto3: MagicMock,
     ) -> None:
-        """Test that Decimal values are converted to int/float in JSON output."""
+        """Test that Decimal values are converted to strings to preserve precision."""
         from websocket_manager import WebSocketManager
 
         # Set up mocks
@@ -143,11 +143,16 @@ class TestWebSocketManagerDecimalSerialization(unittest.TestCase):
         data = call_args[1]["Data"]
         parsed = json.loads(data)
 
-        # Verify Decimals were converted to numbers (not strings)
+        # Verify Decimals were converted to strings for precision preservation
         progress = parsed["payload"]["progress"]
-        self.assertIsInstance(progress["current_step"], (int, float))
-        self.assertIsInstance(progress["total_steps"], (int, float))
-        self.assertIsInstance(progress["percentage"], float)
+        self.assertIsInstance(progress["current_step"], str)
+        self.assertIsInstance(progress["total_steps"], str)
+        self.assertIsInstance(progress["percentage"], str)
+
+        # Verify values can be converted back to Decimal without precision loss
+        self.assertEqual(Decimal(progress["current_step"]), Decimal("3"))
+        self.assertEqual(Decimal(progress["total_steps"]), Decimal("10"))
+        self.assertEqual(Decimal(progress["percentage"]), Decimal("30.5"))
 
 
 if __name__ == "__main__":

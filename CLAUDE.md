@@ -197,18 +197,53 @@ Location: `frontend/` directory with own package.json and configuration
 
 **CRITICAL**: This code processes real financial data for restaurant operations.
 
-- **Always use `Decimal` type** for monetary calculations (never `float`)
+### Decimal Rules (MANDATORY)
+
+1. **NEVER use `float` for money** - Always use `Decimal` type
+2. **Import from `decimal_utils`** - Use the centralized module:
+   ```python
+   from decimal_utils import TWO_PLACES, ZERO, to_currency, FinancialJsonEncoder
+   ```
+3. **Initialize Decimal from strings** - Never from floats:
+   ```python
+   # CORRECT
+   amount = Decimal("123.45")
+   amount = ZERO
+
+   # WRONG - float precision issues
+   amount = Decimal(123.45)
+   amount = Decimal(0.0)
+   ```
+4. **JSON serialization** - Always use `FinancialJsonEncoder`:
+   ```python
+   json.dumps(data, cls=FinancialJsonEncoder)
+   ```
+5. **Quantize after calculations**:
+   ```python
+   result = (subtotal * tax_rate).quantize(TWO_PLACES)
+   ```
+
+### When These Rules Apply
+
+- QuickBooks API amounts (SalesReceipt, Bill, Deposit)
+- FlexePOS scraped data (daily sales, tips)
+- Delivery service amounts (DoorDash, GrubHub, UberEats)
+- Any API response containing monetary values
+- DynamoDB operations (returns Decimal by default)
+
+### Additional Guidelines
+
 - **Validate all financial data** before processing or syncing to QuickBooks
 - **Implement audit trails** for financial operations
-- **Test financial calculations** with edge cases (negative amounts, zero, large numbers)
 - **Log financial operations** with structured JSON logging
 
-Example pattern from codebase:
-```python
-from decimal import Decimal
-TWO_PLACES = Decimal(10) ** -2
-amount = Decimal(value).quantize(TWO_PLACES)
-```
+### Testing Financial Code
+
+- Test negative amounts (credits, refunds)
+- Test zero amounts
+- Test large amounts (>$100,000)
+- Verify bill splits sum exactly to original total
+- Consider property-based tests with `hypothesis`
 
 ## AWS Integration Patterns
 
@@ -438,7 +473,7 @@ progress.update(step_name="Scraping data", current_step=1)
 ### DynamoDB
 
 - **Composite Keys**: Tables with composite primary keys (partition + sort) require `query()` not `get_item()` to find by partition key alone. Example: `task_states` table has `task_id` + `timestamp` composite key.
-- **Decimal Type**: DynamoDB returns numbers as Python `Decimal`. Use `DecimalEncoder` for JSON serialization or convert explicitly.
+- **Decimal Type**: DynamoDB returns numbers as Python `Decimal`. Use `FinancialJsonEncoder` from `decimal_utils` for JSON serialization.
 - **Deduplication**: With composite keys, multiple records per partition key exist. Deduplicate results by partition key when returning lists.
 
 ### API Gateway / Terraform
@@ -463,7 +498,14 @@ progress.update(step_name="Scraping data", current_step=1)
 ### Code Organization
 
 - **QuickBooks Utilities**: All QB helpers belong in `src/qb.py` (store refs, account refs, vendor lookups). Don't duplicate patterns in feature modules.
-- **Financial Calculations**: Always use `Decimal` type with `TWO_PLACES = Decimal(10) ** -2` for money. Import from `qb.py`.
+- **Financial Calculations**: Always use `Decimal` type. Import `TWO_PLACES`, `ZERO`, `to_currency` from `decimal_utils`.
+
+### Decimal & JSON Serialization
+
+- **String Serialization**: Use `FinancialJsonEncoder` - Decimal becomes string to preserve precision
+- **DynamoDB Returns Decimal**: Always use encoder when serializing DynamoDB query results
+- **Float Contamination**: Never `Decimal(0.0)` - use `Decimal("0")` or `ZERO` from `decimal_utils`
+- **reduce() Accumulator**: Initial value must be `Decimal`, not `0.0`
 
 ## References
 

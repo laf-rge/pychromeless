@@ -1,6 +1,7 @@
 import calendar
 import datetime
 import logging
+from decimal import Decimal
 from functools import partial
 from time import sleep
 from typing import Any, Optional, cast
@@ -649,7 +650,7 @@ class Flexepos:
                     rows = tips_table.find_all("tr")
                     rv[store] = [
                         [ele.text.strip() for ele in rows[0].find_all("th")[1:]],
-                        [float(x.text.strip()) for x in rows[1].find_all("td")[1:]],
+                        [Decimal(x.text.strip()) for x in rows[1].find_all("td")[1:]],
                     ]
 
         finally:

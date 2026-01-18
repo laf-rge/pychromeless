@@ -21,9 +21,9 @@ class CustomJsonEncoder(json.JSONEncoder):
         if isinstance(o, (datetime, date)):
             return o.isoformat()
         elif isinstance(o, Decimal):
-            # Convert Decimal to float for JSON serialization
-            # This preserves precision for financial calculations while allowing serialization
-            return float(o)
+            # Convert Decimal to string to preserve exact precision
+            # Float conversion loses precision for financial calculations
+            return str(o)
         return super().default(o)
 
 

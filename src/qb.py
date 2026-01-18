@@ -38,6 +38,7 @@ from quickbooks.objects import (
     VendorCredit,
 )
 
+from decimal_utils import TWO_PLACES, ZERO  # re-export for backward compatibility
 from ssm_parameter_store import SSMParameterStore
 
 logger = logging.getLogger(__name__)
@@ -45,8 +46,6 @@ logger = logging.getLogger(__name__)
 # QBO configuration from SSM Parameter Store
 _qbo_params = SSMParameterStore(prefix="/prod/qbo")
 
-# warning! this won't work if we multiply
-TWO_PLACES = Decimal(10) ** -2
 setlocale(LC_NUMERIC, "")
 AUTH_CLIENT = None
 CLIENT = None
@@ -234,7 +233,7 @@ def create_daily_sales(
         daily_report = daily_reports[store]
 
         line_num = 1
-        amount_total = Decimal(0.0)
+        amount_total = ZERO
         for line_item, line_id in detail_map.items():
             line = SalesItemLine()
             line.LineNum = line_num
@@ -411,7 +410,9 @@ def sync_bill(
     store_refs = get_store_refs()
 
     # is this a credit
-    if reduce(lambda x, y: x + atof(y[-1]), lines, 0.0) < -0.08:
+    if reduce(lambda x, y: x + Decimal(str(atof(y[-1]))), lines, ZERO) < Decimal(
+        "-0.08"
+    ):
         tx_type = VendorCredit
         item_sign = -1
     else:

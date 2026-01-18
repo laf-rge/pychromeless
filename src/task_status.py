@@ -26,10 +26,9 @@ class DecimalEncoder(json.JSONEncoder):
 
     def default(self, o: Any) -> Any:
         if isinstance(o, Decimal):
-            # Convert to int if it's a whole number, otherwise float
-            if o % 1 == 0:
-                return int(o)
-            return float(o)
+            # Convert to string to preserve exact precision
+            # Float conversion loses precision for financial calculations
+            return str(o)
         return super().default(o)
 
 

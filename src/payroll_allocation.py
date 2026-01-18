@@ -25,7 +25,8 @@ from quickbooks.objects.journalentry import (
 )
 
 import qb
-from qb import TWO_PLACES, get_store_refs, refresh_session, wmc_account_ref
+from decimal_utils import TWO_PLACES
+from qb import get_store_refs, refresh_session, wmc_account_ref
 
 logger = logging.getLogger(__name__)
 

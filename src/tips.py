@@ -20,14 +20,13 @@ from openpyxl.worksheet.worksheet import Worksheet
 from wheniwork import WhenIWork
 
 import flexepos
+from decimal_utils import TWO_PLACES
 from ssm_parameter_store import SSMParameterStore
 
 logger = logging.getLogger(__name__)
 
 WHENIWORK_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
 
-# warning! this won't work if we multiply
-TWO_PLACES = Decimal(10) ** -2
 setlocale(LC_NUMERIC, "")
 
 

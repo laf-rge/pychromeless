@@ -61,8 +61,11 @@ if "CONNECTIONS_TABLE" in os.environ:
 else:
     table = None
 
-# warning! this won't work if we multiply
-TWO_PLACES = Decimal(10) ** -2
+from decimal_utils import (  # noqa: E402  # pylint: disable=wrong-import-position
+    TWO_PLACES,
+    FinancialJsonEncoder,
+)
+
 setlocale(LC_NUMERIC, "en_US.UTF-8")
 pattern = re.compile(r"\d+\.\d\d")
 
@@ -96,7 +99,11 @@ def create_response(
 
     return {
         "statusCode": status_code,
-        "body": json.dumps(body) if content_type == "application/json" else body,
+        "body": (
+            json.dumps(body, cls=FinancialJsonEncoder)
+            if content_type == "application/json"
+            else body
+        ),
         "headers": headers,
     }
 
