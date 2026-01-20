@@ -183,7 +183,7 @@ class Flexepos:
                 rows = online_table.find_all("tr")
                 for row in rows[1:]:
                     r = [ele.text.strip() for ele in row.find_all("td")]
-                    payment_data[store][r[0]] = r[5]
+                    payment_data[store][r[0]] = r[6]
                 driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
         finally:
             if driver:
@@ -534,6 +534,7 @@ class Flexepos:
                 driver.find_element(By.ID, TAG_IDS["group_by"])
             ).select_by_visible_text("Summary")
             driver.find_element(By.ID, TAG_IDS["submit"]).click()
+            sleep(5)
             try:
                 soup = BeautifulSoup(driver.page_source, features="html.parser")
                 online_table = soup.find("table", attrs={"class": "table-standard"})
