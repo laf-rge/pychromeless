@@ -493,6 +493,58 @@ class TestUnlinkedSalesReceipts(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["id"], "1111")
 
+    @patch("qb.CLIENT")
+    @patch("qb.refresh_session")
+    @patch("qb.SalesReceipt")
+    def test_get_unlinked_sales_receipts_pagination(
+        self,
+        mock_sales_receipt: MagicMock,
+        mock_refresh: MagicMock,
+        mock_client: MagicMock,
+    ) -> None:
+        """Test that pagination correctly fetches multiple pages of results."""
+        from datetime import date
+
+        from qb import get_unlinked_sales_receipts
+
+        def create_mock_receipt(id_num: str, amount: str) -> MagicMock:
+            mock = MagicMock()
+            mock.Id = id_num
+            mock.TotalAmt = Decimal(amount)
+            mock.LinkedTxn = []
+            mock.DepartmentRef = MagicMock()
+            mock.DepartmentRef.name = "20358"
+            mock.TxnDate = "2025-01-15"
+            mock.DocNumber = f"DS-{id_num}"
+            return mock
+
+        # Simulate 3 receipts across 2 pages
+        mock_sales_receipt.count.return_value = 3
+
+        # Track calls to verify pagination
+        call_count = [0]
+
+        def where_side_effect(**kwargs: object) -> list[MagicMock]:
+            call_count[0] += 1
+            start_pos = kwargs.get("start_position", 1)
+            if start_pos == 1:
+                return [
+                    create_mock_receipt("1", "100.00"),
+                    create_mock_receipt("2", "200.00"),
+                ]
+            elif start_pos == 3:
+                return [create_mock_receipt("3", "300.00")]
+            return []
+
+        mock_sales_receipt.where.side_effect = where_side_effect
+
+        result = get_unlinked_sales_receipts(date(2025, 1, 1), date(2025, 1, 31))
+
+        # Should return all 3 receipts
+        self.assertEqual(len(result), 3)
+        # Should have made exactly 2 API calls (pages)
+        self.assertEqual(call_count[0], 2)
+
 
 if __name__ == "__main__":
     unittest.main()

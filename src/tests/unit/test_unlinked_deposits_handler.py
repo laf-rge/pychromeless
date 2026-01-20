@@ -62,7 +62,7 @@ class TestUnlinkedDepositsHandler(unittest.TestCase):
         mock_qb: MagicMock,
     ) -> None:
         """Test that handler uses default date range when not provided."""
-        from datetime import date
+        from datetime import date, timedelta
 
         from lambda_function import unlinked_deposits_handler
 
@@ -74,9 +74,10 @@ class TestUnlinkedDepositsHandler(unittest.TestCase):
         response = unlinked_deposits_handler(event, None)
 
         self.assertEqual(response["statusCode"], 200)
-        # Verify default start date is 2025-01-01
         call_args = mock_qb.get_unlinked_sales_receipts.call_args[0]
-        self.assertEqual(call_args[0], date(2025, 1, 1))
+        # Default start date is 60 days ago
+        expected_start = date.today() - timedelta(days=60)
+        self.assertEqual(call_args[0], expected_start)
         # End date should be today
         self.assertEqual(call_args[1], date.today())
 

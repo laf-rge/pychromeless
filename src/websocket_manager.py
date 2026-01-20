@@ -187,6 +187,62 @@ class WebSocketManager:
                     },
                 )
 
+    def broadcast_only(
+        self,
+        task_id: str,
+        operation: str,
+        status: str,
+        error: str | None = None,
+    ) -> None:
+        """Broadcast status to WebSocket clients WITHOUT persisting to DynamoDB.
+
+        Used by timeout_detector to avoid creating duplicate records when
+        marking stale tasks as failed.
+
+        Args:
+            task_id: Unique identifier for the task
+            operation: Name of the operation (e.g., "daily_sales")
+            status: Current status of the task
+            error: Optional error message
+        """
+        message: dict[str, Any] = {
+            "type": "task_status",
+            "payload": {
+                "task_id": task_id,
+                "operation": operation,
+                "status": status,
+                "error": error,
+            },
+        }
+
+        # Get all active connections and broadcast
+        response = self.table.scan()
+        connections = response.get("Items", [])
+
+        for connection in connections:
+            try:
+                self.apigateway.post_to_connection(
+                    ConnectionId=str(connection["connection_id"]),
+                    Data=json.dumps(message, cls=CustomJsonEncoder),
+                )
+            except self.apigateway.exceptions.GoneException:
+                # Connection is no longer valid, remove it
+                logger.info(f"Removing stale connection: {connection['connection_id']}")
+                try:
+                    self.table.delete_item(
+                        Key={"connection_id": connection["connection_id"]}
+                    )
+                except Exception as e:
+                    logger.error(f"Error removing stale connection: {str(e)}")
+            except Exception as e:
+                logger.warning(
+                    "Failed to send to connection",
+                    extra={
+                        "connection_id": connection["connection_id"],
+                        "error": str(e),
+                    },
+                )
+
     def _standardize_result_format(
         self, result: dict[str, Any], status: str
     ) -> dict[str, Any]:

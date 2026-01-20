@@ -2018,8 +2018,9 @@ def unlinked_deposits_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
         # Get query parameters with defaults
         params = event.get("queryStringParameters", {}) or {}
 
-        # Default start date is 2025-01-01
-        start_date_str = params.get("start_date", "2025-01-01")
+        # Default start date is 60 days ago
+        default_start = (date.today() - timedelta(days=60)).isoformat()
+        start_date_str = params.get("start_date", default_start)
         start_date = date.fromisoformat(start_date_str)
 
         # Default end date is today
@@ -2113,50 +2114,95 @@ def timeout_detector_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
 
             items = response.get("Items", [])
 
-            # Deduplicate by task_id (keep most recent entry per task)
-            tasks_by_id: dict[str, dict[str, Any]] = {}
+            # Collect ALL items per task_id (don't deduplicate yet)
+            tasks_by_id: dict[str, list[dict[str, Any]]] = {}
             for item in items:
                 task_id = item["task_id"]
-                if (
-                    task_id not in tasks_by_id
-                    or item["timestamp"] > tasks_by_id[task_id]["timestamp"]
-                ):
-                    tasks_by_id[task_id] = item
+                if task_id not in tasks_by_id:
+                    tasks_by_id[task_id] = []
+                tasks_by_id[task_id].append(item)
 
-            for task_id, item in tasks_by_id.items():
-                # Use updated_at if available, otherwise fall back to created_at or timestamp
+            for task_id, task_items in tasks_by_id.items():
+                # Check if task already completed by querying for most recent record
+                # (regardless of status) to avoid marking completed tasks as failed
+                try:
+                    latest_response = task_states_table.query(
+                        KeyConditionExpression="task_id = :tid",
+                        ExpressionAttributeValues={":tid": task_id},
+                        ScanIndexForward=False,  # Newest first
+                        Limit=1,
+                    )
+                    latest_items = latest_response.get("Items", [])
+                    if latest_items:
+                        latest_status = latest_items[0].get("status")
+                        if latest_status in [
+                            "completed",
+                            "completed_with_errors",
+                            "failed",
+                        ]:
+                            # Task already finished - skip
+                            logger.debug(
+                                "Skipping task that already finished",
+                                extra={
+                                    "task_id": task_id,
+                                    "latest_status": latest_status,
+                                },
+                            )
+                            continue
+                except Exception as e:
+                    logger.warning(
+                        "Error checking latest task status, proceeding with timeout check",
+                        extra={"task_id": task_id, "error": str(e)},
+                    )
+
+                # Find most recent item to check timeout against
+                # (if there's recent activity, the task is still active)
+                most_recent_item = max(
+                    task_items,
+                    key=lambda x: float(x.get("updated_at", x.get("timestamp", 0))),
+                )
                 updated_at = float(
-                    item.get(
-                        "updated_at", item.get("created_at", item.get("timestamp", 0))
+                    most_recent_item.get(
+                        "updated_at",
+                        most_recent_item.get(
+                            "created_at", most_recent_item.get("timestamp", 0)
+                        ),
                     )
                 )
 
                 if now - updated_at > timeout_seconds:
                     current_time = int(time.time())
 
-                    # Create a new record marking the task as failed
-                    task_states_table.put_item(
-                        Item={
-                            "task_id": task_id,
-                            "timestamp": current_time,
-                            "operation": op.value,
-                            "status": "failed",
-                            "error": "Task timed out (no response received)",
-                            "created_at": item.get("created_at", current_time),
-                            "updated_at": current_time,
-                            "ttl": current_time + op.ttl_seconds,
-                        }
-                    )
+                    # Update ALL matching records to failed (not just one)
+                    for item in task_items:
+                        task_states_table.update_item(
+                            Key={
+                                "task_id": task_id,
+                                "timestamp": int(item["timestamp"]),
+                            },
+                            UpdateExpression="SET #status = :status, #error = :error, updated_at = :updated_at, #ttl = :ttl",
+                            ExpressionAttributeNames={
+                                "#status": "status",
+                                "#error": "error",
+                                "#ttl": "ttl",
+                            },
+                            ExpressionAttributeValues={
+                                ":status": "failed",
+                                ":error": "Task timed out (no response received)",
+                                ":updated_at": current_time,
+                                ":ttl": current_time + op.ttl_seconds,
+                            },
+                        )
 
-                    # Broadcast to connected clients
-                    ws_manager.broadcast_status(
+                    # Broadcast to clients WITHOUT creating new DynamoDB record
+                    ws_manager.broadcast_only(
                         task_id=task_id,
                         operation=op.value,
                         status="failed",
                         error="Task timed out (no response received)",
                     )
 
-                    marked_count += 1
+                    marked_count += 1  # Count once per task, not per record
                     logger.info(
                         "Marked stale task as failed",
                         extra={
@@ -2164,6 +2210,7 @@ def timeout_detector_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
                             "operation": op.value,
                             "age_seconds": now - updated_at,
                             "timeout_seconds": timeout_seconds,
+                            "records_updated": len(task_items),
                         },
                     )
 

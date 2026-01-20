@@ -1379,7 +1379,8 @@ def get_unlinked_sales_receipts(
                         "has_cents": has_cents,
                     }
                 )
-            r_count += 1
+
+        r_count += len(sales_receipts)
 
     logger.info(
         "Found unlinked sales receipts",
