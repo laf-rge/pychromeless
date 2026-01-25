@@ -10,6 +10,7 @@ const result = await Bun.build({
   splitting: true,
   sourcemap: isDev ? "inline" : "external",
   minify: !isDev,
+  publicPath: "/assets/",
   naming: {
     entry: "assets/[name]-[hash].[ext]",
     chunk: "assets/[name]-[hash].[ext]",
