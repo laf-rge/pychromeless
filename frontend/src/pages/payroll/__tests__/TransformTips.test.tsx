@@ -1,12 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, mock } from 'bun:test';
+import { resetFakeTimerState } from '../../../test-utils/test-helpers';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { TransformTips } from '../TransformTips';
-import { renderWithProviders } from '../../../test-utils/test-providers';
 import { mockMsalInstance, mockAccount } from '../../../test-utils/MockMsalProvider';
 
 // Mock @azure/msal-react
-vi.mock('@azure/msal-react', () => ({
+mock.module('@azure/msal-react', () => ({
   useMsal: () => ({
     instance: mockMsalInstance,
     accounts: [mockAccount],
@@ -16,20 +15,33 @@ vi.mock('@azure/msal-react', () => ({
 }));
 
 // Mock axios
-vi.mock('axios', () => ({
+const mockPost = mock(() =>
+  Promise.resolve({
+    headers: { 'content-type': 'application/json' },
+    data: { success: true },
+  })
+);
+
+mock.module('axios', () => ({
   default: {
     create: () => ({
-      post: vi.fn().mockResolvedValue({
-        headers: { 'content-type': 'application/json' },
-        data: { success: true },
-      }),
+      post: mockPost,
     }),
   },
 }));
 
+// Import component after mocks are set up
+import { TransformTips } from '../TransformTips';
+import { renderWithProviders } from '../../../test-utils/test-providers';
+
 describe('TransformTips', () => {
+  // Prevent testing-library "Fake timers are not active" errors from other test files
+  beforeAll(() => {
+    resetFakeTimerState();
+  });
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockPost.mockClear();
   });
 
   it('renders the form with file input', () => {

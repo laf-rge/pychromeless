@@ -12,3 +12,20 @@ peer = true
 
 # Install optional dependencies
 optional = true
+
+[test]
+# Preload test setup files (order matters - happy-dom must register first)
+preload = ["./src/test-utils/happy-dom-register.ts", "./src/test-utils/bun-setup.ts"]
+
+# Enable coverage
+coverage = true
+
+# Coverage settings
+coverageDir = "coverage"
+
+# Root directory for tests (excludes e2e)
+root = "./src"
+
+[serve.static]
+# Tailwind CSS plugin for dev server
+plugins = ["bun-plugin-tailwind"]

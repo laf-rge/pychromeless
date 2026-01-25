@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, afterAll, jest } from 'bun:test';
 import { useTaskStore } from '../taskStore';
 import type { TaskStatus } from '../../services/TaskStatusService';
 import { OperationType } from '../../services/WebSocketService';
@@ -17,12 +17,55 @@ describe('taskStore', () => {
       dismissTimers: new Map(),
       msalInstance: null,
     });
-    vi.useFakeTimers();
+    jest.useFakeTimers();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
-    vi.useRealTimers();
+    jest.restoreAllMocks();
+    try {
+      jest.clearAllTimers();
+    } catch {
+      // Ignore if timers not active
+    }
+    jest.useRealTimers();
+
+    // Clean up testing-library's fake timer detection properties
+    // Bun's jest.useRealTimers() sets clock to false instead of deleting it,
+    // but testing-library checks hasOwnProperty which returns true for any value
+    // @ts-expect-error - internal property used by testing-library
+    if (Object.prototype.hasOwnProperty.call(globalThis.setTimeout, '_isMockFunction')) {
+      // @ts-expect-error - internal property
+      delete globalThis.setTimeout._isMockFunction;
+    }
+    // @ts-expect-error - internal property used by modern jest timers
+    if (Object.prototype.hasOwnProperty.call(globalThis.setTimeout, 'clock')) {
+      // @ts-expect-error - internal property
+      delete globalThis.setTimeout.clock;
+    }
+  });
+
+  afterAll(() => {
+    // Ensure timers are fully reset after all tests in this file
+    try {
+      jest.clearAllTimers();
+    } catch {
+      // Ignore if timers not active
+    }
+    jest.useRealTimers();
+
+    // Clean up testing-library's fake timer detection properties
+    // Bun's jest.useRealTimers() sets clock to false instead of deleting it,
+    // but testing-library checks hasOwnProperty which returns true for any value
+    // @ts-expect-error - internal property used by testing-library
+    if (Object.prototype.hasOwnProperty.call(globalThis.setTimeout, '_isMockFunction')) {
+      // @ts-expect-error - internal property
+      delete globalThis.setTimeout._isMockFunction;
+    }
+    // @ts-expect-error - internal property used by modern jest timers
+    if (Object.prototype.hasOwnProperty.call(globalThis.setTimeout, 'clock')) {
+      // @ts-expect-error - internal property
+      delete globalThis.setTimeout.clock;
+    }
   });
 
   describe('handleTaskUpdate', () => {
@@ -86,7 +129,7 @@ describe('taskStore', () => {
       expect(visibleNotifications.has('task-123')).toBe(true);
 
       // Fast-forward 10 seconds
-      vi.advanceTimersByTime(10000);
+      jest.advanceTimersByTime(10000);
 
       const { visibleNotifications: afterDismiss } = useTaskStore.getState();
       expect(afterDismiss.has('task-123')).toBe(false);
@@ -186,7 +229,7 @@ describe('taskStore', () => {
       useTaskStore.getState().dismissNotification('task-123');
 
       // Timer should be cancelled
-      vi.advanceTimersByTime(10000);
+      jest.advanceTimersByTime(10000);
 
       const { dismissTimers } = useTaskStore.getState();
       expect(dismissTimers.has('task-123')).toBe(false);

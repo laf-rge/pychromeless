@@ -1,36 +1,48 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import WebSocketService, { OperationType } from '../WebSocketService';
+import { describe, it, expect, beforeEach, afterEach, mock, jest } from 'bun:test';
 import type { IPublicClientApplication } from '@azure/msal-browser';
-import { MockWebSocket, createMockMsalInstance } from '../../test-utils/test-helpers';
+import WebSocketService, { OperationType } from '../WebSocketService';
+import { MockWebSocket, createMockMsalInstance, resetFakeTimerState } from '../../test-utils/test-helpers';
 
-// Mock the WebSocket constructor globally
-beforeEach(() => {
-  MockWebSocket.reset();
-  globalThis.WebSocket = MockWebSocket as unknown as typeof WebSocket;
-});
+// Helper to flush microtask queue (promises) since jest.runAllTimers only advances macrotasks
+const flushPromises = () => new Promise(resolve => setImmediate(resolve));
 
 describe('WebSocketService', () => {
   let mockMsalInstance: IPublicClientApplication;
   let mockWebSocket: MockWebSocket;
 
   beforeEach(() => {
+    // Reset mock instances and inject mock WebSocket
+    MockWebSocket.reset();
+    WebSocketService.setWebSocketClass(MockWebSocket as unknown as new (url: string) => WebSocket);
+
+    // Reset the singleton instance
+    (WebSocketService as unknown as { instance: null }).instance = null;
+
     mockMsalInstance = createMockMsalInstance();
-    vi.useFakeTimers();
+    jest.useFakeTimers();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
-    vi.useRealTimers();
-    // Reset singleton instance
+    jest.restoreAllMocks();
+    try {
+      jest.clearAllTimers();
+    } catch {
+      // Ignore if timers not active
+    }
+    jest.useRealTimers();
+    resetFakeTimerState();
+
+    // Reset singleton instance and WebSocket class
     (WebSocketService as unknown as { instance: null }).instance = null;
+    WebSocketService.resetWebSocketClass();
   });
 
   describe('connection management', () => {
     it('establishes WebSocket connection on getInstance', async () => {
       WebSocketService.getInstance(mockMsalInstance);
 
-      // Wait for async initialization
-      await vi.runAllTimersAsync();
+      // Wait for async initialization (token acquisition + WebSocket creation)
+      await flushPromises();
 
       mockWebSocket = MockWebSocket.getLastInstance();
       expect(mockWebSocket).toBeDefined();
@@ -38,7 +50,7 @@ describe('WebSocketService', () => {
 
     it('sets connected status when connection opens', async () => {
       const service = WebSocketService.getInstance(mockMsalInstance);
-      await vi.runAllTimersAsync();
+      await flushPromises();
 
       mockWebSocket = MockWebSocket.getLastInstance();
       mockWebSocket.triggerOpen();
@@ -48,9 +60,9 @@ describe('WebSocketService', () => {
 
     it('notifies connection listeners on status change', async () => {
       const service = WebSocketService.getInstance(mockMsalInstance);
-      await vi.runAllTimersAsync();
+      await flushPromises();
 
-      const listener = vi.fn();
+      const listener = mock(() => {});
       service.onConnectionChange(listener);
 
       // Listener should be called immediately with current status
@@ -64,9 +76,9 @@ describe('WebSocketService', () => {
 
     it('removes connection listener when unsubscribe is called', async () => {
       const service = WebSocketService.getInstance(mockMsalInstance);
-      await vi.runAllTimersAsync();
+      await flushPromises();
 
-      const listener = vi.fn();
+      const listener = mock(() => {});
       const unsubscribe = service.onConnectionChange(listener);
 
       listener.mockClear();
@@ -83,9 +95,9 @@ describe('WebSocketService', () => {
   describe('message handling', () => {
     it('broadcasts messages to global subscribers', async () => {
       const service = WebSocketService.getInstance(mockMsalInstance);
-      await vi.runAllTimersAsync();
+      await flushPromises();
 
-      const handler = vi.fn();
+      const handler = mock(() => {});
       service.subscribeGlobal(handler);
 
       mockWebSocket = MockWebSocket.getLastInstance();
@@ -116,9 +128,9 @@ describe('WebSocketService', () => {
 
     it('delivers messages to task-specific subscribers', async () => {
       const service = WebSocketService.getInstance(mockMsalInstance);
-      await vi.runAllTimersAsync();
+      await flushPromises();
 
-      const handler = vi.fn();
+      const handler = mock(() => {});
       service.subscribe('task-123', handler);
 
       mockWebSocket = MockWebSocket.getLastInstance();
@@ -153,7 +165,7 @@ describe('WebSocketService', () => {
 
     it('queues messages for tasks without subscribers', async () => {
       const service = WebSocketService.getInstance(mockMsalInstance);
-      await vi.runAllTimersAsync();
+      await flushPromises();
 
       mockWebSocket = MockWebSocket.getLastInstance();
       mockWebSocket.triggerOpen();
@@ -173,7 +185,7 @@ describe('WebSocketService', () => {
       mockWebSocket.triggerMessage(message);
 
       // Subscribe after message arrives
-      const handler = vi.fn();
+      const handler = mock(() => {});
       service.subscribe('task-orphan', handler);
 
       // Queued message should be delivered
@@ -187,9 +199,9 @@ describe('WebSocketService', () => {
 
     it('unsubscribes handlers correctly', async () => {
       const service = WebSocketService.getInstance(mockMsalInstance);
-      await vi.runAllTimersAsync();
+      await flushPromises();
 
-      const handler = vi.fn();
+      const handler = mock(() => {});
       const unsubscribe = service.subscribe('task-123', handler);
 
       mockWebSocket = MockWebSocket.getLastInstance();
@@ -216,9 +228,9 @@ describe('WebSocketService', () => {
 
     it('unsubscribes global handlers correctly', async () => {
       const service = WebSocketService.getInstance(mockMsalInstance);
-      await vi.runAllTimersAsync();
+      await flushPromises();
 
-      const handler = vi.fn();
+      const handler = mock(() => {});
       const unsubscribe = service.subscribeGlobal(handler);
 
       mockWebSocket = MockWebSocket.getLastInstance();
@@ -247,7 +259,7 @@ describe('WebSocketService', () => {
   describe('reconnection', () => {
     it('attempts to reconnect on connection loss', async () => {
       WebSocketService.getInstance(mockMsalInstance);
-      await vi.runAllTimersAsync();
+      await flushPromises();
 
       mockWebSocket = MockWebSocket.getLastInstance();
       mockWebSocket.triggerOpen();
@@ -256,13 +268,14 @@ describe('WebSocketService', () => {
       mockWebSocket.triggerClose();
 
       // First reconnect attempt after 1 second (2^0 * 1000ms)
-      await vi.advanceTimersByTimeAsync(1000);
+      jest.advanceTimersByTime(1000);
+      await flushPromises();
       expect(MockWebSocket.instances.length).toBe(initialCount + 1);
     });
 
     it('uses exponential backoff for reconnection', async () => {
       WebSocketService.getInstance(mockMsalInstance);
-      await vi.runAllTimersAsync();
+      await flushPromises();
 
       mockWebSocket = MockWebSocket.getLastInstance();
       mockWebSocket.triggerOpen();
@@ -270,34 +283,38 @@ describe('WebSocketService', () => {
       // First disconnect
       let count = MockWebSocket.instances.length;
       mockWebSocket.triggerClose();
-      await vi.advanceTimersByTimeAsync(1000); // 2^0 * 1000ms = 1000ms
+      jest.advanceTimersByTime(1000); // 2^0 * 1000ms = 1000ms
+      await flushPromises();
       expect(MockWebSocket.instances.length).toBe(count + 1);
 
       // Second disconnect
       count = MockWebSocket.instances.length;
       mockWebSocket = MockWebSocket.getLastInstance();
       mockWebSocket.triggerClose();
-      await vi.advanceTimersByTimeAsync(2000); // 2^1 * 1000ms = 2000ms
+      jest.advanceTimersByTime(2000); // 2^1 * 1000ms = 2000ms
+      await flushPromises();
       expect(MockWebSocket.instances.length).toBe(count + 1);
 
       // Third disconnect
       count = MockWebSocket.instances.length;
       mockWebSocket = MockWebSocket.getLastInstance();
       mockWebSocket.triggerClose();
-      await vi.advanceTimersByTimeAsync(4000); // 2^2 * 1000ms = 4000ms
+      jest.advanceTimersByTime(4000); // 2^2 * 1000ms = 4000ms
+      await flushPromises();
       expect(MockWebSocket.instances.length).toBe(count + 1);
     });
 
     it('resets reconnect attempts on successful connection', async () => {
       WebSocketService.getInstance(mockMsalInstance);
-      await vi.runAllTimersAsync();
+      await flushPromises();
 
       mockWebSocket = MockWebSocket.getLastInstance();
       mockWebSocket.triggerOpen();
 
       // Disconnect and reconnect
       mockWebSocket.triggerClose();
-      await vi.advanceTimersByTimeAsync(1000);
+      jest.advanceTimersByTime(1000);
+      await flushPromises();
 
       // Connection successful
       mockWebSocket = MockWebSocket.getLastInstance();
@@ -306,13 +323,14 @@ describe('WebSocketService', () => {
       // Next disconnect should use initial delay again
       const count = MockWebSocket.instances.length;
       mockWebSocket.triggerClose();
-      await vi.advanceTimersByTimeAsync(1000);
+      jest.advanceTimersByTime(1000);
+      await flushPromises();
       expect(MockWebSocket.instances.length).toBeGreaterThan(count);
     });
 
     it('stops after max reconnect attempts', async () => {
       WebSocketService.getInstance(mockMsalInstance);
-      await vi.runAllTimersAsync();
+      await flushPromises();
 
       mockWebSocket = MockWebSocket.getLastInstance();
       mockWebSocket.triggerOpen();
@@ -322,7 +340,8 @@ describe('WebSocketService', () => {
       // Trigger multiple disconnects
       for (let i = 0; i < 6; i++) {
         mockWebSocket.triggerClose();
-        await vi.advanceTimersByTimeAsync(10000); // Advance by a large amount
+        jest.advanceTimersByTime(10000); // Advance by a large amount
+        await flushPromises();
         mockWebSocket = MockWebSocket.getLastInstance();
       }
 
@@ -336,11 +355,11 @@ describe('WebSocketService', () => {
   describe('multiple subscribers', () => {
     it('notifies all global subscribers', async () => {
       const service = WebSocketService.getInstance(mockMsalInstance);
-      await vi.runAllTimersAsync();
+      await flushPromises();
 
-      const handler1 = vi.fn();
-      const handler2 = vi.fn();
-      const handler3 = vi.fn();
+      const handler1 = mock(() => {});
+      const handler2 = mock(() => {});
+      const handler3 = mock(() => {});
 
       service.subscribeGlobal(handler1);
       service.subscribeGlobal(handler2);
@@ -369,10 +388,10 @@ describe('WebSocketService', () => {
 
     it('notifies both global and task-specific subscribers', async () => {
       const service = WebSocketService.getInstance(mockMsalInstance);
-      await vi.runAllTimersAsync();
+      await flushPromises();
 
-      const globalHandler = vi.fn();
-      const taskHandler = vi.fn();
+      const globalHandler = mock(() => {});
+      const taskHandler = mock(() => {});
 
       service.subscribeGlobal(globalHandler);
       service.subscribe('task-both', taskHandler);

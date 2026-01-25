@@ -1,12 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, mock } from 'bun:test';
+import { resetFakeTimerState } from '../../../test-utils/test-helpers';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { UnlinkedDepositsSection } from '../UnlinkedDepositsSection';
-import { renderWithProviders } from '../../../test-utils/test-providers';
 import { mockMsalInstance, mockAccount } from '../../../test-utils/MockMsalProvider';
 
 // Mock @azure/msal-react
-vi.mock('@azure/msal-react', () => ({
+mock.module('@azure/msal-react', () => ({
   useMsal: () => ({
     instance: mockMsalInstance,
     accounts: [mockAccount],
@@ -15,21 +14,18 @@ vi.mock('@azure/msal-react', () => ({
   MsalProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-// Define taskStore mock values using vi.hoisted for proper hoisting
-const { mockCreateImmediateTask, mockCompletedTasks, mockFailedTasks, mockTaskStoreState } = vi.hoisted(() => {
-  const mockCreateImmediateTask = vi.fn();
-  const mockCompletedTasks = new Map();
-  const mockFailedTasks = new Map();
-  const mockTaskStoreState = {
-    createImmediateTask: mockCreateImmediateTask,
-    completedTasks: mockCompletedTasks,
-    failedTasks: mockFailedTasks,
-  };
-  return { mockCreateImmediateTask, mockCompletedTasks, mockFailedTasks, mockTaskStoreState };
-});
+// Define taskStore mock values at module level (replaces vi.hoisted)
+const mockCreateImmediateTask = mock(() => {});
+const mockCompletedTasks = new Map();
+const mockFailedTasks = new Map();
+const mockTaskStoreState = {
+  createImmediateTask: mockCreateImmediateTask,
+  completedTasks: mockCompletedTasks,
+  failedTasks: mockFailedTasks,
+};
 
 // Mock taskStore
-vi.mock('../../../stores/taskStore', () => ({
+mock.module('../../../stores/taskStore', () => ({
   useTaskStore: (selector: (state: typeof mockTaskStoreState) => unknown) => {
     return selector(mockTaskStoreState);
   },
@@ -72,10 +68,10 @@ const mockEmptyResponse = {
 };
 
 // Create mock axios
-const mockGet = vi.fn();
-const mockPost = vi.fn();
+const mockGet = mock(() => Promise.resolve({ data: mockDepositsResponse }));
+const mockPost = mock(() => Promise.resolve({ data: { task_id: 'test-task-123' } }));
 
-vi.mock('axios', () => ({
+mock.module('axios', () => ({
   default: {
     create: () => ({
       get: mockGet,
@@ -84,11 +80,22 @@ vi.mock('axios', () => ({
   },
 }));
 
+// Import component after mocks are set up
+import { UnlinkedDepositsSection } from '../UnlinkedDepositsSection';
+import { renderWithProviders } from '../../../test-utils/test-providers';
+
 describe('UnlinkedDepositsSection', () => {
+  // Prevent testing-library "Fake timers are not active" errors from other test files
+  beforeAll(() => {
+    resetFakeTimerState();
+  });
+
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockGet.mockResolvedValue({ data: mockDepositsResponse });
-    mockPost.mockResolvedValue({ data: { task_id: 'test-task-123' } });
+    mockGet.mockClear();
+    mockPost.mockClear();
+    mockCreateImmediateTask.mockClear();
+    mockGet.mockImplementation(() => Promise.resolve({ data: mockDepositsResponse }));
+    mockPost.mockImplementation(() => Promise.resolve({ data: { task_id: 'test-task-123' } }));
     mockCompletedTasks.clear();
     mockFailedTasks.clear();
   });
@@ -172,7 +179,7 @@ describe('UnlinkedDepositsSection', () => {
   });
 
   it('displays empty state when no deposits', async () => {
-    mockGet.mockResolvedValue({ data: mockEmptyResponse });
+    mockGet.mockImplementation(() => Promise.resolve({ data: mockEmptyResponse }));
 
     renderWithProviders(<UnlinkedDepositsSection />);
 
@@ -184,7 +191,7 @@ describe('UnlinkedDepositsSection', () => {
   });
 
   it('displays error state on fetch failure', async () => {
-    mockGet.mockRejectedValue(new Error('Network error'));
+    mockGet.mockImplementation(() => Promise.reject(new Error('Network error')));
 
     renderWithProviders(<UnlinkedDepositsSection />);
 
@@ -206,7 +213,7 @@ describe('UnlinkedDepositsSection', () => {
 
     // Clear mock and set up for second call
     mockGet.mockClear();
-    mockGet.mockResolvedValue({ data: mockEmptyResponse });
+    mockGet.mockImplementation(() => Promise.resolve({ data: mockEmptyResponse }));
 
     // Click refresh
     const refreshButton = screen.getByRole('button', { name: /refresh/i });

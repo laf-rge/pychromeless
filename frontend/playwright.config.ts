@@ -12,7 +12,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -23,8 +23,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'VITE_E2E_MODE=true bun run dev',
-    url: 'http://localhost:5173',
+    command: 'BUN_E2E_MODE=true bun run dev',
+    url: 'http://localhost:3000',
     reuseExistingServer: false, // Always start fresh server with E2E mode
     timeout: 120 * 1000,
   },

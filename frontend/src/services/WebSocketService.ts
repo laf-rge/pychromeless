@@ -40,8 +40,13 @@ interface WebSocketMessage {
   payload: TaskStatus;
 }
 
+// WebSocket constructor type for dependency injection (used in tests)
+type WebSocketConstructor = new (url: string) => WebSocket;
+
 class WebSocketService {
   private static instance: WebSocketService;
+  // Allow injecting a custom WebSocket constructor for testing
+  private static WebSocketClass: WebSocketConstructor = WebSocket;
   private ws: WebSocket | null = null;
   private subscribers: Map<string, Set<MessageHandler>> = new Map();
   private globalSubscribers: Set<MessageHandler> = new Set(); // Global subscribers for all tasks
@@ -52,8 +57,22 @@ class WebSocketService {
   private msalInstance: IPublicClientApplication;
   private isConnected = false;
   private isReconnecting = false;
-  private reconnectTimer: number | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private connectionListeners: Set<(connected: boolean) => void> = new Set();
+
+  /**
+   * Set a custom WebSocket constructor (for testing purposes)
+   */
+  static setWebSocketClass(wsClass: WebSocketConstructor): void {
+    WebSocketService.WebSocketClass = wsClass;
+  }
+
+  /**
+   * Reset to default WebSocket constructor
+   */
+  static resetWebSocketClass(): void {
+    WebSocketService.WebSocketClass = WebSocket;
+  }
 
   private constructor(msalInstance: IPublicClientApplication) {
     this.msalInstance = msalInstance;
@@ -166,7 +185,7 @@ class WebSocketService {
         `Bearer ${accessToken}`
       )}`;
       console.log("Connecting to WebSocket with URL:", wsUrl);
-      this.ws = new WebSocket(wsUrl);
+      this.ws = new WebSocketService.WebSocketClass(wsUrl);
 
       this.ws.onopen = () => {
         console.log("WebSocket connected successfully");

@@ -1,19 +1,19 @@
-import { vi } from 'vitest';
+import { mock, jest } from 'bun:test';
 import type { PublicClientApplication } from '@azure/msal-browser';
 
 // Mock MSAL instance
 export const createMockMsalInstance = (): PublicClientApplication => {
   const mockLogger = {
-    error: vi.fn(),
-    warning: vi.fn(),
-    info: vi.fn(),
-    verbose: vi.fn(),
-    trace: vi.fn(),
-    clone: vi.fn(),
+    error: mock(() => {}),
+    warning: mock(() => {}),
+    info: mock(() => {}),
+    verbose: mock(() => {}),
+    trace: mock(() => {}),
+    clone: mock(() => {}),
   };
 
   return {
-    getActiveAccount: vi.fn(() => ({
+    getActiveAccount: mock(() => ({
       username: 'test@example.com',
       name: 'Test User',
       localAccountId: 'test-account-id',
@@ -21,30 +21,44 @@ export const createMockMsalInstance = (): PublicClientApplication => {
       environment: 'login.windows.net',
       tenantId: 'test-tenant-id',
     })),
-    getAllAccounts: vi.fn(() => []),
-    acquireTokenSilent: vi.fn(() =>
+    getAllAccounts: mock(() => []),
+    acquireTokenSilent: mock(() =>
       Promise.resolve({
         accessToken: 'mock-access-token',
         expiresOn: new Date(Date.now() + 3600000),
       })
     ),
-    acquireTokenPopup: vi.fn(() =>
+    acquireTokenPopup: mock(() =>
       Promise.resolve({
         accessToken: 'mock-access-token',
         expiresOn: new Date(Date.now() + 3600000),
       })
     ),
-    getLogger: vi.fn(() => mockLogger),
-    setLogger: vi.fn(),
-    setActiveAccount: vi.fn(),
-    initialize: vi.fn(() => Promise.resolve()),
-    handleRedirectPromise: vi.fn(() => Promise.resolve(null)),
+    getLogger: mock(() => mockLogger),
+    setLogger: mock(() => {}),
+    setActiveAccount: mock(() => {}),
+    initialize: mock(() => Promise.resolve()),
+    handleRedirectPromise: mock(() => Promise.resolve(null)),
   } as unknown as PublicClientApplication;
 };
 
+// Use globalThis to ensure truly shared state across all module instances
+// This prevents Bun's module isolation from creating separate instances arrays
+const MOCK_WS_REGISTRY_KEY = '__mockWebSocketInstances__';
+
+function getMockWebSocketInstances(): MockWebSocket[] {
+  if (!(MOCK_WS_REGISTRY_KEY in globalThis)) {
+    (globalThis as Record<string, unknown>)[MOCK_WS_REGISTRY_KEY] = [];
+  }
+  return (globalThis as Record<string, unknown>)[MOCK_WS_REGISTRY_KEY] as MockWebSocket[];
+}
+
 // Mock WebSocket
 export class MockWebSocket {
-  static instances: MockWebSocket[] = [];
+  // Use globalThis registry to avoid module identity issues
+  static get instances(): MockWebSocket[] {
+    return getMockWebSocketInstances();
+  }
 
   onopen: (() => void) | null = null;
   onmessage: ((event: MessageEvent) => void) | null = null;
@@ -52,11 +66,11 @@ export class MockWebSocket {
   onclose: ((event: CloseEvent) => void) | null = null;
   readyState: number = WebSocket.CONNECTING;
 
-  send = vi.fn();
-  close = vi.fn();
+  send = mock(() => {});
+  close = mock(() => {});
 
   constructor(_url: string) {
-    MockWebSocket.instances.push(this);
+    getMockWebSocketInstances().push(this);
   }
 
   triggerOpen() {
@@ -79,18 +93,19 @@ export class MockWebSocket {
     }
   }
 
-  static getLastInstance() {
-    return this.instances[this.instances.length - 1];
+  static getLastInstance(): MockWebSocket {
+    const instances = getMockWebSocketInstances();
+    return instances[instances.length - 1];
   }
 
   static reset() {
-    this.instances = [];
+    (globalThis as Record<string, unknown>)[MOCK_WS_REGISTRY_KEY] = [];
   }
 }
 
 // Mock fetch
 export const createMockFetch = (responses: Record<string, unknown> = {}) => {
-  return vi.fn((url: string) => {
+  return mock((url: string) => {
     const response = responses[url] || { data: [] };
     return Promise.resolve({
       ok: true,
@@ -113,3 +128,23 @@ export const createMockTask = (overrides = {}) => {
     ...overrides,
   };
 };
+
+/**
+ * Reset fake timer state to prevent testing-library "Fake timers are not active" errors.
+ *
+ * Bun's jest.useRealTimers() sets setTimeout.clock = false instead of deleting it,
+ * but @testing-library/dom checks hasOwnProperty('clock') which returns true for any value.
+ * This causes testing-library to think fake timers are enabled when they're not.
+ *
+ * Call this in beforeAll() for test files that use testing-library's async utilities
+ * (waitFor, userEvent, etc.) when other test files in the suite use fake timers.
+ */
+export function resetFakeTimerState(): void {
+  jest.useRealTimers();
+  if (Object.prototype.hasOwnProperty.call(globalThis.setTimeout, 'clock')) {
+    delete (globalThis.setTimeout as unknown as { clock?: unknown }).clock;
+  }
+  if (Object.prototype.hasOwnProperty.call(globalThis.setTimeout, '_isMockFunction')) {
+    delete (globalThis.setTimeout as unknown as { _isMockFunction?: unknown })._isMockFunction;
+  }
+}

@@ -5,6 +5,7 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
+    "types": ["bun-types"],
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -26,6 +27,7 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.spec.ts", "src/**/*.spec.tsx"],
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.spec.ts", "src/**/*.spec.tsx", "src/test-utils"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

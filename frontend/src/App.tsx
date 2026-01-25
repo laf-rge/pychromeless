@@ -10,7 +10,7 @@ import { logger } from "./utils/logger";
 import { MockMsalProvider } from "./test-utils/MockMsalProvider";
 
 // Check if we're in E2E test mode
-const isE2ETestMode = import.meta.env.VITE_E2E_MODE === "true";
+const isE2ETestMode = import.meta.env.BUN_E2E_MODE === "true";
 
 function App() {
   if (isE2ETestMode) {
