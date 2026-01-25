@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { BrowserRouter } from "react-router-dom";
-import { MsalProvider } from "@azure/msal-react";
+import { MsalProvider, useMsal } from "@azure/msal-react";
 import { msalInstance } from "./msal";
 import { AppRoutes } from "./routes";
 import { TestModeRoutes } from "./routes.e2e";
@@ -36,16 +36,30 @@ function App() {
 /**
  * Component to initialize WebSocket global subscription
  * Separated to ensure it runs within MsalProvider context
+ * Only initializes WebSocket when user is authenticated
  */
 function WebSocketInitializer() {
+  const { instance, accounts } = useMsal();
+  const isAuthenticated = accounts.length > 0;
   const { setMsalInstance, handleTaskUpdate, setConnectionStatus } =
     useTaskStore();
 
   useEffect(() => {
-    logger.debug("Initializing WebSocket global subscription");
-
-    // Set MSAL instance in store for API calls
+    // Set MSAL instance in store for API calls (always needed)
     setMsalInstance(msalInstance);
+
+    // Don't initialize WebSocket until user is authenticated
+    if (!isAuthenticated) {
+      logger.debug("Skipping WebSocket initialization - user not authenticated");
+      return;
+    }
+
+    // Ensure active account is set (needed for token acquisition)
+    if (!instance.getActiveAccount() && accounts[0]) {
+      instance.setActiveAccount(accounts[0]);
+    }
+
+    logger.debug("Initializing WebSocket global subscription");
 
     // Initialize WebSocket service
     const wsService = WebSocketService.getInstance(msalInstance);
@@ -70,7 +84,7 @@ function WebSocketInitializer() {
       unsubscribeConnection();
       unsubscribeGlobal();
     };
-  }, [setMsalInstance, handleTaskUpdate, setConnectionStatus]);
+  }, [isAuthenticated, instance, accounts, setMsalInstance, handleTaskUpdate, setConnectionStatus]);
 
   return null;
 }

@@ -197,6 +197,12 @@ class Grubhub:
         Returns:
             List of payment records in format: ["Grubhub", txdate, notes, lines, store]
             where lines is a list of [account_code, description, amount] tuples
+
+        Account mapping:
+            - 1363: Subtotal + Tax (matches FlexePOS GrubHub sales, excludes tips)
+            - 2320: Tips (liability - owed to employees)
+            - 6310: Commission, Delivery Commission, Processing Fee (expenses)
+            - 4830: Adjustments/Error charges (reduces income)
         """
 
         # Helper function to parse numeric values, handling "n/a" and empty strings
@@ -222,12 +228,16 @@ class Grubhub:
                         deposits[deposit_id] = {
                             "deposit_date": None,
                             "store": None,
-                            "restaurant_total": Decimal("0"),
+                            # Separate tracking for proper account mapping
+                            "subtotal": Decimal("0"),  # Food amount
+                            "tax": Decimal("0"),  # Sales tax
+                            "tip": Decimal("0"),  # Tips (to 2320)
                             "commission": Decimal("0"),
                             "delivery_commission": Decimal("0"),
                             "processing_fee": Decimal("0"),
+                            "adjustments_total": Decimal("0"),  # Sum for 4830 line
                             "order_count": 0,
-                            "adjustments": [],
+                            "adjustment_details": [],  # For notes
                         }
 
                     deposit_data = deposits[deposit_id]
@@ -255,30 +265,50 @@ class Grubhub:
                             if store_match:
                                 deposit_data["store"] = store_match.group(1)
 
-                    # Aggregate totals
-                    deposit_data["restaurant_total"] += parse_decimal(
-                        row["Restaurant Total"]
-                    )
-                    deposit_data["commission"] += parse_decimal(row["Commission"])
-                    deposit_data["delivery_commission"] += parse_decimal(
-                        row["Delivery Commission"]
-                    )
-                    deposit_data["processing_fee"] += parse_decimal(
-                        row["Processing Fee"]
-                    )
-
-                    # Count orders (skip adjustments)
-                    if not row["Type"].startswith("Adjustment"):
-                        deposit_data["order_count"] += 1
-
-                    # Track adjustments/refunds for notes
+                    # Handle orders vs adjustments vs cancelations differently
                     if row["Type"].startswith("Adjustment"):
-                        deposit_data["adjustments"].append(
+                        # Adjustments go to 4830 Error Charges (negative amount)
+                        adj_amount = parse_decimal(row["Restaurant Total"])
+                        deposit_data["adjustments_total"] += adj_amount
+                        deposit_data["adjustment_details"].append(
                             {
                                 "description": row["Description"],
-                                "amount": parse_decimal(row["Restaurant Total"]),
+                                "amount": adj_amount,
                                 "date": row["Date"],
                             }
+                        )
+                    elif row["Type"].startswith("Cancelation"):
+                        # Cancelations go to 4830 Error Charges (negative subtotal+tax)
+                        # This keeps 1363 at gross amount (matching POS which records
+                        # both the original order and doesn't capture cancelations)
+                        cancel_subtotal = parse_decimal(row["Subtotal"])
+                        cancel_tax = parse_decimal(row["Tax"])
+                        cancel_amount = cancel_subtotal + cancel_tax
+                        deposit_data["adjustments_total"] += cancel_amount
+                        deposit_data["adjustment_details"].append(
+                            {
+                                "description": row["Description"] or row["Type"],
+                                "amount": cancel_amount,
+                                "date": row["Date"],
+                            }
+                        )
+                        # Also track the commission refund (positive commission on cancelation)
+                        deposit_data["commission"] += parse_decimal(row["Commission"])
+                        deposit_data["delivery_commission"] += parse_decimal(
+                            row["Delivery Commission"]
+                        )
+                    else:
+                        # Regular orders - track components separately
+                        deposit_data["order_count"] += 1
+                        deposit_data["subtotal"] += parse_decimal(row["Subtotal"])
+                        deposit_data["tax"] += parse_decimal(row["Tax"])
+                        deposit_data["tip"] += parse_decimal(row["Tip"])
+                        deposit_data["commission"] += parse_decimal(row["Commission"])
+                        deposit_data["delivery_commission"] += parse_decimal(
+                            row["Delivery Commission"]
+                        )
+                        deposit_data["processing_fee"] += parse_decimal(
+                            row["Processing Fee"]
                         )
 
         except FileNotFoundError:
@@ -305,27 +335,39 @@ class Grubhub:
 
             # Build notes from adjustments
             notes = ""
-            if deposit_data["adjustments"]:
+            if deposit_data["adjustment_details"]:
                 adjustment_texts = []
-                for adj in deposit_data["adjustments"]:
+                for adj in deposit_data["adjustment_details"]:
                     adjustment_texts.append(
                         f"{adj['date']}: {adj['description']} ${adj['amount']}"
                     )
-                notes = "Refunds/Adjustments:\n" + "\n".join(adjustment_texts)
+                notes = "Adjustments:\n" + "\n".join(adjustment_texts)
 
-            # Build lines array matching get_payments format
+            # Build lines array for deposit
             lines = []
 
-            # First line: main deposit total (account 1363 = Grubhub)
+            # Line 1: 1363 GrubHub = Subtotal + Tax (matches FlexePOS, excludes tips)
             order_count = deposit_data["order_count"]
-            main_label = f"Prepaid Orders ({order_count})"
-            main_amount = deposit_data["restaurant_total"]
+            sales_amount = deposit_data["subtotal"] + deposit_data["tax"]
             lines.append(
-                ["1363", main_label, str(main_amount.quantize(Decimal("0.01")))]
+                [
+                    "1363",
+                    f"Subtotal+Tax ({order_count} orders)",
+                    str(sales_amount.quantize(Decimal("0.01"))),
+                ]
             )
 
-            # Additional lines for deductions (account 6310 = Other Current Assets)
-            # Preserve negative signs as they represent deductions
+            # Line 2: 2320 Tips (if any) - credit to tip liability
+            if deposit_data["tip"] != 0:
+                lines.append(
+                    [
+                        "2320",
+                        "Tips",
+                        str(deposit_data["tip"].quantize(Decimal("0.01"))),
+                    ]
+                )
+
+            # Line 3-5: 6310 Commissions/Fees (expenses, negative amounts)
             if deposit_data["commission"] != 0:
                 lines.append(
                     [
@@ -354,6 +396,16 @@ class Grubhub:
                         "6310",
                         "Processing Fee",
                         str(deposit_data["processing_fee"].quantize(Decimal("0.01"))),
+                    ]
+                )
+
+            # Line 6: 4830 Adjustments/Error charges (if any, negative amount)
+            if deposit_data["adjustments_total"] != 0:
+                lines.append(
+                    [
+                        "4830",
+                        "Adjustments",
+                        str(deposit_data["adjustments_total"].quantize(Decimal("0.01"))),
                     ]
                 )
 
