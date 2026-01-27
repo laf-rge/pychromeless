@@ -463,7 +463,7 @@ progress.update(step_name="Scraping data", current_step=1)
 ## Known Limitations
 
 - **Lambda timeout**: Max 10 minutes (600 seconds) for container functions
-- **Lambda memory**: Functions use 10GB memory for Chrome operations
+- **Lambda memory**: Chrome/scraping functions use 2GB; API/data-processing functions use 512MB
 - **Cold starts**: Container functions have ~10-15 second cold starts
 - **Rate limits**: QuickBooks API has rate limits (handle 429 responses)
 - **DynamoDB TTL**: Task states auto-delete after 12-48 hours

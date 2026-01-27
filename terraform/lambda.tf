@@ -79,7 +79,7 @@ locals {
       description = "Syncs the last 30 days of invoices from CrunchTime into Quickbooks"
       handler     = "lambda_function.invoice_sync_handler"
       timeout     = 600
-      memory      = 10240
+      memory      = 2048
       env_vars    = local.lambda_env_invoice_sync
     },
     daily_journal = {
@@ -87,7 +87,7 @@ locals {
       description = "Sends an email report on store operations"
       handler     = "lambda_function.daily_journal_handler"
       timeout     = 480
-      memory      = 10240
+      memory      = 2048
       env_vars    = local.lambda_env_daily_journal
     },
     daily_sales = {
@@ -95,7 +95,7 @@ locals {
       description = "Enters daily sales for yesterday."
       handler     = "lambda_function.daily_sales_handler"
       timeout     = 540
-      memory      = 10240
+      memory      = 2048
       env_vars    = local.lambda_env_daily_sales
     },
     email_tips = {
@@ -103,7 +103,7 @@ locals {
       description = "Emails tips spreadsheet."
       handler     = "lambda_function.email_tips_handler"
       timeout     = 480
-      memory      = 10240
+      memory      = 2048
       env_vars    = local.lambda_env_email_tips
     },
     transform_tips = {
@@ -111,7 +111,7 @@ locals {
       description = "Takes the excel tip spreadsheet and returns the Gusto CSV for import."
       handler     = "lambda_function.transform_tips_handler"
       timeout     = 480
-      memory      = 10240
+      memory      = 512
       env_vars    = local.lambda_env_transform_tips
     },
     get_mpvs = {
@@ -119,7 +119,7 @@ locals {
       description = "Returns MPVs for a specific pay period or the whole month."
       handler     = "lambda_function.get_mpvs_handler"
       timeout     = 480
-      memory      = 10240
+      memory      = 2048
       env_vars    = local.lambda_env_get_mpvs
     },
     split_bill = {
@@ -127,7 +127,7 @@ locals {
       description = "Splits a QuickBooks bill between multiple locations"
       handler     = "lambda_function.split_bill_handler"
       timeout     = 300
-      memory      = 10240
+      memory      = 512
       env_vars    = local.lambda_env_split_bill
     },
     get_food_handler_links = {
@@ -135,7 +135,7 @@ locals {
       description = "Returns public links to combined food handler PDFs for each store"
       handler     = "lambda_function.get_food_handler_links_handler"
       timeout     = 120
-      memory      = 10240
+      memory      = 2048
       env_vars    = local.lambda_env_get_food_handler_links
     },
     update_food_handler_pdfs = {
@@ -143,7 +143,7 @@ locals {
       description = "Asynchronously updates the combined food handler PDFs for each store"
       handler     = "lambda_function.update_food_handler_pdfs_handler"
       timeout     = 480 # 8 minutes since this runs async
-      memory      = 10240
+      memory      = 2048
       env_vars    = local.lambda_env_update_food_handler_pdfs
     },
     process_store_sales_internal = {
@@ -151,7 +151,7 @@ locals {
       description = "Internal Lambda to process daily sales for a single store"
       handler     = "lambda_function.process_store_sales_internal_handler"
       timeout     = 300 # 5 minutes for single store processing
-      memory      = 10240
+      memory      = 2048
       env_vars    = local.lambda_env_daily_sales
     },
     payroll_allocation = {
@@ -159,7 +159,7 @@ locals {
       description = "Process payroll allocation from Gusto CSV to QuickBooks journal entry"
       handler     = "lambda_function.payroll_allocation_handler"
       timeout     = 300 # 5 minutes
-      memory      = 10240
+      memory      = 512
       env_vars    = local.lambda_env_payroll_allocation
     },
     grubhub_csv_import = {
@@ -167,7 +167,7 @@ locals {
       description = "Import GrubHub deposits from CSV export to QuickBooks"
       handler     = "lambda_function.grubhub_csv_import_handler"
       timeout     = 300 # 5 minutes
-      memory      = 10240
+      memory      = 512
       env_vars    = local.lambda_env_grubhub_csv_import
     },
     fdms_statement_import = {
@@ -175,7 +175,7 @@ locals {
       description = "Import FDMS statement PDFs and create bills in QuickBooks"
       handler     = "lambda_function.fdms_statement_import_handler"
       timeout     = 300 # 5 minutes
-      memory      = 10240
+      memory      = 512
       env_vars    = local.lambda_env_fdms_statement_import
     },
     qb_auth_url = {
@@ -183,7 +183,7 @@ locals {
       description = "Generate QuickBooks OAuth authorization URL"
       handler     = "lambda_function.qb_auth_url_handler"
       timeout     = 30
-      memory      = 10240
+      memory      = 512
       env_vars    = local.lambda_env_qb_auth_url
     },
     qb_callback = {
@@ -191,7 +191,7 @@ locals {
       description = "Handle QuickBooks OAuth callback"
       handler     = "lambda_function.qb_callback_handler"
       timeout     = 30
-      memory      = 10240
+      memory      = 512
       env_vars    = local.lambda_env_qb_callback
     },
     qb_connection_status = {
@@ -199,7 +199,7 @@ locals {
       description = "Get QuickBooks connection status"
       handler     = "lambda_function.qb_connection_status_handler"
       timeout     = 30
-      memory      = 10240
+      memory      = 512
       env_vars    = local.lambda_env_qb_connection_status
     },
     unlinked_deposits = {
@@ -207,7 +207,7 @@ locals {
       description = "Get unlinked sales receipts (deposits without linked bank transactions)"
       handler     = "lambda_function.unlinked_deposits_handler"
       timeout     = 30
-      memory      = 10240
+      memory      = 512
       env_vars    = local.lambda_env_unlinked_deposits
     },
     timeout_detector = {
@@ -215,7 +215,7 @@ locals {
       description = "Detects and marks stale tasks as failed"
       handler     = "lambda_function.timeout_detector_handler"
       timeout     = 60
-      memory      = 256
+      memory      = 320
       env_vars    = local.lambda_env_timeout_detector
     }
   }
