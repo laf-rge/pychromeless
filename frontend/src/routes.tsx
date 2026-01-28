@@ -17,6 +17,7 @@ import { FoodHandlerLinks } from "./pages/utilities/FoodHandlerLinks";
 import { ErrorTester } from "./pages/utilities/ErrorTester";
 import { QuickBooksConnection } from "./pages/settings/QuickBooksConnection";
 import { QBCallback } from "./pages/settings/QBCallback";
+import { POS } from "./pages/POS";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { PageLayout, AppShell } from "./components/layout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -255,6 +256,14 @@ export function AppRoutes() {
           element={
             <ErrorBoundary>
               <QBCallback />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/pos"
+          element={
+            <ErrorBoundary>
+              <POS />
             </ErrorBoundary>
           }
         />
