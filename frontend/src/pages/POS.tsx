@@ -20,52 +20,72 @@ export function POS() {
               <h2 className="text-base landscape:text-lg font-semibold text-green-400 mb-2 landscape:mb-3">
                 Steps
               </h2>
-              <ol className="list-decimal list-inside space-y-1.5 landscape:space-y-3 text-gray-300">
-                <li>
-                  Ring up the customer's items in the{" "}
-                  <strong className="text-white">POS as normal</strong>.
-                </li>
-                <li>
-                  Ask if they are a{" "}
-                  <strong className="text-white">Shore Points member</strong>.
-                </li>
-                <li>
-                  Go to the <strong className="text-white">payment screen</strong>.
-                </li>
-                <li>
-                  Select{" "}
-                  <strong className="text-white">House Account</strong>.
-                </li>
-                <li>
-                  Type{" "}
-                  <strong className="text-white">bitcoin</strong>{" "}
-                  as the house account name.
-                </li>
-                <li>
-                  Enter the <strong className="text-white">order total</strong>{" "}
-                  on the keypad{" "}
-                  <span className="hidden landscape:inline">to the right</span>
-                  <span className="landscape:hidden">below</span>.
-                </li>
-                <li>
-                  Tap{" "}
-                  <strong className="text-white">Charge</strong>{" "}
-                  to generate a QR code.
-                </li>
-                <li>
-                  Have the customer{" "}
-                  <strong className="text-white">scan the QR code</strong> with
-                  their Bitcoin Lightning wallet.
-                </li>
-                <li>
-                  Wait for the screen to show the payment is{" "}
-                  <strong className="text-green-400">settled</strong>.
-                  Lightning payments confirm instantly.
-                </li>
-                <li>
-                  Press <strong className="text-white">Pay</strong> on the POS.
-                </li>
-              </ol>
+              <div className="space-y-2 landscape:space-y-3">
+                {/* Steps 1-5: On the Register */}
+                <div className="border-l-2 border-blue-500 pl-3">
+                  <span className="text-blue-400 text-[10px] landscape:text-xs font-semibold uppercase tracking-wide">Register</span>
+                  <ol start={1} className="list-decimal list-inside space-y-1 landscape:space-y-2 text-gray-300 mt-1">
+                    <li>
+                      Ring up the customer's items in the{" "}
+                      <strong className="text-white">POS as normal</strong>.
+                    </li>
+                    <li>
+                      Ask if they are a{" "}
+                      <strong className="text-white">Shore Points member</strong>.
+                    </li>
+                    <li>
+                      Go to the <strong className="text-white">payment screen</strong>.
+                    </li>
+                    <li>
+                      Select{" "}
+                      <strong className="text-white">House Account</strong>.
+                    </li>
+                    <li>
+                      Type{" "}
+                      <strong className="text-white">bitcoin</strong>{" "}
+                      as the house account name.
+                    </li>
+                  </ol>
+                </div>
+
+                {/* Steps 6-9: On this iPad */}
+                <div className="border-l-2 border-orange-500 pl-3">
+                  <span className="text-orange-400 text-[10px] landscape:text-xs font-semibold uppercase tracking-wide">This iPad</span>
+                  <ol start={6} className="list-decimal list-inside space-y-1 landscape:space-y-2 text-gray-300 mt-1">
+                    <li>
+                      Enter the <strong className="text-white">order total</strong>{" "}
+                      on the keypad{" "}
+                      <span className="hidden landscape:inline">to the right</span>
+                      <span className="landscape:hidden">below</span>.
+                    </li>
+                    <li>
+                      Tap{" "}
+                      <strong className="text-white">Charge</strong>{" "}
+                      to generate a QR code.
+                    </li>
+                    <li>
+                      Have the customer{" "}
+                      <strong className="text-white">scan the QR code</strong> with
+                      their Bitcoin Lightning wallet.
+                    </li>
+                    <li>
+                      Wait for the payment to be{" "}
+                      <strong className="text-green-400">settled</strong>.
+                      Lightning confirms instantly.
+                    </li>
+                  </ol>
+                </div>
+
+                {/* Step 10: Back to Register */}
+                <div className="border-l-2 border-blue-500 pl-3">
+                  <span className="text-blue-400 text-[10px] landscape:text-xs font-semibold uppercase tracking-wide">Register</span>
+                  <ol start={10} className="list-decimal list-inside text-gray-300 mt-1">
+                    <li>
+                      Press <strong className="text-white">Pay</strong> on the POS.
+                    </li>
+                  </ol>
+                </div>
+              </div>
             </section>
 
             <p className="text-red-400 text-xs mt-2">
