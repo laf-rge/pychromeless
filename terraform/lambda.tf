@@ -79,7 +79,7 @@ locals {
       description = "Syncs the last 30 days of invoices from CrunchTime into Quickbooks"
       handler     = "lambda_function.invoice_sync_handler"
       timeout     = 600
-      memory      = 2048
+      memory      = 4096
       env_vars    = local.lambda_env_invoice_sync
     },
     daily_journal = {
@@ -87,7 +87,7 @@ locals {
       description = "Sends an email report on store operations"
       handler     = "lambda_function.daily_journal_handler"
       timeout     = 480
-      memory      = 2048
+      memory      = 4096
       env_vars    = local.lambda_env_daily_journal
     },
     daily_sales = {
@@ -151,7 +151,7 @@ locals {
       description = "Internal Lambda to process daily sales for a single store"
       handler     = "lambda_function.process_store_sales_internal_handler"
       timeout     = 300 # 5 minutes for single store processing
-      memory      = 2048
+      memory      = 4096
       env_vars    = local.lambda_env_daily_sales
     },
     payroll_allocation = {
