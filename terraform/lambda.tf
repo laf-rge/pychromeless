@@ -103,7 +103,7 @@ locals {
       description = "Emails tips spreadsheet."
       handler     = "lambda_function.email_tips_handler"
       timeout     = 480
-      memory      = 2048
+      memory      = 4096
       env_vars    = local.lambda_env_email_tips
     },
     transform_tips = {
