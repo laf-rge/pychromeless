@@ -177,6 +177,23 @@ resource "aws_ssm_parameter" "qbo_company_id" {
   tags        = local.common_tags
 }
 
+# Square credentials
+resource "aws_ssm_parameter" "square_application_id" {
+  name        = "/${terraform.workspace}/square/application_id"
+  description = "Square application ID (from Square Developer Dashboard)"
+  type        = "String"
+  value       = var.service_credentials.square_application_id
+  tags        = local.common_tags
+}
+
+resource "aws_ssm_parameter" "square_access_token" {
+  name        = "/${terraform.workspace}/square/access_token"
+  description = "Square API personal access token for catalog management"
+  type        = "SecureString"
+  value       = var.service_credentials.square_access_token
+  tags        = local.common_tags
+}
+
 resource "aws_ssm_parameter" "gcp_employees_folder" {
   name        = "/${terraform.workspace}/gcp/employees_folder"
   description = "Google Drive employees folder ID"

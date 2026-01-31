@@ -65,6 +65,10 @@ service_credentials = {
   # QuickBooks Online
   qbo_company_id = "YOUR_QBO_COMPANY_ID"
 
+  # Square API (from Square Developer Dashboard)
+  square_application_id = "YOUR_SQUARE_APPLICATION_ID"
+  square_access_token   = "YOUR_SQUARE_ACCESS_TOKEN"
+
   # Google Drive service account JSON
   gdrive_json = <<-EOT
 {

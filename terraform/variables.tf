@@ -54,6 +54,10 @@ variable "service_credentials" {
 
     # Google Drive
     gdrive_json = string
+
+    # Square
+    square_application_id = string
+    square_access_token   = string
   })
   sensitive = true
 }
