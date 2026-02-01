@@ -1,5 +1,5 @@
 import tailwindPlugin from "bun-plugin-tailwind";
-import { watch } from "fs";
+import { watch, readdirSync, existsSync, mkdirSync, statSync } from "fs";
 import { join } from "path";
 
 const PORT = 3000;
@@ -42,6 +42,25 @@ async function build() {
       console.error(log);
     }
     return false;
+  }
+
+  // Copy public/ files to dist/
+  const publicDir = join(process.cwd(), "public");
+  if (existsSync(publicDir)) {
+    const distDir = join(process.cwd(), "dist");
+    async function copyDir(src: string, dest: string) {
+      if (!existsSync(dest)) mkdirSync(dest, { recursive: true });
+      for (const entry of readdirSync(src)) {
+        const srcPath = join(src, entry);
+        const destPath = join(dest, entry);
+        if (statSync(srcPath).isDirectory()) {
+          await copyDir(srcPath, destPath);
+        } else {
+          await Bun.write(destPath, Bun.file(srcPath));
+        }
+      }
+    }
+    await copyDir(publicDir, distDir);
   }
 
   // Update index.html with correct asset paths

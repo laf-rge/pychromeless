@@ -1,6 +1,8 @@
 import { ReactNode, useState } from "react";
 import { useMsal } from "@azure/msal-react";
+import { useLocation } from "react-router-dom";
 import { NavBar } from "./NavBar";
+import { Footer } from "./Footer";
 import { Button } from "../ui/button";
 import { IdTokenData } from "../DataDisplay";
 
@@ -8,20 +10,24 @@ interface PageLayoutProps {
   children: ReactNode;
 }
 
+const PUBLIC_ROUTES = ["/map", "/about", "/about-next", "/careers", "/locations"];
+
 export function PageLayout({ children }: PageLayoutProps) {
   const { instance } = useMsal();
   const activeAccount = instance.getActiveAccount();
+  const location = useLocation();
   const [showDebug, setShowDebug] = useState(false);
 
-  return (
-    <div className="min-h-screen bg-background">
-      <NavBar />
-      {children}
-      <footer className="border-t bg-card py-4 text-center text-sm text-muted-foreground">
-        Copyright 2026, Wagoner Management Corp.
-      </footer>
+  const isPublicRoute = PUBLIC_ROUTES.includes(location.pathname);
+  const isLightTheme = isPublicRoute || !activeAccount;
 
-      {/* Debug Panel in Footer - Only in Dev Mode */}
+  return (
+    <div className={`min-h-screen flex flex-col bg-background ${isLightTheme ? "theme-light" : "theme-dark"}`}>
+      <NavBar />
+      <div className="flex-1">{children}</div>
+      <Footer />
+
+      {/* Debug Panel - Only in Dev Mode */}
       {import.meta.env.DEV && activeAccount?.idTokenClaims && (
         <div className="fixed bottom-0 right-0 z-50 p-4">
           <div className="flex justify-end">

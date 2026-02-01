@@ -25,6 +25,7 @@ export interface StoreProperties {
   url: string;
   store: string;
   storeNumber: string;
+  hours: string;
 }
 
 export const storeLocations: GeoJSON = {
@@ -48,6 +49,7 @@ export const storeLocations: GeoJSON = {
         url: "https://www.jerseymikes.com/20407/cotati-ca",
         store: "Cotati",
         storeNumber: "20407",
+        hours: "10am–9pm",
       },
     },
     {
@@ -68,6 +70,7 @@ export const storeLocations: GeoJSON = {
         url: "https://www.jerseymikes.com/20358/santa-rosa-ca",
         store: "Santa Rosa",
         storeNumber: "20358",
+        hours: "10am–9pm",
       },
     },
     {
@@ -88,6 +91,7 @@ export const storeLocations: GeoJSON = {
         url: "https://www.jerseymikes.com/20400/santa-rosa-ca",
         store: "North Santa Rosa",
         storeNumber: "20400",
+        hours: "10am–9pm",
       },
     },
     {
@@ -108,6 +112,7 @@ export const storeLocations: GeoJSON = {
         url: "https://www.jerseymikes.com/20395/petaluma-ca",
         store: "Petaluma",
         storeNumber: "20395",
+        hours: "10am–9pm",
       },
     },
   ],

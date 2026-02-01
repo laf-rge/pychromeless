@@ -18,6 +18,8 @@ import { ErrorTester } from "./pages/utilities/ErrorTester";
 import { QuickBooksConnection } from "./pages/settings/QuickBooksConnection";
 import { QBCallback } from "./pages/settings/QBCallback";
 import { POS } from "./pages/POS";
+import { CareersPage } from "./pages/Careers";
+import { AboutNextPage } from "./pages/AboutNext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { PageLayout, AppShell } from "./components/layout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -63,6 +65,26 @@ export function AppRoutes() {
             <PageLayout>
               <ErrorBoundary>
                 <AboutPage />
+              </ErrorBoundary>
+            </PageLayout>
+          }
+        />
+        <Route
+          path="/locations"
+          element={
+            <PageLayout>
+              <ErrorBoundary>
+                <StoreMapPage />
+              </ErrorBoundary>
+            </PageLayout>
+          }
+        />
+        <Route
+          path="/careers"
+          element={
+            <PageLayout>
+              <ErrorBoundary>
+                <CareersPage />
               </ErrorBoundary>
             </PageLayout>
           }
@@ -221,6 +243,18 @@ export function AppRoutes() {
             </PageLayout>
           }
         />
+        {import.meta.env.DEV && (
+          <Route
+            path="/about-next"
+            element={
+              <PageLayout>
+                <ErrorBoundary>
+                  <AboutNextPage />
+                </ErrorBoundary>
+              </PageLayout>
+            }
+          />
+        )}
         {import.meta.env.DEV && (
           <Route
             path="/utilities/error-tester"

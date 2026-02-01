@@ -1,7 +1,78 @@
 @import "tailwindcss";
 
-
 @layer base {
+  /* ============================================
+     Light theme — public-facing pages
+     Warm, community-rooted palette with JM brand colors
+     ============================================ */
+  .theme-light {
+    --background: 40 33% 97%;           /* #FAFAF8 warm off-white */
+    --foreground: 30 30% 12%;           /* #2C2416 warm ink */
+    --card: 0 0% 100%;                  /* #FFFFFF */
+    --card-foreground: 30 30% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 30% 12%;
+    --primary: 350 85% 44%;             /* #C8102E JM red */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 36 20% 92%;            /* warm light gray */
+    --secondary-foreground: 30 30% 12%;
+    --muted: 36 20% 92%;
+    --muted-foreground: 220 9% 46%;     /* #6B7280 */
+    --accent: 36 20% 88%;
+    --accent-foreground: 30 30% 12%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 45 93% 47%;
+    --warning-foreground: 26 83% 14%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --border: 36 18% 85%;              /* #E8E2D6 stone */
+    --input: 36 18% 85%;
+    --ring: 350 85% 44%;               /* focus ring matches JM red */
+    --radius: 0.5rem;
+
+    /* Extended public palette */
+    --pub-cream: 36 33% 93%;           /* #F5F0E8 section alternating bg */
+    --pub-stone: 36 18% 85%;           /* #E8E2D6 borders */
+    --pub-earth: 30 21% 44%;           /* #8B7355 tertiary text */
+    --pub-warm: 42 61% 58%;            /* #D4A853 gold accent (use sparingly) */
+    --pub-blue: 220 100% 32%;          /* #003DA5 JM blue */
+    --pub-ink: 30 30% 12%;             /* #2C2416 deepest text */
+  }
+
+  /* ============================================
+     Dark theme — dashboard / authenticated pages
+     Existing palette, unchanged
+     ============================================ */
+  .theme-dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 47% 15%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 47% 15%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --warning: 45 93% 47%;
+    --warning-foreground: 26 83% 14%;
+    --success: 142 76% 36%;
+    --success-foreground: 143 76% 97%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 94.1%;
+    --radius: 0.5rem;
+  }
+
+  /* Fallback: apply dark theme to root so existing pages
+     render correctly before theme class is set */
   :root {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -35,7 +106,24 @@
     border-color: hsl(var(--border));
   }
   body {
+    /* Background and color are set by .theme-light / .theme-dark on the
+       PageLayout wrapper, not here. This keeps the body neutral so the
+       theme class on the wrapper div controls everything. */
+    margin: 0;
+  }
+  .theme-light,
+  .theme-dark {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+  }
+}
+
+/* Typography utilities for public pages */
+@layer utilities {
+  .font-display {
+    font-family: 'Fraunces', serif;
+  }
+  .font-heading {
+    font-family: 'Outfit', sans-serif;
   }
 }

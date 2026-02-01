@@ -1,4 +1,6 @@
 import tailwindPlugin from "bun-plugin-tailwind";
+import { join } from "path";
+import { readdirSync, existsSync, mkdirSync, statSync } from "fs";
 
 const isDev = process.argv.includes("--dev");
 
@@ -39,6 +41,26 @@ if (!result.success) {
     console.error(log);
   }
   process.exit(1);
+}
+
+// Copy public/ files to dist/ (static assets not processed by bundler)
+const publicDir = join(process.cwd(), "public");
+if (existsSync(publicDir)) {
+  const distDir = join(process.cwd(), "dist");
+  async function copyDir(src: string, dest: string) {
+    if (!existsSync(dest)) mkdirSync(dest, { recursive: true });
+    for (const entry of readdirSync(src)) {
+      const srcPath = join(src, entry);
+      const destPath = join(dest, entry);
+      if (statSync(srcPath).isDirectory()) {
+        await copyDir(srcPath, destPath);
+      } else {
+        await Bun.write(destPath, Bun.file(srcPath));
+      }
+    }
+  }
+  await copyDir(publicDir, distDir);
+  console.log("  Copied public/ assets to dist/");
 }
 
 // Copy index.html to dist with updated script references

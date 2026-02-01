@@ -1,10 +1,11 @@
 import { useRef, useEffect, useState } from "react";
-import mapboxgl, { Map, LngLatLike, LngLat } from "mapbox-gl";
+import mapboxgl, { Map, LngLatLike, LngLat, Marker } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { storeLocations, CustomGeoJSON, StoreProperties } from "./StoreMapData";
-import { Point } from "geojson";
+import { storeLocations, CustomGeoJSON } from "./StoreMapData";
 import { cn } from "../utils/cn";
-import customMarkerImage from "../assets/map-marker-jersey-mikes.png";
+// Use absolute path from public/ — dynamic DOM elements can't resolve
+// Bun's relative asset paths (they resolve relative to page URL, not module)
+const customMarkerImage = "/map-marker-jersey-mikes.png";
 
 mapboxgl.accessToken =
   "pk.eyJ1Ijoid2Fnb25lcm1hbmFnZW1lbnQiLCJhIjoiY2x2aXA1MDJoMWtobjJqbjFqa2lxenhleCJ9.KxOTU9EAcV9lZKE5HBR03g";
@@ -14,93 +15,64 @@ export default function StoreMap() {
   const defaultzoom = 10;
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
+  const markersRef = useRef<Marker[]>([]);
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
-
-  const handleStyleLoad = () => {
-    if (map.current == null) return;
-
-    console.log("Style loaded, loading marker image:", customMarkerImage);
-
-    // Add the marker image to the map
-    map.current.loadImage(customMarkerImage, (error, image) => {
-      if (error) {
-        console.error("Failed to load custom marker image", error);
-        // Fallback: add layer with default marker
-        if (map.current) {
-          map.current.addLayer({
-            id: "store-locations",
-            type: "symbol",
-            source: {
-              type: "geojson",
-              data: storeLocations,
-            },
-            layout: {
-              "icon-image": "marker-15",
-              "icon-allow-overlap": true,
-              "icon-anchor": "bottom",
-            },
-          });
-          console.log("Store locations layer added with default marker");
-        }
-        return;
-      }
-      if (!map.current) return;
-      if (image) {
-        map.current.addImage("custom-marker", image);
-        console.log("Custom marker image added successfully");
-      }
-
-      // Add the layer after the image has been added
-      // Use inline source definition like the old code
-      map.current.addLayer({
-        id: "store-locations",
-        type: "symbol",
-        source: {
-          type: "geojson",
-          data: storeLocations,
-        },
-        layout: {
-          "icon-image": "custom-marker",
-          "icon-allow-overlap": true,
-          "icon-anchor": "bottom",
-        },
-      });
-      console.log("Store locations layer added");
-    });
-  };
 
   useEffect(() => {
     if (map.current || mapContainer.current == null) return;
 
-    console.log("Initializing map...");
-    try {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current!,
-        style: "mapbox://styles/mapbox/standard",
-        center: [mapcenter.lng, mapcenter.lat],
-        zoom: defaultzoom,
-        scrollZoom: false,
-        touchZoomRotate: true,
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current!,
+      style: "mapbox://styles/mapbox/light-v11",
+      center: [mapcenter.lng, mapcenter.lat],
+      zoom: defaultzoom,
+      scrollZoom: false,
+      touchZoomRotate: true,
+    });
+
+    map.current.on("load", () => {
+      if (!map.current) return;
+      map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+      // Add HTML markers for each store
+      const features = (storeLocations as CustomGeoJSON).features;
+      features.forEach((feature) => {
+        const el = document.createElement("div");
+        el.className = "store-marker";
+        el.style.cursor = "pointer";
+
+        const img = document.createElement("img");
+        img.src = customMarkerImage;
+        img.alt = `${feature.properties.store} location`;
+        img.style.width = "32px";
+        img.style.height = "auto";
+        el.appendChild(img);
+
+        const coords = feature.geometry.coordinates as [number, number];
+        const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
+          .setLngLat(coords)
+          .addTo(map.current!);
+
+        el.addEventListener("click", () => {
+          setSelectedStore((prev) => {
+            if (prev === feature.properties.store) {
+              map.current?.flyTo({ center: mapcenter, zoom: defaultzoom });
+              return null;
+            } else {
+              map.current?.flyTo({ center: coords, zoom: 15 });
+              return feature.properties.store;
+            }
+          });
+        });
+
+        markersRef.current.push(marker);
       });
+    });
 
-      console.log("Map created, waiting for style to load...");
-
-      // Wait for the style to load before adding the layer
-      map.current.on("style.load", handleStyleLoad);
-
-      // Add navigation control after map is ready
-      map.current.on("load", () => {
-        console.log("Map fully loaded");
-        if (map.current) {
-          map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
-        }
-      });
-    } catch (error) {
-      console.error("Error initializing map:", error);
-    }
     return () => {
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
       if (map.current) {
-        map.current.off("style.load", handleStyleLoad);
         map.current.remove();
         map.current = null;
       }
@@ -108,144 +80,102 @@ export default function StoreMap() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapContainer]);
 
-  useEffect(() => {
-    if (!map.current) return;
-    map.current.on<"click">("click", "store-locations", (e) => {
-      if (e.features) {
-        const featureGeometry = e.features[0].geometry as Point;
-        const storeProps = e.features[0].properties as StoreProperties;
-        const clickedStoreIndex = storeProps.store;
-        if (selectedStore === clickedStoreIndex) {
-          setSelectedStore(null);
-          map.current!.flyTo({ center: mapcenter, zoom: defaultzoom });
-        } else {
-          setSelectedStore(clickedStoreIndex);
-          if (
-            "coordinates" in featureGeometry &&
-            featureGeometry.coordinates.length >= 2
-          ) {
-            const coordinates: LngLatLike = [
-              featureGeometry.coordinates[0],
-              featureGeometry.coordinates[1],
-            ] as [number, number];
-
-            map.current!.flyTo({ center: coordinates, zoom: 15 });
-          }
-        }
-      }
-    });
-    map.current.on("mouseenter", "store-locations", () => {
-      map.current!.getCanvas().style.cursor = "pointer";
-    });
-
-    map.current.on("mouseleave", "store-locations", () => {
-      map.current!.getCanvas().style.cursor = "";
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStore]);
+  const handleCardClick = (storeName: string, coordinates: LngLatLike) => {
+    if (selectedStore === storeName) {
+      setSelectedStore(null);
+      map.current?.flyTo({ center: mapcenter, zoom: defaultzoom });
+    } else {
+      setSelectedStore(storeName);
+      map.current?.flyTo({ center: coordinates, zoom: 15 });
+    }
+  };
 
   return (
-    <div className="flex flex-col md:flex-row justify-center items-start w-full max-w-6xl mx-auto">
-      <div className="flex-1 pr-0 md:pr-4 overflow-y-auto">
-        <div className="flex flex-row md:flex-col justify-center items-start w-full flex-wrap">
+    <div className="flex flex-col md:flex-row justify-center items-start w-full max-w-6xl mx-auto gap-4">
+      <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-row md:flex-col justify-center items-start w-full flex-wrap gap-4">
           {(storeLocations as CustomGeoJSON).features.map((feature) => (
             <div
               key={feature.properties.store}
               className={cn(
-                "min-w-[200px] md:w-full mb-4 cursor-pointer p-2 rounded-lg border-2 ml-2",
+                "min-w-[200px] md:w-full cursor-pointer p-4 rounded-xl border transition-all",
                 selectedStore === feature.properties.store
-                  ? "bg-red-200 dark:bg-red-900 border-gray-500"
-                  : "bg-gray-100 dark:bg-gray-700 border-gray-500"
+                  ? "bg-[#C8102E]/10 border-[#C8102E] shadow-md"
+                  : "bg-white border-[hsl(var(--pub-stone))] shadow-sm hover:shadow-md hover:border-[#C8102E]/40"
               )}
               role="button"
               aria-label={`Store location: ${feature.properties.store} - ${feature.properties.address}, ${feature.properties.city}`}
               aria-pressed={selectedStore === feature.properties.store}
-              onClick={() => {
-                if (selectedStore === feature.properties.store) {
-                  setSelectedStore(null);
-                  map.current!.flyTo({
-                    center: mapcenter,
-                    zoom: defaultzoom,
-                  });
-                } else {
-                  setSelectedStore(feature.properties.store);
-                  const coordinates: LngLatLike =
-                    feature.geometry.coordinates;
-                  map.current!.flyTo({ center: coordinates, zoom: 15 });
-                }
-              }}
+              onClick={() => handleCardClick(feature.properties.store, feature.geometry.coordinates)}
               tabIndex={0}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  if (selectedStore === feature.properties.store) {
-                    setSelectedStore(null);
-                    map.current!.flyTo({
-                      center: mapcenter,
-                      zoom: defaultzoom,
-                    });
-                  } else {
-                    setSelectedStore(feature.properties.store);
-                    const coordinates: LngLatLike =
-                      feature.geometry.coordinates;
-                    map.current!.flyTo({ center: coordinates, zoom: 15 });
-                  }
+                  handleCardClick(feature.properties.store, feature.geometry.coordinates);
                 }
               }}
             >
-              <div className="text-md font-bold" aria-label="Store name">
+              <div className="font-heading text-base font-bold text-[hsl(var(--pub-ink))]">
                 Jersey Mike's Subs
               </div>
-              <div className="text-sm font-bold" aria-label="Store location">
+              <div className="font-heading text-sm font-semibold text-[hsl(var(--pub-ink))]">
                 {feature.properties.store}
               </div>
-              <div className="text-sm" aria-label="Store address">
+              <div className="text-sm text-muted-foreground mt-1">
                 {feature.properties.address}
               </div>
-              <div className="text-sm">
+              <div className="text-sm text-muted-foreground">
                 {feature.properties.city}, {feature.properties.state}{" "}
                 {feature.properties.postalCode}
               </div>
-              <div>
-                <a
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  href={
-                    "https://maps.apple.com/?q=q=Jersey%20Mike's%20Subs%20" +
-                    encodeURIComponent(
-                      [
-                        feature.properties.address,
-                        feature.properties.city,
-                        feature.properties.state,
-                        feature.properties.postalCode,
-                      ].join(" ")
-                    )
-                  }
-                  className="text-primary hover:underline"
-                >
-                  📍 Directions
-                </a>
+              <div className="text-sm text-muted-foreground mt-1">
+                Open daily {feature.properties.hours}
               </div>
-              <div>
-                <a
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  href={"tel:" + feature.properties.phone}
-                  className="text-primary hover:underline"
-                >
-                  📞 {feature.properties.phoneFormatted}
-                </a>
-              </div>
-              <div>
-                <a
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  href={feature.properties.url}
-                  aria-label={`Order online from ${feature.properties.store} location`}
-                  className="text-primary hover:underline"
-                >
-                  🛒 Order Now
-                </a>
+              <div className="mt-2 space-y-1">
+                <div>
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href={
+                      "https://maps.apple.com/?q=q=Jersey%20Mike's%20Subs%20" +
+                      encodeURIComponent(
+                        [
+                          feature.properties.address,
+                          feature.properties.city,
+                          feature.properties.state,
+                          feature.properties.postalCode,
+                        ].join(" ")
+                      )
+                    }
+                    className="text-sm text-[#C8102E] hover:text-[#9B0D23] hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    📍 Directions
+                  </a>
+                </div>
+                <div>
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href={"tel:" + feature.properties.phone}
+                    className="text-sm text-[hsl(var(--pub-earth))] hover:text-[hsl(var(--pub-ink))]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    📞 {feature.properties.phoneFormatted}
+                  </a>
+                </div>
+                <div>
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href={feature.properties.url}
+                    aria-label={`Order online from ${feature.properties.store} location`}
+                    className="text-sm text-[#C8102E] hover:text-[#9B0D23] hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    🛒 Order Now
+                  </a>
+                </div>
               </div>
             </div>
           ))}
@@ -253,7 +183,7 @@ export default function StoreMap() {
       </div>
       <div
         ref={mapContainer}
-        className="ml-2 md:ml-0 flex-1 md:flex-[3] min-h-[550px] md:min-h-[732px] min-w-[200px] w-[97%] rounded-lg border-2 border-gray-500"
+        className="flex-1 md:flex-[3] min-h-[550px] md:min-h-[732px] min-w-[200px] w-full rounded-xl border border-[hsl(var(--pub-stone))] shadow-sm"
         style={{ height: "100%" }}
       />
     </div>

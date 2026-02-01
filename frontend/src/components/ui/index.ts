@@ -25,3 +25,4 @@ export {
   FormDescription,
   FormMessage,
 } from "./form";
+export { ImagePlaceholder } from "./image-placeholder";
