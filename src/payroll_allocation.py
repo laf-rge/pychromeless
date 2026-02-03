@@ -55,6 +55,8 @@ PAYROLL_ACCOUNTS = {
     "dental_insurance": "5532",  # Payroll Expenses Labor:Employee Benefits:Dental Insurance
     "hsa": "5534",  # Payroll Expenses Labor:Employee Benefits:HSA
     "life_insurance": "5533",  # Payroll Expenses Labor:Employee Benefits:Life Insurance
+    "manager_wages": "5511",  # Payroll Expenses Labor:Manager Labor:Manager Wages
+    "manager_overtime": "5512",  # Payroll Expenses Labor:Manager Labor:Manager Overtime
     "travel_reimbursement": "6152",  # Expenses:Travel & Ent:Travel (source for reimbursements)
     "store_supplies": "6059",  # Expenses:Management Control:Supplies:Store Supplies (dest)
 }
@@ -93,6 +95,9 @@ class PayrollData:
     # New columns from enhanced Gusto report
     officer_wages: Decimal = field(default_factory=lambda: Decimal("0.00"))
     meal_period_violations: Decimal = field(default_factory=lambda: Decimal("0.00"))
+    # Manager labor split
+    manager_regular_earnings: Decimal = field(default_factory=lambda: Decimal("0.00"))
+    manager_overtime_earnings: Decimal = field(default_factory=lambda: Decimal("0.00"))
 
     def add(self, other: "PayrollData") -> None:
         """Add another PayrollData to this one."""
@@ -117,6 +122,8 @@ class PayrollData:
         self.hsa += other.hsa
         self.officer_wages += other.officer_wages
         self.meal_period_violations += other.meal_period_violations
+        self.manager_regular_earnings += other.manager_regular_earnings
+        self.manager_overtime_earnings += other.manager_overtime_earnings
 
 
 def get_journal_entries_by_pattern(pattern: str, max_results: int = 10) -> list[Any]:
@@ -218,17 +225,29 @@ def examine_labor_journal_entries(count: int = 3) -> list[dict[str, Any]]:
     return [journal_entry_to_dict(entry) for entry in entries]
 
 
-def parse_gusto_csv(csv_content: bytes) -> dict[str, PayrollData]:
+def parse_gusto_csv(
+    csv_content: bytes, manager_names: dict[str, str] | None = None
+) -> dict[str, PayrollData]:
     """
     Parse Gusto "Total By Location" CSV and aggregate by store.
 
     Args:
         csv_content: Raw CSV file content
+        manager_names: Optional mapping of store_id -> manager name for splitting
+                       manager vs crew wages. Case-insensitive matching.
 
     Returns:
         Dictionary mapping store ID to PayrollData
     """
     result: dict[str, PayrollData] = {}
+    # Track which configured managers were found in CSV (for warning on mismatch)
+    managers_found: set[str] = set()
+
+    # Build lowercase lookup for case-insensitive manager matching
+    manager_lookup: dict[str, str] = {}  # {lowercase_name: store_id}
+    if manager_names:
+        for store_id, name in manager_names.items():
+            manager_lookup[name.lower()] = store_id
 
     # Decode CSV content
     content = csv_content.decode("utf-8-sig")  # Handle BOM if present
@@ -319,7 +338,35 @@ def parse_gusto_csv(csv_content: bytes) -> dict[str, PayrollData]:
             ),
         )
 
+        # Check if this employee is the manager for their store
+        if manager_lookup:
+            employee_name = row.get("Employee", "").strip().lower()
+            if employee_name and employee_name in manager_lookup:
+                matched_store = manager_lookup[employee_name]
+                if matched_store == store_id:
+                    managers_found.add(matched_store)
+                    # Move regular + overtime to manager fields, zero out crew fields
+                    employee_data.manager_regular_earnings = (
+                        employee_data.regular_earnings
+                    )
+                    employee_data.manager_overtime_earnings = (
+                        employee_data.overtime_earnings
+                        + employee_data.double_overtime_earnings
+                    )
+                    employee_data.regular_earnings = Decimal("0.00")
+                    employee_data.overtime_earnings = Decimal("0.00")
+                    employee_data.double_overtime_earnings = Decimal("0.00")
+
         result[store_id].add(employee_data)
+
+    # Warn if configured managers were not found in CSV
+    if manager_names:
+        for store_id, name in manager_names.items():
+            if store_id not in managers_found:
+                logger.warning(
+                    "Configured manager not found in CSV",
+                    extra={"store_id": store_id, "manager_name": name},
+                )
 
     return result
 
@@ -495,6 +542,30 @@ def create_payroll_allocation_journal(
         store_refs,
     )
 
+    # 4a. Manager Wages (5511)
+    manager_wages_by_store = {
+        store: data.manager_regular_earnings
+        for store, data in payroll_by_store.items()
+    }
+    _add_account_lines(
+        lines,
+        PAYROLL_ACCOUNTS["manager_wages"],
+        manager_wages_by_store,
+        store_refs,
+    )
+
+    # 4b. Manager Overtime (5512)
+    manager_overtime_by_store = {
+        store: data.manager_overtime_earnings
+        for store, data in payroll_by_store.items()
+    }
+    _add_account_lines(
+        lines,
+        PAYROLL_ACCOUNTS["manager_overtime"],
+        manager_overtime_by_store,
+        store_refs,
+    )
+
     # 5. Vacation Pay (includes PTO and holiday)
     vacation_by_store = {
         store: data.pto_earnings + data.holiday_earnings
@@ -620,6 +691,7 @@ def process_payroll_allocation(
     month: int,
     gusto_csv_content: bytes,
     allow_update: bool = False,
+    manager_names: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """
     Process payroll allocation from Gusto CSV to QuickBooks journal entry.
@@ -632,6 +704,8 @@ def process_payroll_allocation(
         gusto_csv_content: Raw bytes of the Gusto CSV file
         allow_update: If True, allow updating an existing entry. If False (default),
                       return an error if the entry already exists.
+        manager_names: Optional mapping of store_id -> manager name for splitting
+                       manager vs crew wages into separate accounts (5511/5512).
 
     Returns:
         Dictionary with results:
@@ -656,7 +730,7 @@ def process_payroll_allocation(
 
     try:
         # Parse Gusto CSV
-        payroll_by_store = parse_gusto_csv(gusto_csv_content)
+        payroll_by_store = parse_gusto_csv(gusto_csv_content, manager_names=manager_names)
 
         if not payroll_by_store:
             logger.warning(

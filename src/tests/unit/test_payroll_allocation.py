@@ -58,6 +58,8 @@ class TestPayrollData(unittest.TestCase):
         self.assertEqual(data.regular_earnings, Decimal("0.00"))
         self.assertEqual(data.overtime_earnings, Decimal("0.00"))
         self.assertEqual(data.reimbursements, Decimal("0.00"))
+        self.assertEqual(data.manager_regular_earnings, Decimal("0.00"))
+        self.assertEqual(data.manager_overtime_earnings, Decimal("0.00"))
 
     def test_payroll_data_add(self) -> None:
         """Test adding two PayrollData instances."""
@@ -80,6 +82,22 @@ class TestPayrollData(unittest.TestCase):
         self.assertEqual(data1.employer_taxes, Decimal("150.00"))
         self.assertEqual(data1.regular_earnings, Decimal("1300.00"))
         self.assertEqual(data1.overtime_earnings, Decimal("200.00"))
+
+    def test_payroll_data_add_manager_fields(self) -> None:
+        """Test that add() accumulates manager fields."""
+        data1 = PayrollData(
+            manager_regular_earnings=Decimal("3000.00"),
+            manager_overtime_earnings=Decimal("200.00"),
+        )
+        data2 = PayrollData(
+            manager_regular_earnings=Decimal("1500.00"),
+            manager_overtime_earnings=Decimal("100.00"),
+        )
+
+        data1.add(data2)
+
+        self.assertEqual(data1.manager_regular_earnings, Decimal("4500.00"))
+        self.assertEqual(data1.manager_overtime_earnings, Decimal("300.00"))
 
 
 class TestStoreMapping(unittest.TestCase):
@@ -122,9 +140,16 @@ class TestPayrollAccounts(unittest.TestCase):
             "dental_insurance",
             "hsa",
             "life_insurance",
+            "manager_wages",
+            "manager_overtime",
         ]
         for key in expected_keys:
             self.assertIn(key, PAYROLL_ACCOUNTS)
+
+    def test_manager_account_numbers(self) -> None:
+        """Test that manager accounts map to correct QBO account numbers."""
+        self.assertEqual(PAYROLL_ACCOUNTS["manager_wages"], "5511")
+        self.assertEqual(PAYROLL_ACCOUNTS["manager_overtime"], "5512")
 
     def test_payroll_accounts_are_strings(self) -> None:
         """Test that all account numbers are strings."""
@@ -216,6 +241,159 @@ Nov 15 - 30,94954,1000.00,100.00,,,,,,,,
         self.assertIn("20395", result)
         self.assertEqual(result["20395"].gross_earnings, Decimal("1000.00"))
         self.assertEqual(result["20395"].regular_earnings, Decimal("0.00"))
+
+
+class TestManagerSplitting(unittest.TestCase):
+    """Tests for manager vs crew labor splitting in parse_gusto_csv."""
+
+    def _csv_with_employee(
+        self, employee: str, zip_code: str, regular: str, overtime: str,
+        double_ot: str = "0.00", gross: str = "0.00", taxes: str = "0.00",
+        sick: str = "0.00",
+    ) -> bytes:
+        """Helper to build a CSV row with Employee column."""
+        header = (
+            "Payroll,Employee,Work address (zip),Gross earnings,"
+            "Total employer taxes,Regular earnings,Overtime earnings,"
+            "Double overtime earnings,Paid time off earnings,"
+            "Sick time off earnings,Total reimbursements,Officer Wages,"
+            "Meal Period Violations"
+        )
+        row = (
+            f"Nov 15 - 30,{employee},{zip_code},{gross},{taxes},"
+            f"{regular},{overtime},{double_ot},0.00,{sick},0.00,0.00,0.00"
+        )
+        return (header + "\n" + row + "\n").encode("utf-8")
+
+    def _multi_row_csv(self, rows: list[tuple[str, str, str, str, str, str, str]]) -> bytes:
+        """Helper to build multi-row CSV. Each row: (employee, zip, gross, taxes, regular, ot, double_ot)."""
+        header = (
+            "Payroll,Employee,Work address (zip),Gross earnings,"
+            "Total employer taxes,Regular earnings,Overtime earnings,"
+            "Double overtime earnings,Paid time off earnings,"
+            "Sick time off earnings,Total reimbursements,Officer Wages,"
+            "Meal Period Violations"
+        )
+        lines = [header]
+        for emp, z, g, t, r, o, do in rows:
+            lines.append(f"Nov 15 - 30,{emp},{z},{g},{t},{r},{o},{do},0.00,0.00,0.00,0.00,0.00")
+        return ("\n".join(lines) + "\n").encode("utf-8")
+
+    def test_manager_wages_split_to_manager_fields(self) -> None:
+        """Test that a manager's regular + OT go to manager fields."""
+        csv = self._csv_with_employee(
+            "Melissa Martin", "95407", regular="3000.00", overtime="200.00",
+            gross="3200.00", taxes="300.00",
+        )
+        manager_names = {"20358": "Melissa Martin"}
+        result = parse_gusto_csv(csv, manager_names=manager_names)
+
+        data = result["20358"]
+        self.assertEqual(data.manager_regular_earnings, Decimal("3000.00"))
+        self.assertEqual(data.manager_overtime_earnings, Decimal("200.00"))
+        # Crew fields should be zero
+        self.assertEqual(data.regular_earnings, Decimal("0.00"))
+        self.assertEqual(data.overtime_earnings, Decimal("0.00"))
+
+    def test_manager_double_overtime_combined(self) -> None:
+        """Test that double OT is combined with OT in manager_overtime_earnings."""
+        csv = self._csv_with_employee(
+            "Brandon Aguirre", "94954", regular="2500.00", overtime="150.00",
+            double_ot="50.00", gross="2700.00", taxes="250.00",
+        )
+        manager_names = {"20395": "Brandon Aguirre"}
+        result = parse_gusto_csv(csv, manager_names=manager_names)
+
+        data = result["20395"]
+        self.assertEqual(data.manager_overtime_earnings, Decimal("200.00"))  # 150 + 50
+        self.assertEqual(data.double_overtime_earnings, Decimal("0.00"))
+
+    def test_manager_case_insensitive_matching(self) -> None:
+        """Test that manager matching is case-insensitive."""
+        csv = self._csv_with_employee(
+            "vanessa canon", "94931", regular="2800.00", overtime="100.00",
+            gross="2900.00", taxes="280.00",
+        )
+        # Config has different case
+        manager_names = {"20407": "Vanessa Canon"}
+        result = parse_gusto_csv(csv, manager_names=manager_names)
+
+        data = result["20407"]
+        self.assertEqual(data.manager_regular_earnings, Decimal("2800.00"))
+        self.assertEqual(data.regular_earnings, Decimal("0.00"))
+
+    def test_crew_unaffected_when_manager_configured(self) -> None:
+        """Test that non-manager employees stay in crew fields."""
+        csv = self._multi_row_csv([
+            ("Melissa Martin", "95407", "3200.00", "300.00", "3000.00", "200.00", "0.00"),
+            ("John Doe", "95407", "1500.00", "150.00", "1400.00", "100.00", "0.00"),
+        ])
+        manager_names = {"20358": "Melissa Martin"}
+        result = parse_gusto_csv(csv, manager_names=manager_names)
+
+        data = result["20358"]
+        # Manager goes to manager fields
+        self.assertEqual(data.manager_regular_earnings, Decimal("3000.00"))
+        self.assertEqual(data.manager_overtime_earnings, Decimal("200.00"))
+        # Crew goes to regular fields
+        self.assertEqual(data.regular_earnings, Decimal("1400.00"))
+        self.assertEqual(data.overtime_earnings, Decimal("100.00"))
+
+    def test_backward_compat_no_manager_names(self) -> None:
+        """Test that omitting manager_names preserves existing behavior."""
+        csv = self._csv_with_employee(
+            "Melissa Martin", "95407", regular="3000.00", overtime="200.00",
+            gross="3200.00", taxes="300.00",
+        )
+        # No manager_names passed
+        result = parse_gusto_csv(csv)
+
+        data = result["20358"]
+        self.assertEqual(data.regular_earnings, Decimal("3000.00"))
+        self.assertEqual(data.overtime_earnings, Decimal("200.00"))
+        self.assertEqual(data.manager_regular_earnings, Decimal("0.00"))
+        self.assertEqual(data.manager_overtime_earnings, Decimal("0.00"))
+
+    def test_backward_compat_no_employee_column(self) -> None:
+        """Test that CSVs without Employee column work (backward compat)."""
+        csv_content = b"""Payroll,Work address (zip),Gross earnings,Total employer taxes,Regular earnings,Overtime earnings,Double overtime earnings,Paid time off earnings,Sick time off earnings,Total reimbursements,Officer Wages,Meal Period Violations
+Nov 15 - 30,94954,1000.00,100.00,900.00,100.00,0.00,0.00,0.00,0.00,0.00,0.00
+"""
+        manager_names = {"20395": "Brandon Aguirre"}
+        result = parse_gusto_csv(csv_content, manager_names=manager_names)
+
+        data = result["20395"]
+        # No Employee column, so everything stays in crew fields
+        self.assertEqual(data.regular_earnings, Decimal("900.00"))
+        self.assertEqual(data.manager_regular_earnings, Decimal("0.00"))
+
+    def test_manager_sick_stays_shared(self) -> None:
+        """Test that manager's sick pay stays in shared (crew) fields."""
+        csv = self._csv_with_employee(
+            "Melissa Martin", "95407", regular="3000.00", overtime="0.00",
+            gross="3100.00", taxes="300.00", sick="100.00",
+        )
+        manager_names = {"20358": "Melissa Martin"}
+        result = parse_gusto_csv(csv, manager_names=manager_names)
+
+        data = result["20358"]
+        # Sick stays in shared field
+        self.assertEqual(data.sick_earnings, Decimal("100.00"))
+        # Wages split to manager
+        self.assertEqual(data.manager_regular_earnings, Decimal("3000.00"))
+
+    def test_warning_when_manager_not_found(self) -> None:
+        """Test that a warning is logged when configured manager not found in CSV."""
+        csv_content = b"""Payroll,Employee,Work address (zip),Gross earnings,Total employer taxes,Regular earnings,Overtime earnings,Double overtime earnings,Paid time off earnings,Sick time off earnings,Total reimbursements,Officer Wages,Meal Period Violations
+Nov 15 - 30,John Doe,95407,1500.00,150.00,1400.00,100.00,0.00,0.00,0.00,0.00,0.00,0.00
+"""
+        manager_names = {"20358": "Melissa Martin"}
+        with patch("payroll_allocation.logger") as mock_logger:
+            parse_gusto_csv(csv_content, manager_names=manager_names)
+            mock_logger.warning.assert_any_call(
+                "Configured manager not found in CSV",
+                extra={"store_id": "20358", "manager_name": "Melissa Martin"},
+            )
 
 
 class TestCreatePayrollAllocationJournal(unittest.TestCase):
@@ -392,6 +570,61 @@ class TestCreatePayrollAllocationJournal(unittest.TestCase):
 
         self.assertIn("999", url)
         mock_existing.save.assert_called_once()
+
+
+    @patch("payroll_allocation.refresh_session")
+    @patch("payroll_allocation.qb")
+    @patch("payroll_allocation.get_store_refs")
+    @patch("payroll_allocation.get_journal_entry_by_doc_number")
+    @patch("payroll_allocation.wmc_account_ref")
+    def test_create_journal_entry_with_manager_lines(
+        self,
+        mock_account_ref: MagicMock,
+        mock_get_entry: MagicMock,
+        mock_store_refs: MagicMock,
+        mock_qb: MagicMock,
+        mock_refresh: MagicMock,
+    ) -> None:
+        """Test that manager fields generate 5511/5512 journal lines."""
+        from payroll_allocation import create_payroll_allocation_journal
+
+        mock_get_entry.return_value = None
+        mock_store_refs.return_value = {
+            "WMC": MagicMock(),
+            "20358": MagicMock(),
+            "20395": MagicMock(),
+            "20400": MagicMock(),
+            "20407": MagicMock(),
+        }
+        mock_account_ref.return_value = MagicMock()
+
+        mock_entry = MagicMock()
+        mock_entry.Id = "456"
+
+        with patch("payroll_allocation.JournalEntry") as MockJournalEntry:
+            MockJournalEntry.return_value = mock_entry
+
+            payroll_data = {
+                "20358": PayrollData(
+                    gross_earnings=Decimal("5000.00"),
+                    employer_taxes=Decimal("500.00"),
+                    regular_earnings=Decimal("1500.00"),
+                    overtime_earnings=Decimal("100.00"),
+                    manager_regular_earnings=Decimal("3000.00"),
+                    manager_overtime_earnings=Decimal("400.00"),
+                ),
+            }
+
+            url, warnings = create_payroll_allocation_journal(2025, 12, payroll_data)
+
+            self.assertIn("456", url)
+            mock_entry.save.assert_called_once()
+            # Verify wmc_account_ref was called with manager account numbers
+            account_nums_called = [
+                call.args[0] for call in mock_account_ref.call_args_list
+            ]
+            self.assertIn("5511", account_nums_called)
+            self.assertIn("5512", account_nums_called)
 
 
 class TestProcessPayrollAllocation(unittest.TestCase):

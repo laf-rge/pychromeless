@@ -112,6 +112,15 @@ class StoreConfig:
             # On or after second Tuesday, process current month
             return (processing_date.year, processing_date.month)
 
+    def get_manager_names_by_store(self) -> dict[str, str]:
+        """Returns {store_id: manager_name} for stores with a manager configured."""
+        result: dict[str, str] = {}
+        for store_id, config in self._store_config.items():
+            manager_name = config.get("manager_name")
+            if manager_name:
+                result[store_id] = manager_name
+        return result
+
     @property
     def all_stores(self) -> list[str]:
         """Get list of all store IDs."""

@@ -86,6 +86,7 @@ variable "store_config" {
     open_date     = string
     ubereats_uuid = string
     close_date    = optional(string)
+    manager_name  = optional(string)
   }))
 }
 

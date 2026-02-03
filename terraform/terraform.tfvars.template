@@ -15,11 +15,14 @@ store_config = {
     # close_date = "YYYY-MM-DD"
     # ubereats uses a group uuid
     ubereats_uuid = "YOUR_UBEREATS_UUID"
+    # manager_name is optional, used for splitting manager vs crew labor in payroll
+    # manager_name = "First Last"
   }
   "STORE_ID_2" = {
     name = "Jersey Mike's Subs - Location 2"
     open_date = "YYYY-MM-DD"
     ubereats_uuid = "YOUR_UBEREATS_UUID"
+    # manager_name = "First Last"
   }
   # Add more stores as needed
 }

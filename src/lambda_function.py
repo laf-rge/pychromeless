@@ -1417,9 +1417,13 @@ def payroll_allocation_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
             )
             return create_response(400, {"message": "CSV file is required"})
 
+        # Get manager names from store config for manager/crew labor splitting
+        manager_names = store_config.get_manager_names_by_store()
+
         # Process payroll allocation
         result = process_payroll_allocation(
-            year, month, csv_content, allow_update=allow_update
+            year, month, csv_content, allow_update=allow_update,
+            manager_names=manager_names,
         )
 
         if result.get("success"):
