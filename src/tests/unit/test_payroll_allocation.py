@@ -36,6 +36,7 @@ from payroll_allocation import (
     STORE_ADDRESS_MAP,
     STORE_ORDER,
     PayrollData,
+    _add_account_lines,
     parse_gusto_csv,
 )
 
@@ -625,6 +626,78 @@ class TestCreatePayrollAllocationJournal(unittest.TestCase):
             ]
             self.assertIn("5511", account_nums_called)
             self.assertIn("5512", account_nums_called)
+
+
+class TestAddAccountLines(unittest.TestCase):
+    """Tests for _add_account_lines credit/debit structure."""
+
+    def setUp(self) -> None:
+        self.store_refs = {
+            "WMC": MagicMock(),
+            "20358": MagicMock(),
+            "20395": MagicMock(),
+            "20400": MagicMock(),
+            "20407": MagicMock(),
+        }
+
+    @patch("payroll_allocation.JournalEntryLineDetail", side_effect=lambda: MagicMock())
+    @patch("payroll_allocation.JournalEntryLine", side_effect=lambda: MagicMock())
+    @patch("payroll_allocation.wmc_account_ref")
+    def test_skip_credit_produces_debit_only_lines(
+        self, mock_ref: MagicMock, _mock_line: MagicMock, _mock_detail: MagicMock,
+    ) -> None:
+        """Test that skip_credit=True produces no Credit line."""
+        mock_ref.return_value = MagicMock()
+        lines: list = []
+        store_amounts = {"20358": Decimal("3000.00"), "20395": Decimal("2000.00")}
+        _add_account_lines(lines, "5511", store_amounts, self.store_refs, skip_credit=True)
+
+        posting_types = [
+            line.JournalEntryLineDetail.PostingType for line in lines
+        ]
+        self.assertNotIn("Credit", posting_types)
+        self.assertTrue(all(p == "Debit" for p in posting_types))
+
+    @patch("payroll_allocation.JournalEntryLineDetail", side_effect=lambda: MagicMock())
+    @patch("payroll_allocation.JournalEntryLine", side_effect=lambda: MagicMock())
+    @patch("payroll_allocation.wmc_account_ref")
+    def test_credit_total_overrides_computed_credit(
+        self, mock_ref: MagicMock, _mock_line: MagicMock, _mock_detail: MagicMock,
+    ) -> None:
+        """Test that credit_total overrides the auto-computed sum."""
+        mock_ref.return_value = MagicMock()
+        lines: list = []
+        store_amounts = {"20358": Decimal("1500.00")}
+        _add_account_lines(
+            lines, "5502", store_amounts, self.store_refs,
+            credit_total=Decimal("4500.00"),
+        )
+
+        credit_lines = [
+            line for line in lines
+            if line.JournalEntryLineDetail.PostingType == "Credit"
+        ]
+        self.assertEqual(len(credit_lines), 1)
+        self.assertEqual(credit_lines[0].Amount, Decimal("4500.00"))
+
+    @patch("payroll_allocation.JournalEntryLineDetail", side_effect=lambda: MagicMock())
+    @patch("payroll_allocation.JournalEntryLine", side_effect=lambda: MagicMock())
+    @patch("payroll_allocation.wmc_account_ref")
+    def test_default_credit_equals_debit_sum(
+        self, mock_ref: MagicMock, _mock_line: MagicMock, _mock_detail: MagicMock,
+    ) -> None:
+        """Test that without overrides, credit equals sum of store amounts."""
+        mock_ref.return_value = MagicMock()
+        lines: list = []
+        store_amounts = {"20358": Decimal("1000.00"), "20395": Decimal("2000.00")}
+        _add_account_lines(lines, "5502", store_amounts, self.store_refs)
+
+        credit_lines = [
+            line for line in lines
+            if line.JournalEntryLineDetail.PostingType == "Credit"
+        ]
+        self.assertEqual(len(credit_lines), 1)
+        self.assertEqual(credit_lines[0].Amount, Decimal("3000.00"))
 
 
 class TestProcessPayrollAllocation(unittest.TestCase):

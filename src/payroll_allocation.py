@@ -376,6 +376,8 @@ def _add_account_lines(
     account_num: str,
     store_amounts: dict[str, Decimal],
     store_refs: dict[str, Any],
+    credit_total: Decimal | None = None,
+    skip_credit: bool = False,
 ) -> None:
     """
     Add journal entry lines for a single account.
@@ -388,20 +390,27 @@ def _add_account_lines(
         account_num: The AcctNum for the account
         store_amounts: Dictionary mapping store ID to amount
         store_refs: Dictionary mapping store name to DepartmentRef
+        credit_total: Override the credit amount (e.g. when the source account
+                      in Gusto includes amounts that will be debited to a
+                      different account, like manager wages split from 5502).
+        skip_credit: If True, only add Debit lines (credit already handled
+                     by another account's credit line).
     """
     # Calculate total
     total = sum(store_amounts.values())
     if total == Decimal("0.00"):
         return
 
-    # Add Credit line for NOT SPECIFIED (total)
-    credit_line = JournalEntryLine()
-    credit_line.JournalEntryLineDetail = JournalEntryLineDetail()
-    credit_line.JournalEntryLineDetail.AccountRef = wmc_account_ref(account_num)
-    credit_line.JournalEntryLineDetail.PostingType = "Credit"
-    credit_line.JournalEntryLineDetail.DepartmentRef = None  # NOT SPECIFIED
-    credit_line.Amount = total.quantize(TWO_PLACES)
-    lines.append(credit_line)
+    if not skip_credit:
+        effective_credit = credit_total if credit_total is not None else total
+        # Add Credit line for NOT SPECIFIED (total)
+        credit_line = JournalEntryLine()
+        credit_line.JournalEntryLineDetail = JournalEntryLineDetail()
+        credit_line.JournalEntryLineDetail.AccountRef = wmc_account_ref(account_num)
+        credit_line.JournalEntryLineDetail.PostingType = "Credit"
+        credit_line.JournalEntryLineDetail.DepartmentRef = None  # NOT SPECIFIED
+        credit_line.Amount = effective_credit.quantize(TWO_PLACES)
+        lines.append(credit_line)
 
     # Add Debit lines for each store (in order)
     for store_id in STORE_ORDER:
@@ -520,50 +529,59 @@ def create_payroll_allocation_journal(
     )
 
     # 3. Hourly Wages - all stores
+    # Credit must include manager wages because Gusto posts ALL wages to 5502.
+    # Manager portions are debited to 5511 per store (step 4a) with no separate credit.
     wages_by_store = {
         store: data.regular_earnings for store, data in payroll_by_store.items()
     }
+    manager_wages_by_store = {
+        store: data.manager_regular_earnings
+        for store, data in payroll_by_store.items()
+    }
+    wages_credit = sum(wages_by_store.values()) + sum(manager_wages_by_store.values())
     _add_account_lines(
         lines,
         PAYROLL_ACCOUNTS["wages"],
         wages_by_store,
         store_refs,
+        credit_total=wages_credit,
     )
 
     # 4. Overtime - all stores
+    # Credit must include manager OT because Gusto posts ALL OT to 5504.
     overtime_by_store = {
         store: data.overtime_earnings + data.double_overtime_earnings
         for store, data in payroll_by_store.items()
     }
+    manager_overtime_by_store = {
+        store: data.manager_overtime_earnings
+        for store, data in payroll_by_store.items()
+    }
+    ot_credit = sum(overtime_by_store.values()) + sum(manager_overtime_by_store.values())
     _add_account_lines(
         lines,
         PAYROLL_ACCOUNTS["overtime"],
         overtime_by_store,
         store_refs,
+        credit_total=ot_credit,
     )
 
-    # 4a. Manager Wages (5511)
-    manager_wages_by_store = {
-        store: data.manager_regular_earnings
-        for store, data in payroll_by_store.items()
-    }
+    # 4a. Manager Wages (5511) - debit only, credit already included in 5502 above
     _add_account_lines(
         lines,
         PAYROLL_ACCOUNTS["manager_wages"],
         manager_wages_by_store,
         store_refs,
+        skip_credit=True,
     )
 
-    # 4b. Manager Overtime (5512)
-    manager_overtime_by_store = {
-        store: data.manager_overtime_earnings
-        for store, data in payroll_by_store.items()
-    }
+    # 4b. Manager Overtime (5512) - debit only, credit already included in 5504 above
     _add_account_lines(
         lines,
         PAYROLL_ACCOUNTS["manager_overtime"],
         manager_overtime_by_store,
         store_refs,
+        skip_credit=True,
     )
 
     # 5. Vacation Pay (includes PTO and holiday)
