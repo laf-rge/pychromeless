@@ -277,6 +277,31 @@ resource "aws_lambda_function" "task_status" {
   }
 }
 
+# QuickBooks MCP server (Node.js, zip-based)
+resource "aws_lambda_function" "qb_mcp" {
+  function_name = "qb-mcp-${terraform.workspace}"
+  description   = "[${terraform.workspace}] QuickBooks MCP server (Streamable HTTP)"
+
+  role        = aws_iam_role.flexepos_lambda_role.arn
+  filename    = "../deploy/qb-mcp.zip"
+  handler     = "handler.handler"
+  runtime     = "nodejs20.x"
+  timeout     = 60
+  memory_size = 512
+
+  source_code_hash = filebase64sha256("../deploy/qb-mcp.zip")
+
+  environment {
+    variables = local.lambda_env_qb_mcp
+  }
+
+  tags = local.common_tags
+  logging_config {
+    application_log_level = local.common_logging.application_log_level
+    log_format            = local.common_logging.log_format
+  }
+}
+
 resource "aws_lambda_permission" "apigw" {
   for_each      = aws_lambda_function.functions
   statement_id  = "AllowAPIGatewayInvoke"
@@ -299,6 +324,15 @@ resource "aws_lambda_permission" "apigw_task_status" {
   statement_id  = "AllowAPIGatewayInvoke-task-status"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.task_status.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.josiah.execution_arn}/*/*"
+}
+
+# Add API Gateway permission for the QuickBooks MCP function
+resource "aws_lambda_permission" "apigw_qb_mcp" {
+  statement_id  = "AllowAPIGatewayInvoke-qb-mcp"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.qb_mcp.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.josiah.execution_arn}/*/*"
 }

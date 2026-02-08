@@ -109,8 +109,16 @@ task_status: install_lambda_deps
 		zip -r ../deploy/task_status.zip * && \
 		rm task_status.py logging_utils.py
 
+# QuickBooks MCP server (Node.js Lambda)
+QUICKBOOKS_MCP_DIR ?= ../quickbooks-mcp
+qb-mcp:
+	cd $(QUICKBOOKS_MCP_DIR) && npm run build:lambda
+	mkdir -p deploy
+	cp $(QUICKBOOKS_MCP_DIR)/dist-lambda/handler.mjs deploy/
+	cd deploy && zip -j qb-mcp.zip handler.mjs && rm handler.mjs
+
 # Build all Lambda packages
-build-lambda: websocket validate_token task_status
+build-lambda: websocket validate_token task_status qb-mcp
 
 # Frontend targets
 frontend-install: check-prerequisites

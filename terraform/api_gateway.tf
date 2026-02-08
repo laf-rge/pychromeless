@@ -594,7 +594,9 @@ resource "aws_api_gateway_deployment" "josiah" {
     aws_api_gateway_integration.lambda_qb_connection_status,
     aws_api_gateway_integration.integration_qb_connection_status_OPTIONS,
     aws_api_gateway_integration.lambda_unlinked_deposits,
-    aws_api_gateway_integration.integration_unlinked_deposits_OPTIONS
+    aws_api_gateway_integration.integration_unlinked_deposits_OPTIONS,
+    aws_api_gateway_integration.lambda_qb_mcp,
+    aws_api_gateway_integration.integration_qb_mcp_OPTIONS
   ]
 
   rest_api_id = aws_api_gateway_rest_api.josiah.id
@@ -647,6 +649,10 @@ resource "aws_api_gateway_deployment" "josiah" {
       unlinked_deposits_method             = aws_api_gateway_method.proxy_unlinked_deposits.id
       unlinked_deposits_response           = aws_api_gateway_method_response.unlinked_deposits_method_response_200.id
       unlinked_deposits_options            = aws_api_gateway_integration.integration_unlinked_deposits_OPTIONS.id
+      qb_mcp_integration                   = aws_api_gateway_integration.lambda_qb_mcp.id
+      qb_mcp_method                        = aws_api_gateway_method.proxy_qb_mcp.id
+      qb_mcp_response                      = aws_api_gateway_method_response.qb_mcp_method_response_200.id
+      qb_mcp_options                       = aws_api_gateway_integration.integration_qb_mcp_OPTIONS.id
     }))
   }
 
@@ -1761,5 +1767,101 @@ resource "aws_api_gateway_integration_response" "unlinked_deposits_options-200" 
   depends_on = [
     aws_api_gateway_integration.integration_unlinked_deposits_OPTIONS,
     aws_api_gateway_method_response.unlinked_deposits_method_response_options
+  ]
+}
+
+# =============================================================================
+# QuickBooks MCP Server Endpoint
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# /qb/mcp - QuickBooks MCP server (Streamable HTTP, authenticated)
+# -----------------------------------------------------------------------------
+resource "aws_api_gateway_resource" "qb_mcp_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_resource.qb_resource.id
+  path_part   = "mcp"
+}
+
+resource "aws_api_gateway_method" "proxy_qb_mcp" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.qb_mcp_resource.id
+  http_method   = "POST"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+}
+
+resource "aws_api_gateway_integration" "lambda_qb_mcp" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_method.proxy_qb_mcp.resource_id
+  http_method = aws_api_gateway_method.proxy_qb_mcp.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.qb_mcp.invoke_arn
+  timeout_milliseconds    = 29000
+}
+
+resource "aws_api_gateway_method_response" "qb_mcp_method_response_200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.qb_mcp_resource.id
+  http_method = aws_api_gateway_method.proxy_qb_mcp.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+resource "aws_api_gateway_method" "method_qb_mcp_options" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.qb_mcp_resource.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "integration_qb_mcp_OPTIONS" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.qb_mcp_resource.id
+  http_method = aws_api_gateway_method.method_qb_mcp_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+
+  depends_on = [
+    aws_api_gateway_method.method_qb_mcp_options
+  ]
+}
+
+resource "aws_api_gateway_method_response" "qb_mcp_method_response_options" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.qb_mcp_resource.id
+  http_method = aws_api_gateway_method.method_qb_mcp_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "qb_mcp_options-200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.qb_mcp_resource.id
+  http_method = aws_api_gateway_method.method_qb_mcp_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.integration_qb_mcp_OPTIONS,
+    aws_api_gateway_method_response.qb_mcp_method_response_options
   ]
 }

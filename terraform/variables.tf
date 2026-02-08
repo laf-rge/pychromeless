@@ -141,6 +141,12 @@ locals {
   }
   qb_connection_status = { prod = local.base_env_config }
   unlinked_deposits    = { prod = local.base_env_config }
+  qb_mcp = {
+    prod = {
+      QBO_CREDENTIAL_MODE = "aws"
+      QBO_SECRET_NAME     = "prod/qbo"
+    }
+  }
   timeout_detector = {
     prod = merge(local.base_env_config, {
       OPERATION_TIMEOUTS = jsonencode(local.operation_timeouts)
@@ -171,6 +177,7 @@ locals {
   lambda_env_qb_connection_status     = local.qb_connection_status[terraform.workspace]
   lambda_env_unlinked_deposits        = local.unlinked_deposits[terraform.workspace]
   lambda_env_timeout_detector         = local.timeout_detector[terraform.workspace]
+  lambda_env_qb_mcp                   = local.qb_mcp[terraform.workspace]
   lambda_env_websocket = {
     CONNECTIONS_TABLE  = aws_dynamodb_table.websocket_connections.name
     WEBSOCKET_ENDPOINT = replace(aws_apigatewayv2_stage.websocket.invoke_url, "wss://", "https://")
