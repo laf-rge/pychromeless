@@ -385,11 +385,8 @@ class Flexepos:
             if gift_cards_sold_text:
                 gift_cards_sold = gift_cards_sold_text.split(":")
                 if len(gift_cards_sold) >= 2:
-                    # Remove any leading characters (like bullet points) from label
-                    label = gift_cards_sold[0].strip()
-                    if len(label) > 2 and label[:2] in ["• ", "  "]:
-                        label = label[2:]
-                    sales_data[store][label] = gift_cards_sold[1].strip()
+                    value = gift_cards_sold[1].strip().lstrip("$")
+                    sales_data[store]["Gift Cards Sold"] = value
                 else:
                     logger.warning(
                         "Unexpected format for 'Gift Cards Sold' text: %s",
@@ -407,11 +404,8 @@ class Flexepos:
             if register_audit_text:
                 register_audit = register_audit_text.split(":")
                 if len(register_audit) >= 2:
-                    # Remove any leading characters (like bullet points) from label
-                    label = register_audit[0].strip()
-                    if len(label) > 2 and label[:2] in ["• ", "  "]:
-                        label = label[2:]
-                    sales_data[store][label] = register_audit[1].strip()
+                    value = register_audit[1].strip().lstrip("$")
+                    sales_data[store]["Register Audit"] = value
                 else:
                     logger.warning(
                         "Unexpected format for 'Register Audit' text: %s",
