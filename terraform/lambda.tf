@@ -285,7 +285,7 @@ resource "aws_lambda_function" "qb_mcp" {
   role        = aws_iam_role.flexepos_lambda_role.arn
   filename    = "../deploy/qb-mcp.zip"
   handler     = "handler.handler"
-  runtime     = "nodejs20.x"
+  runtime     = "nodejs22.x"
   timeout     = 60
   memory_size = 512
 
