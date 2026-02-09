@@ -56,7 +56,7 @@ resource "aws_api_gateway_integration" "lambda_root" {
     "integration.request.querystring.store"            = "method.request.querystring.store"
   }
   request_templates = {
-    "application/json" = <<-EOT
+    "application/json"    = <<-EOT
                 {
                 "year": "$input.params('year')",
                 "month": "$input.params('month')",
@@ -596,7 +596,12 @@ resource "aws_api_gateway_deployment" "josiah" {
     aws_api_gateway_integration.lambda_unlinked_deposits,
     aws_api_gateway_integration.integration_unlinked_deposits_OPTIONS,
     aws_api_gateway_integration.lambda_qb_mcp,
-    aws_api_gateway_integration.integration_qb_mcp_OPTIONS
+    aws_api_gateway_integration.lambda_get_qb_mcp,
+    aws_api_gateway_integration.integration_qb_mcp_OPTIONS,
+    aws_api_gateway_integration.lambda_authorize,
+    aws_api_gateway_integration.lambda_token,
+    aws_api_gateway_integration.token_options_integration,
+    aws_api_gateway_integration.lambda_oauth_as_metadata
   ]
 
   rest_api_id = aws_api_gateway_rest_api.josiah.id
@@ -652,7 +657,17 @@ resource "aws_api_gateway_deployment" "josiah" {
       qb_mcp_integration                   = aws_api_gateway_integration.lambda_qb_mcp.id
       qb_mcp_method                        = aws_api_gateway_method.proxy_qb_mcp.id
       qb_mcp_response                      = aws_api_gateway_method_response.qb_mcp_method_response_200.id
+      qb_mcp_get_integration               = aws_api_gateway_integration.lambda_get_qb_mcp.id
+      qb_mcp_get_method                    = aws_api_gateway_method.get_qb_mcp.id
+      qb_mcp_get_response                  = aws_api_gateway_method_response.get_qb_mcp_200.id
       qb_mcp_options                       = aws_api_gateway_integration.integration_qb_mcp_OPTIONS.id
+      authorize_integration                = aws_api_gateway_integration.lambda_authorize.id
+      authorize_method                     = aws_api_gateway_method.get_authorize.id
+      token_integration                    = aws_api_gateway_integration.lambda_token.id
+      token_method                         = aws_api_gateway_method.post_token.id
+      token_options                        = aws_api_gateway_integration.token_options_integration.id
+      oauth_as_metadata_integration        = aws_api_gateway_integration.lambda_oauth_as_metadata.id
+      oauth_as_metadata_method             = aws_api_gateway_method.get_oauth_as_metadata.id
     }))
   }
 
@@ -1787,8 +1802,7 @@ resource "aws_api_gateway_method" "proxy_qb_mcp" {
   rest_api_id   = aws_api_gateway_rest_api.josiah.id
   resource_id   = aws_api_gateway_resource.qb_mcp_resource.id
   http_method   = "POST"
-  authorization = "CUSTOM"
-  authorizer_id = aws_api_gateway_authorizer.azure_auth.id
+  authorization = "NONE"
 }
 
 resource "aws_api_gateway_integration" "lambda_qb_mcp" {
@@ -1806,6 +1820,37 @@ resource "aws_api_gateway_method_response" "qb_mcp_method_response_200" {
   rest_api_id = aws_api_gateway_rest_api.josiah.id
   resource_id = aws_api_gateway_resource.qb_mcp_resource.id
   http_method = aws_api_gateway_method.proxy_qb_mcp.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+# GET /qb/mcp — Protected Resource Metadata (RFC 9728) for MCP OAuth discovery
+resource "aws_api_gateway_method" "get_qb_mcp" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.qb_mcp_resource.id
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "lambda_get_qb_mcp" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_method.get_qb_mcp.resource_id
+  http_method = aws_api_gateway_method.get_qb_mcp.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.qb_mcp.invoke_arn
+  timeout_milliseconds    = 29000
+}
+
+resource "aws_api_gateway_method_response" "get_qb_mcp_200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.qb_mcp_resource.id
+  http_method = aws_api_gateway_method.get_qb_mcp.http_method
   status_code = "200"
   response_parameters = {
     "method.response.header.Access-Control-Allow-Origin"  = true,
@@ -1856,7 +1901,7 @@ resource "aws_api_gateway_integration_response" "qb_mcp_options-200" {
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
-    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,OPTIONS'"
     "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
   }
 
@@ -1864,4 +1909,187 @@ resource "aws_api_gateway_integration_response" "qb_mcp_options-200" {
     aws_api_gateway_integration.integration_qb_mcp_OPTIONS,
     aws_api_gateway_method_response.qb_mcp_method_response_options
   ]
+}
+
+# =============================================================================
+# MCP OAuth proxy endpoints — custom domain removes /production stage prefix
+# so MCP clients can reach /authorize, /token, /.well-known/* at the origin.
+# =============================================================================
+
+# Custom domain for MCP endpoint (no stage prefix needed)
+resource "aws_api_gateway_domain_name" "mcp" {
+  domain_name              = "mcp.wagonermanagement.com"
+  regional_certificate_arn = "arn:aws:acm:us-east-2:262877227567:certificate/4cd9f1a8-d0fb-4bc3-afbb-ef0376bca5f0"
+
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+
+  tags = local.common_tags
+}
+
+# Map custom domain to the production stage (no base path = root mapping)
+resource "aws_api_gateway_base_path_mapping" "mcp" {
+  api_id      = aws_api_gateway_rest_api.josiah.id
+  stage_name  = aws_api_gateway_stage.test.stage_name
+  domain_name = aws_api_gateway_domain_name.mcp.domain_name
+}
+
+output "mcp_domain_target" {
+  description = "CNAME target for mcp.wagonermanagement.com"
+  value       = aws_api_gateway_domain_name.mcp.regional_domain_name
+}
+
+# -----------------------------------------------------------------------------
+# GET /authorize — OAuth authorization redirect (proxied to Azure AD)
+# -----------------------------------------------------------------------------
+resource "aws_api_gateway_resource" "authorize_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_rest_api.josiah.root_resource_id
+  path_part   = "authorize"
+}
+
+resource "aws_api_gateway_method" "get_authorize" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.authorize_resource.id
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "lambda_authorize" {
+  rest_api_id             = aws_api_gateway_rest_api.josiah.id
+  resource_id             = aws_api_gateway_resource.authorize_resource.id
+  http_method             = aws_api_gateway_method.get_authorize.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.qb_mcp.invoke_arn
+  timeout_milliseconds    = 29000
+}
+
+resource "aws_api_gateway_method_response" "authorize_302" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.authorize_resource.id
+  http_method = aws_api_gateway_method.get_authorize.http_method
+  status_code = "302"
+}
+
+# -----------------------------------------------------------------------------
+# POST /token — OAuth token exchange (proxied to Azure AD)
+# -----------------------------------------------------------------------------
+resource "aws_api_gateway_resource" "token_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_rest_api.josiah.root_resource_id
+  path_part   = "token"
+}
+
+resource "aws_api_gateway_method" "post_token" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.token_resource.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "lambda_token" {
+  rest_api_id             = aws_api_gateway_rest_api.josiah.id
+  resource_id             = aws_api_gateway_resource.token_resource.id
+  http_method             = aws_api_gateway_method.post_token.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.qb_mcp.invoke_arn
+  timeout_milliseconds    = 29000
+}
+
+resource "aws_api_gateway_method_response" "token_200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.token_resource.id
+  http_method = aws_api_gateway_method.post_token.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+# OPTIONS /token (CORS)
+resource "aws_api_gateway_method" "token_options" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.token_resource.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "token_options_integration" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.token_resource.id
+  http_method = aws_api_gateway_method.token_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+
+  depends_on = [aws_api_gateway_method.token_options]
+}
+
+resource "aws_api_gateway_method_response" "token_options_200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.token_resource.id
+  http_method = aws_api_gateway_method.token_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true,
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "token_options_200" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  resource_id = aws_api_gateway_resource.token_resource.id
+  http_method = aws_api_gateway_method.token_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = local.cors_headers
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = local.cors_origin
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.token_options_integration,
+    aws_api_gateway_method_response.token_options_200
+  ]
+}
+
+# -----------------------------------------------------------------------------
+# GET /.well-known/oauth-authorization-server — OAuth AS Metadata
+# -----------------------------------------------------------------------------
+resource "aws_api_gateway_resource" "well_known_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_rest_api.josiah.root_resource_id
+  path_part   = ".well-known"
+}
+
+resource "aws_api_gateway_resource" "oauth_as_metadata_resource" {
+  rest_api_id = aws_api_gateway_rest_api.josiah.id
+  parent_id   = aws_api_gateway_resource.well_known_resource.id
+  path_part   = "oauth-authorization-server"
+}
+
+resource "aws_api_gateway_method" "get_oauth_as_metadata" {
+  rest_api_id   = aws_api_gateway_rest_api.josiah.id
+  resource_id   = aws_api_gateway_resource.oauth_as_metadata_resource.id
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "lambda_oauth_as_metadata" {
+  rest_api_id             = aws_api_gateway_rest_api.josiah.id
+  resource_id             = aws_api_gateway_resource.oauth_as_metadata_resource.id
+  http_method             = aws_api_gateway_method.get_oauth_as_metadata.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.qb_mcp.invoke_arn
+  timeout_milliseconds    = 29000
 }

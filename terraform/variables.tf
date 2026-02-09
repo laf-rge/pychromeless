@@ -145,6 +145,11 @@ locals {
     prod = {
       QBO_CREDENTIAL_MODE = "aws"
       QBO_SECRET_NAME     = "prod/qbo"
+      MCP_AUTH_JWKS_URI   = "https://login.microsoftonline.com/4d83363f-a694-437f-892e-3ee76d388743/discovery/v2.0/keys"
+      MCP_AUTH_AUDIENCE   = "api://32483067-a12e-43ba-a194-a4a6e0a579b2"
+      MCP_AUTH_ISSUER     = "https://login.microsoftonline.com/4d83363f-a694-437f-892e-3ee76d388743/v2.0"
+      MCP_AUTH_SERVER_URL = "https://login.microsoftonline.com/4d83363f-a694-437f-892e-3ee76d388743/v2.0"
+      MCP_AUTH_SCOPE      = "WMCWeb.Josiah"
     }
   }
   timeout_detector = {
