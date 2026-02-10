@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pychromeless"
+name = "josiah"
 version = "1.0.0"
-description = "Jersey Mike's Data Integration Suite - Serverless automation for syncing POS, delivery, and inventory data to QuickBooks"
+description = "WMC Automation Platform - Serverless automation for syncing POS, delivery, and inventory data to QuickBooks"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -81,7 +81,7 @@ quality = [
     "flake8-bugbear>=23.0.0",  # Additional bug-finding checks
 ]
 all = [
-    "pychromeless[dev,quality]",
+    "josiah[dev,quality]",
 ]
 
 [tool.setuptools.packages.find]

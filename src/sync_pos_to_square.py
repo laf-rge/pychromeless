@@ -7,7 +7,7 @@ Compares FlexePOS menu export against Square catalog via API and:
 3. Reports/deletes discontinued Square items
 4. Optionally creates new items with images from Jersey Mike's website
 
-Usage (from pychromeless directory):
+Usage (from josiah directory):
     # Dry run (default) - shows what would change
     python src/sync_pos_to_square.py ../wmc-reconcile/data/menu-export-20358.csv
 

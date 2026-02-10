@@ -1,6 +1,6 @@
-# Pychromeless - Jersey Mike's Data Integration Suite
+# Josiah - WMC Automation Platform
 
-Serverless automation for syncing Jersey Mike's point-of-sale, delivery, and inventory data to QuickBooks.
+Serverless automation for Wagoner Management Corp's Jersey Mike's operations — syncing point-of-sale, delivery, scheduling, and inventory data to QuickBooks, plus the public website and internal operations dashboard.
 
 ## Features
 
