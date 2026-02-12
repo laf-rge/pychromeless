@@ -107,6 +107,13 @@ def onDay(weekdate: datetime.date, weekday: int) -> datetime.date:
     return weekdate + datetime.timedelta(days=(weekday - weekdate.weekday()) % 7)
 
 
+def last_sunday_of_month(year: int, month: int) -> datetime.date:
+    """Last Sunday of the given calendar month (OLO billing period end)."""
+    last_day = datetime.date(year, month, calendar.monthrange(year, month)[1])
+    offset = (last_day.weekday() + 1) % 7  # days since last Sunday
+    return last_day - datetime.timedelta(days=offset)
+
+
 class Flexepos:
     """"""
 
@@ -202,12 +209,13 @@ class Flexepos:
     def getOnlinePayments(
         self, stores: list[str], year: int, month: int
     ) -> dict[str, dict[str, str | None]]:
-        span_dates = [
-            datetime.date(year, month, 1),
-            datetime.date(year, month, calendar.monthrange(year, month)[1]),
-        ]
-        span_date_start = span_dates[0].strftime("%m%d%Y")
-        span_date_end = span_dates[1].strftime("%m%d%Y")
+        # OLO billing periods end on the last Sunday of the calendar month
+        period_end = last_sunday_of_month(year, month)
+        prev_month = month - 1 if month > 1 else 12
+        prev_year = year if month > 1 else year - 1
+        period_start = last_sunday_of_month(prev_year, prev_month) + datetime.timedelta(days=1)
+        span_date_start = period_start.strftime("%m%d%Y")
+        span_date_end = period_end.strftime("%m%d%Y")
 
         self._login()
         driver = self._driver

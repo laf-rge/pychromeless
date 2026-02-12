@@ -39,6 +39,7 @@ from quickbooks.objects import (
 )
 
 from decimal_utils import TWO_PLACES, ZERO  # re-export for backward compatibility
+from flexepos import last_sunday_of_month
 from ssm_parameter_store import SSMParameterStore
 
 logger = logging.getLogger(__name__)
@@ -327,7 +328,7 @@ def enter_online_cc_fee(year: int, month: int, payment_data: dict[str, Any]) -> 
         sync_bill(
             supplier,
             "cc" + store + str(year * 100 + month),
-            datetime.date(year, month, calendar.monthrange(year, month)[1]),
+            last_sunday_of_month(year, month),
             json.dumps(payment_data[store]),
             lines,
             store,
