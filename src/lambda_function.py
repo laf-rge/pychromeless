@@ -813,14 +813,21 @@ def daily_sales_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
 
 
 def online_cc_fee(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
-    txdate = date.today() - timedelta(days=1)
+    event = _args[0] if _args else {}
+    year = event.get("year")
+    month = event.get("month")
+    if year and month:
+        year, month = int(year), int(month)
+    else:
+        txdate = date.today() - timedelta(days=1)
+        year, month = txdate.year, txdate.month
 
     dj = Flexepos()
     payment_data = dj.getOnlinePayments(
-        store_config.all_stores, txdate.year, txdate.month
+        store_config.all_stores, year, month
     )
-    qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
-    return create_response(200, {"message": "Success"})
+    qb.enter_online_cc_fee(year, month, payment_data)
+    return create_response(200, {"message": "Success", "year": year, "month": month})
 
 
 def daily_journal_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
