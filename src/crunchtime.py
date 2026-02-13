@@ -105,11 +105,10 @@ class Crunchtime:
             loop_detection += 1
         element = driver.find_element(By.NAME, "endDateCombo")
         loop_detection = 0
-        while (
-            loop_detection < 30
-            and driver.find_element(By.NAME, "endDateCombo").get_attribute("value")[:2]
+        while loop_detection < 30 and (
+            driver.find_element(By.NAME, "endDateCombo").get_attribute("value")[:2]
             != str(month).zfill(2)
-            and driver.find_element(By.NAME, "endDateCombo").get_attribute("value")[6:]
+            or driver.find_element(By.NAME, "endDateCombo").get_attribute("value")[6:]
             != str(year)
         ):
             ActionChains(driver).move_to_element(element).click().send_keys(
