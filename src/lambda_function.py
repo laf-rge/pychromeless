@@ -38,12 +38,20 @@ import crunchtime
 import qb
 from doordash import Doordash
 from email_service import EmailService
+from email_templates import (
+    AttendanceRecord,
+    DailyJournalData,
+    MealPeriodViolation,
+    MissingPunch,
+    StoreCard,
+    render_daily_journal,
+)
 from ezcater import EZCater
 from flexepos import Flexepos
 from logging_utils import setup_json_logger
 from operation_types import OperationType
 from store_config import StoreConfig
-from tips import Tips
+from tips import WHENIWORK_DATE_FORMAT, Tips
 from ubereats import UberEats
 from websocket_manager import WebSocketManager
 from wmcgdrive import WMCGdrive
@@ -823,6 +831,99 @@ def online_cc_fee(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
     return create_response(200, {"message": "Success"})
 
 
+def _build_store_cards(
+    drawer_opens: dict[str, str],
+    attendance_raw: list[list[str]],
+    missing_punches_raw: list[dict[str, Any]],
+    mpvs_raw: list[dict[str, Any]],
+    tips_instance: Tips,
+) -> list[StoreCard]:
+    """Group raw data by store into StoreCard dataclasses."""
+    from collections import defaultdict
+
+    store_attendance: defaultdict[str, list[AttendanceRecord]] = defaultdict(list)
+    store_missing: defaultdict[str, list[MissingPunch]] = defaultdict(list)
+    store_mpvs: defaultdict[str, list[MealPeriodViolation]] = defaultdict(list)
+
+    # Parse attendance rows (skip header row)
+    for row in attendance_raw[1:]:
+        store_id = row[0]
+        name = row[1]
+        record_type = row[5]
+
+        shift_time_str = row[2].strip('"')
+        shift_time = datetime.strptime(shift_time_str, "%Y-%m-%d %H:%M:%S")
+
+        clock_in_time = None
+        minutes_diff = None
+        if row[3] != "N/A":
+            clock_in_time = datetime.strptime(row[3], "%Y-%m-%d %H:%M:%S")
+        if row[4] != "N/A":
+            minutes_diff = float(row[4])
+
+        store_attendance[store_id].append(
+            AttendanceRecord(
+                store=store_id,
+                name=name,
+                shift_time=shift_time,
+                clock_in_time=clock_in_time,
+                minutes_diff=minutes_diff,
+                record_type=record_type,
+            )
+        )
+
+    # Parse missing punches
+    for record in missing_punches_raw:
+        user = tips_instance._users[record["user_id"]]
+        store_id = tips_instance._locations[record["location_id"]]["name"]
+        name = f"{user['last_name']}, {user['first_name']}"
+        start_time = datetime.strptime(record["start_time"], WHENIWORK_DATE_FORMAT)
+        store_missing[store_id].append(
+            MissingPunch(store=store_id, name=name, start_time=start_time)
+        )
+
+    # Parse meal period violations
+    for item in mpvs_raw:
+        store_id = item["store"]
+        name = f"{item['last_name']}, {item['first_name']}"
+        day = item["day"]
+        shift_start = datetime.strptime(item["start_time"], WHENIWORK_DATE_FORMAT)
+        store_mpvs[store_id].append(
+            MealPeriodViolation(
+                store=store_id, name=name, day=day, shift_start=shift_start,
+            )
+        )
+
+    # Build cards for all stores
+    all_store_ids = sorted(
+        set(drawer_opens.keys())
+        | set(store_attendance.keys())
+        | set(store_missing.keys())
+        | set(store_mpvs.keys())
+    )
+
+    cards = []
+    for store_id in all_store_ids:
+        journal_text = drawer_opens.get(store_id, "")
+        store_name = store_config.get_store_name(store_id) or ""
+        # Strip the store number prefix if the name starts with "Store "
+        if store_name.startswith("Store "):
+            store_name = store_name[6:]
+
+        cards.append(
+            StoreCard(
+                store_id=store_id,
+                store_name=store_name,
+                drawer_opens=journal_text.count("Cash Drawer Open"),
+                attendance=store_attendance.get(store_id, []),
+                missing_punches=store_missing.get(store_id, []),
+                mpvs=store_mpvs.get(store_id, []),
+            )
+        )
+
+    return cards
+
+
 def daily_journal_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
     """
     Generate and email daily journal reports.
@@ -852,12 +953,13 @@ def daily_journal_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
 
         subject = "Daily Journal Report {}".format(yesterday.strftime("%m/%d/%Y"))
 
+        # Fetch drawer opens from Flexepos
         dj = Flexepos()
-        drawer_opens = dict()
         drawer_opens = dj.getDailyJournal(
             store_config.all_stores, yesterday.strftime("%m%d%Y")
         )
 
+        # Upload raw journals to Google Drive
         gdrive = WMCGdrive()
         for store in store_config.all_stores:
             gdrive.upload(
@@ -866,38 +968,40 @@ def daily_journal_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
                 "text/plain",
             )
 
-        message = (
-            "<h1>Wagoner Management Corp.</h1>\n\n<h2>Cash Drawer Opens:</h2>\n<pre>"
-        )
-
-        for store, journal in drawer_opens.items():
-            message = "{}{}: {}\n".format(
-                message, store, journal.count("Cash Drawer Open")
-            )
-
-        message += "</pre>\n\n<h2>Missing Punches:</h2>\n<pre>"
-
+        # Collect WhenIWork data
         t = Tips()
-        for time_record in t.getMissingPunches():
-            user = t._users[time_record["user_id"]]
-            message = "{}{}, {} : {} - {}\n".format(
-                message,
-                user["last_name"],
-                user["first_name"],
-                t._locations[time_record["location_id"]]["name"],
-                time_record["start_time"],
-            )
-        message += "</pre>\n\n<h2>Meal Period Violations:</h2>\n<pre>"
-        for item in sorted(
+        missing_punches_raw = t.getMissingPunches()
+        mpvs_raw = sorted(
             t.getMealPeriodViolations(store_config.all_stores, yesterday),
             key=itemgetter("store", "start_time"),
-        ):
-            message += f"MPV {item['store']} {item['last_name']}, {item['first_name']}, {item['start_time']}\n"
+        )
+        attendance_raw = t.attendanceReport(
+            store_config.all_stores, yesterday, date.today()
+        )
 
-        message += "</pre><h2>Attendance Report:</h2><div>"
-        message += email_service.create_attendance_table(yesterday, date.today())
+        # Build structured data
+        cards = _build_store_cards(
+            drawer_opens, attendance_raw, missing_punches_raw, mpvs_raw, t
+        )
 
-        message += "</div>\n\n<div><pre>Thanks!\nJosiah (aka The Robot)</pre></div>"
+        data = DailyJournalData(
+            report_date=yesterday,
+            store_cards=cards,
+            total_no_shows=sum(
+                1 for c in cards for a in c.attendance
+                if a.record_type == "no show on shift"
+            ),
+            total_late=sum(
+                1 for c in cards for a in c.attendance if a.record_type == "late"
+            ),
+            total_early=sum(
+                1 for c in cards for a in c.attendance if a.record_type == "early"
+            ),
+            total_mpvs=sum(len(c.mpvs) for c in cards),
+            total_drawer_opens=sum(c.drawer_opens for c in cards),
+        )
+
+        message = render_daily_journal(data)
 
         response = None
         try:

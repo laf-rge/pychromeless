@@ -8,15 +8,16 @@ This module handles all email communications including:
 - Tips reports
 """
 
+import html
 from datetime import date
 from decimal import Decimal
 from typing import Any, cast
 
 import boto3
 
+from email_templates import render_alert_email
 from ssm_parameter_store import SSMParameterStore
 from store_config import StoreConfig
-from tips import Tips
 
 
 class EmailService:
@@ -27,17 +28,6 @@ class EmailService:
         self.charset = "UTF-8"
         self.client = boto3.client("ses")
         self.store_config = store_config
-        self.style_tag = """
-    <style>
-      table,
-      th,
-      td {
-        padding: 10px;
-        border: 1px solid black;
-        border-collapse: collapse;
-      }
-    </style>
-"""
 
     def send_email(
         self, subject: str, message: str, recipients: list[str] | None = None
@@ -47,7 +37,7 @@ class EmailService:
 
         Args:
             subject: Email subject line
-            message: HTML message content
+            message: Complete HTML document string (from template render functions)
             recipients: Optional list of recipient email addresses.
                       If None, uses default recipients from SSM.
 
@@ -69,7 +59,7 @@ class EmailService:
                 "Body": {
                     "Html": {
                         "Charset": self.charset,
-                        "Data": f"<html><head><title>{subject}</title>{self.style_tag}</head><body>{message}</body></html>",
+                        "Data": message,
                     },
                 },
                 "Subject": {
@@ -84,34 +74,23 @@ class EmailService:
     def send_missing_deposit_alert(self, store: str, txdate: date) -> None:
         """Send alert email for missing store deposits."""
         subject = f"{store} missing deposit for {str(txdate)}"
-        message = f"""
-Folks,<br/>
-I couldn't find a deposit for the following dates for these stores:<br/>
-<pre>{store} is missing a deposit for {str(txdate)}\n</pre>
-Please correct this and re-run.<br/><br/>
-Thanks,<br/>
-Josiah<br/>
-(aka The Robot)"""
+        body_html = (
+            f"Folks,<br/><br/>"
+            f"I couldn't find a deposit for <strong>{html.escape(store)}</strong> "
+            f"on <strong>{html.escape(str(txdate))}</strong>.<br/><br/>"
+            f"Please correct this and re-run.<br/><br/>"
+            f"Thanks,<br/>Josiah<br/>(aka The Robot)"
+        )
+        message = render_alert_email(subject, txdate, body_html)
         self.send_email(subject, message)
 
     def send_high_payin_alert(self, store: str, amount: Decimal, payins: str) -> None:
         """Send alert email for high pay-in amounts."""
-        self.send_email(
-            f"High pay-in detected {store}", f"<pre>{store} - ${amount}\n{payins}</pre>"
+        subject = f"High pay-in detected {store}"
+        body_html = (
+            f"<strong>{html.escape(store)}</strong> &mdash; "
+            f"<strong>${html.escape(str(amount))}</strong><br/><br/>"
+            f"<pre style=\"font-size:12px;margin:0;white-space:pre-wrap;\">{html.escape(payins)}</pre>"
         )
-
-    def create_attendance_table(self, start_date: date, end_date: date) -> str:
-        """Create HTML table of attendance data."""
-        t = Tips()
-        data = t.attendanceReport(self.store_config.all_stores, start_date, end_date)
-        table = "<table>\n<tr>"
-        table += "".join(f"<th>{str(item)}</th>" for item in data[0])
-        table += "</tr>\n"
-
-        for row in sorted(data[1:]):
-            table += "<tr>"
-            table += "".join(f"<td>{str(item)}</td>" for item in row)
-            table += "</tr>\n"
-
-        table += "</table>\n"
-        return table
+        message = render_alert_email(subject, date.today(), body_html)
+        self.send_email(subject, message)

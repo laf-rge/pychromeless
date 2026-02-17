@@ -285,7 +285,9 @@ class Tips:
         msg["Subject"] = subject
         msg["From"] = from_email
         msg["To"] = ", ".join(receiver_email)
-        text_part = MIMEText("Attached is the spreadsheet\n\n")
+        from email_templates import render_tips_email
+
+        text_part = MIMEText(render_tips_email(subject, tip_date), "html")
         msg.attach(text_part)
         attachment_part = MIMEApplication(output.getvalue())
         attachment_part.add_header(
