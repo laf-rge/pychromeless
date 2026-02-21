@@ -43,11 +43,17 @@ resource "aws_dynamodb_table" "task_states" {
 
   global_secondary_index {
     name            = "operation_type-index"
-    hash_key        = "operation"
-    range_key       = "timestamp"
     projection_type = "ALL"
-    write_capacity  = 5
-    read_capacity   = 5
+
+    key_schema {
+      attribute_name = "operation"
+      key_type       = "HASH"
+    }
+
+    key_schema {
+      attribute_name = "timestamp"
+      key_type       = "RANGE"
+    }
   }
 
   ttl {
