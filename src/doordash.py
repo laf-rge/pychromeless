@@ -122,7 +122,7 @@ class Doordash:
         txdate = datetime.datetime.strptime(txdate_str, "Payout on %B %d, %Y").date()
 
         # Click the 'Show details' button
-        driver.find_element(By.XPATH, "//button[.//div[text()='Show details']]").click()
+        driver.find_element(By.XPATH, "//button[.//span[text()='Show details']]").click()
         sleep(1)
 
         notes = {}

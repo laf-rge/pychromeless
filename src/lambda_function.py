@@ -890,7 +890,10 @@ def _build_store_cards(
         shift_start = datetime.strptime(item["start_time"], WHENIWORK_DATE_FORMAT)
         store_mpvs[store_id].append(
             MealPeriodViolation(
-                store=store_id, name=name, day=day, shift_start=shift_start,
+                store=store_id,
+                name=name,
+                day=day,
+                shift_start=shift_start,
             )
         )
 
@@ -988,7 +991,9 @@ def daily_journal_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
             report_date=yesterday,
             store_cards=cards,
             total_no_shows=sum(
-                1 for c in cards for a in c.attendance
+                1
+                for c in cards
+                for a in c.attendance
                 if a.record_type == "no show on shift"
             ),
             total_late=sum(
@@ -1526,7 +1531,10 @@ def payroll_allocation_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
 
         # Process payroll allocation
         result = process_payroll_allocation(
-            year, month, csv_content, allow_update=allow_update,
+            year,
+            month,
+            csv_content,
+            allow_update=allow_update,
             manager_names=manager_names,
         )
 
