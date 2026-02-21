@@ -905,16 +905,14 @@ def fix_deposit() -> None:
                     == "1330 Other Current Assets:Gift Cards"
                     and "20358" in bill.Line[0].Description
                 ):
-                            logger.info(
-                                "Found deposit",
-                                extra={
-                                    "bill": bill.to_json(),
-                                    "bill.Line[0].Description": bill.Line[
-                                        0
-                                    ].Description,
-                                },
-                            )
-                            modify_queue.append(bill)
+                    logger.info(
+                        "Found deposit",
+                        extra={
+                            "bill": bill.to_json(),
+                            "bill.Line[0].Description": bill.Line[0].Description,
+                        },
+                    )
+                    modify_queue.append(bill)
                 r_count += 1
         for bill in modify_queue:
             bill.DepartmentRef = store_refs["20358"]

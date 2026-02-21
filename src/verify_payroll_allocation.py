@@ -180,7 +180,7 @@ def parse_existing_journal_entry(entry_data: dict) -> dict[str, dict[str, Decima
     return result
 
 
-def main():
+def main() -> None:
     """Run dry-run verification."""
     print("=" * 80)
     print("PAYROLL ALLOCATION DRY-RUN VERIFICATION")

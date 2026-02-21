@@ -211,10 +211,10 @@ def match_items(
     custom_pos_to_square: dict[str, str] = {}
     for rule in CUSTOM_MATCH_RULES:
         pos_key = f"{normalize_name(rule['pos'][0])}|{normalize_name(rule['pos'][1])}"
-        square_key = (
+        sq_rule_key = (
             f"{normalize_name(rule['square'][0])}|{normalize_name(rule['square'][1])}"
         )
-        custom_pos_to_square[pos_key] = square_key
+        custom_pos_to_square[pos_key] = sq_rule_key
 
     for pos_item in pos_items:
         pos_key = f"{pos_item['normalized_name']}|{pos_item['normalized_size']}"

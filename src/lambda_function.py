@@ -1192,7 +1192,7 @@ def split_bill_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                     return create_response(
                         400, {"message": "split_ratios must be a dictionary"}
                     )
-                if not all(isinstance(v, (int, float)) for v in split_ratios.values()):
+                if not all(isinstance(v, int | float) for v in split_ratios.values()):
                     return create_response(
                         400, {"message": "split_ratios values must be numbers"}
                     )
@@ -2235,7 +2235,7 @@ def timeout_detector_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
             # Collect ALL items per task_id (don't deduplicate yet)
             tasks_by_id: dict[str, list[dict[str, Any]]] = {}
             for item in items:
-                task_id = item["task_id"]
+                task_id = str(item["task_id"])
                 if task_id not in tasks_by_id:
                     tasks_by_id[task_id] = []
                 tasks_by_id[task_id].append(item)
@@ -2296,7 +2296,7 @@ def timeout_detector_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
                         task_states_table.update_item(
                             Key={
                                 "task_id": task_id,
-                                "timestamp": int(item["timestamp"]),
+                                "timestamp": int(str(item["timestamp"])),
                             },
                             UpdateExpression="SET #status = :status, #error = :error, updated_at = :updated_at, #ttl = :ttl",
                             ExpressionAttributeNames={

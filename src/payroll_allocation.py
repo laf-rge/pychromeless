@@ -144,7 +144,7 @@ def get_journal_entries_by_pattern(pattern: str, max_results: int = 10) -> list[
         max_results=max_results,
         order_by="DocNumber DESC",
     )
-    return entries
+    return list(entries)
 
 
 def get_journal_entry_by_doc_number(doc_number: str) -> JournalEntry | None:
@@ -246,8 +246,8 @@ def parse_gusto_csv(
     # Build lowercase lookup for case-insensitive manager matching
     manager_lookup: dict[str, str] = {}  # {lowercase_name: store_id}
     if manager_names:
-        for store_id, name in manager_names.items():
-            manager_lookup[name.lower()] = store_id
+        for mgr_store_id, name in manager_names.items():
+            manager_lookup[name.lower()] = mgr_store_id
 
     # Decode CSV content
     content = csv_content.decode("utf-8-sig")  # Handle BOM if present
@@ -397,7 +397,7 @@ def _add_account_lines(
                      by another account's credit line).
     """
     # Calculate total
-    total = sum(store_amounts.values())
+    total = sum(store_amounts.values(), Decimal(0))
     if total == Decimal("0.00"):
         return
 
@@ -537,7 +537,9 @@ def create_payroll_allocation_journal(
     manager_wages_by_store = {
         store: data.manager_regular_earnings for store, data in payroll_by_store.items()
     }
-    wages_credit = sum(wages_by_store.values()) + sum(manager_wages_by_store.values())
+    wages_credit = sum(wages_by_store.values(), Decimal(0)) + sum(
+        manager_wages_by_store.values(), Decimal(0)
+    )
     _add_account_lines(
         lines,
         PAYROLL_ACCOUNTS["wages"],
@@ -556,8 +558,8 @@ def create_payroll_allocation_journal(
         store: data.manager_overtime_earnings
         for store, data in payroll_by_store.items()
     }
-    ot_credit = sum(overtime_by_store.values()) + sum(
-        manager_overtime_by_store.values()
+    ot_credit = sum(overtime_by_store.values(), Decimal(0)) + sum(
+        manager_overtime_by_store.values(), Decimal(0)
     )
     _add_account_lines(
         lines,

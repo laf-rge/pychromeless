@@ -2,6 +2,7 @@
 
 import json
 import unittest
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 
@@ -68,7 +69,7 @@ class TestUnlinkedDepositsHandler(unittest.TestCase):
         mock_qb.get_unlinked_sales_receipts.return_value = []
 
         # Event without query parameters
-        event = {}
+        event: dict[str, Any] = {}
 
         response = unlinked_deposits_handler(event, None)
 
@@ -137,7 +138,7 @@ class TestUnlinkedDepositsHandler(unittest.TestCase):
             "QB connection failed"
         )
 
-        event = {}
+        event: dict[str, Any] = {}
 
         response = unlinked_deposits_handler(event, None)
 

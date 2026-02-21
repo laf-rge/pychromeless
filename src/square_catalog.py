@@ -714,7 +714,7 @@ class SquareCatalog:
     def _serialize(obj: Any) -> dict[str, Any]:
         """Convert a Square SDK object to a plain dict."""
         if hasattr(obj, "to_dict"):
-            return obj.to_dict()
+            return dict(obj.to_dict())
         if hasattr(obj, "__dict__"):
-            return obj.__dict__
+            return dict(obj.__dict__)
         return dict(obj)

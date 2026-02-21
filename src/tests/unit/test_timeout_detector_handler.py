@@ -3,6 +3,7 @@
 import json
 import time
 import unittest
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 
@@ -52,7 +53,7 @@ class TestTimeoutDetectorHandler(unittest.TestCase):
         # Simulate a stale task (updated 10 minutes ago, timeout is 600s)
         stale_time = int(time.time()) - 700  # 700 seconds ago
 
-        def mock_query(**kwargs: dict) -> dict:
+        def mock_query(**kwargs: Any) -> dict:
             """Return stale task for both GSI query and direct query."""
             # GSI query for started/processing tasks
             if kwargs.get("IndexName") == "operation_type-index":
@@ -125,7 +126,7 @@ class TestTimeoutDetectorHandler(unittest.TestCase):
         # Simulate a recent task (updated 1 minute ago, timeout is 600s)
         recent_time = int(time.time()) - 60  # 60 seconds ago
 
-        def mock_query(**kwargs: dict) -> dict:
+        def mock_query(**kwargs: Any) -> dict:
             """Return recent task for both GSI and direct query."""
             if kwargs.get("IndexName") == "operation_type-index":
                 expr_values = kwargs.get("ExpressionAttributeValues", {})
@@ -179,7 +180,7 @@ class TestTimeoutDetectorHandler(unittest.TestCase):
         mock_table = MagicMock()
         mock_dynamodb.Table.return_value = mock_table
 
-        def mock_query(**kwargs: dict) -> dict:
+        def mock_query(**kwargs: Any) -> dict:
             """Return empty results for all queries."""
             return {"Items": []}
 
@@ -209,7 +210,7 @@ class TestTimeoutDetectorHandler(unittest.TestCase):
         stale_time = int(time.time()) - 700
         recent_time = int(time.time()) - 60
 
-        def mock_query(**kwargs: dict) -> dict:
+        def mock_query(**kwargs: Any) -> dict:
             """Return both records via GSI, and latest processing record via direct."""
             # GSI query for started/processing tasks
             if kwargs.get("IndexName") == "operation_type-index":
@@ -276,7 +277,7 @@ class TestTimeoutDetectorHandler(unittest.TestCase):
         # daily_journal is not in our test OPERATION_TIMEOUTS
         stale_time = int(time.time()) - 700  # 700s ago, exceeds default 600s
 
-        def mock_query(**kwargs: dict) -> dict:
+        def mock_query(**kwargs: Any) -> dict:
             """Return stale task only for daily_journal operation."""
             # GSI query for started/processing tasks
             if kwargs.get("IndexName") == "operation_type-index":
@@ -392,7 +393,7 @@ class TestTimeoutDetectorHandler(unittest.TestCase):
 
         call_count = 0
 
-        def mock_query(**kwargs: dict) -> dict:
+        def mock_query(**kwargs: Any) -> dict:
             """Return stale started record via GSI, completed record via direct query."""
             nonlocal call_count
             call_count += 1
@@ -455,7 +456,7 @@ class TestTimeoutDetectorHandler(unittest.TestCase):
         # Three stale records for the same task
         base_time = int(time.time()) - 800
 
-        def mock_query(**kwargs: dict) -> dict:
+        def mock_query(**kwargs: Any) -> dict:
             """Return 3 stale records via GSI, no completed record via direct query."""
             if kwargs.get("IndexName") == "operation_type-index":
                 expr_values = kwargs.get("ExpressionAttributeValues", {})
@@ -542,7 +543,7 @@ class TestTimeoutDetectorHandler(unittest.TestCase):
 
         stale_time = int(time.time()) - 700
 
-        def mock_query(**kwargs: dict) -> dict:
+        def mock_query(**kwargs: Any) -> dict:
             """Return stale task via GSI, still in-progress via direct query."""
             if kwargs.get("IndexName") == "operation_type-index":
                 expr_values = kwargs.get("ExpressionAttributeValues", {})
@@ -609,7 +610,7 @@ class TestTimeoutDetectorHandler(unittest.TestCase):
         stale_time = int(time.time()) - 700
         failed_time = int(time.time()) - 50
 
-        def mock_query(**kwargs: dict) -> dict:
+        def mock_query(**kwargs: Any) -> dict:
             """Return stale started record via GSI, failed record via direct query."""
             if kwargs.get("IndexName") == "operation_type-index":
                 expr_values = kwargs.get("ExpressionAttributeValues", {})
