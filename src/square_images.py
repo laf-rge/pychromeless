@@ -14,13 +14,15 @@ import re
 import tempfile
 from pathlib import Path
 from typing import Any
-from urllib.request import urlopen, Request
-from urllib.error import URLError, HTTPError
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
 
 # Default path to image URL mappings (relative to this file's typical usage)
-DEFAULT_IMAGE_URLS_PATH = Path(__file__).parent.parent.parent / "wmc-reconcile/data/square-image-urls.json"
+DEFAULT_IMAGE_URLS_PATH = (
+    Path(__file__).parent.parent.parent / "wmc-reconcile/data/square-image-urls.json"
+)
 
 
 class SquareImageManager:
@@ -54,8 +56,7 @@ class SquareImageManager:
 
         # Count total mappings
         total = sum(
-            len(v) for k, v in data.items()
-            if k != "_meta" and isinstance(v, dict)
+            len(v) for k, v in data.items() if k != "_meta" and isinstance(v, dict)
         )
         logger.info("Loaded %d image mappings from %s", total, self._path)
 
@@ -86,7 +87,11 @@ class SquareImageManager:
                     if isinstance(value, dict):
                         file_name = value.get("file", "")
                         item_size = value.get("size", "sm")
-                        url_base = self._base_url_lg if item_size == "lg" else self._base_url_sm
+                        url_base = (
+                            self._base_url_lg
+                            if item_size == "lg"
+                            else self._base_url_sm
+                        )
                         return f"{url_base}{file_name}" if file_name else None
                     else:
                         return f"{base_url}{value}" if value else None
@@ -99,13 +104,22 @@ class SquareImageManager:
             for name, value in items.items():
                 # Check if the item name contains our search term (minus the number prefix)
                 search_without_number = re.sub(r"^#?\d+\s*", "", normalized)
-                name_without_number = re.sub(r"^#?\d+\s*", "", self._normalize_name(name))
+                name_without_number = re.sub(
+                    r"^#?\d+\s*", "", self._normalize_name(name)
+                )
 
-                if search_without_number and search_without_number == name_without_number:
+                if (
+                    search_without_number
+                    and search_without_number == name_without_number
+                ):
                     if isinstance(value, dict):
                         file_name = value.get("file", "")
                         item_size = value.get("size", "sm")
-                        url_base = self._base_url_lg if item_size == "lg" else self._base_url_sm
+                        url_base = (
+                            self._base_url_lg
+                            if item_size == "lg"
+                            else self._base_url_sm
+                        )
                         return f"{url_base}{file_name}" if file_name else None
                     else:
                         return f"{base_url}{value}" if value else None
@@ -138,7 +152,9 @@ class SquareImageManager:
             logger.error("Error downloading %s: %s", url, e)
         return None
 
-    def download_image_to_file(self, url: str, dest_path: Path | None = None) -> Path | None:
+    def download_image_to_file(
+        self, url: str, dest_path: Path | None = None
+    ) -> Path | None:
         """Download an image to a temporary or specified file.
 
         Args:
@@ -168,13 +184,16 @@ class SquareImageManager:
             fd, temp_path = tempfile.mkstemp(suffix=ext)
             path = Path(temp_path)
             import os
+
             os.close(fd)
 
         path.write_bytes(image_data)
         logger.info("Saved image to %s", path)
         return path
 
-    def get_image_for_item(self, item_name: str, size: str = "sm") -> tuple[bytes, str] | None:
+    def get_image_for_item(
+        self, item_name: str, size: str = "sm"
+    ) -> tuple[bytes, str] | None:
         """Convenience method: look up URL and download image in one step.
 
         Args:

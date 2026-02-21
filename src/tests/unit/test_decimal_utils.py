@@ -11,8 +11,6 @@ Tests cover:
 import json
 from decimal import Decimal
 
-import pytest
-
 from decimal_utils import TWO_PLACES, ZERO, FinancialJsonEncoder, to_currency
 
 
@@ -21,7 +19,7 @@ class TestTwoPlaces:
 
     def test_two_places_value(self) -> None:
         """TWO_PLACES should equal 0.01."""
-        assert TWO_PLACES == Decimal("0.01")
+        assert Decimal("0.01") == TWO_PLACES
 
     def test_two_places_quantize(self) -> None:
         """TWO_PLACES should quantize to 2 decimal places."""
@@ -43,7 +41,7 @@ class TestZero:
 
     def test_zero_value(self) -> None:
         """ZERO should be exactly Decimal('0')."""
-        assert ZERO == Decimal("0")
+        assert Decimal("0") == ZERO
 
     def test_zero_is_decimal(self) -> None:
         """ZERO should be a Decimal type."""

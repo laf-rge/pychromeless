@@ -124,14 +124,16 @@ def load_pos_items(csv_path: Path) -> list[dict[str, Any]]:
             except ValueError:
                 price = 0.0
 
-            items.append({
-                "category": row.get("Category", ""),
-                "plu_name": row.get("PLU Name", ""),
-                "size": row.get("Size", ""),
-                "price": price,
-                "normalized_name": normalize_name(row.get("PLU Name", "")),
-                "normalized_size": normalize_name(row.get("Size", "")),
-            })
+            items.append(
+                {
+                    "category": row.get("Category", ""),
+                    "plu_name": row.get("PLU Name", ""),
+                    "size": row.get("Size", ""),
+                    "price": price,
+                    "normalized_name": normalize_name(row.get("PLU Name", "")),
+                    "normalized_size": normalize_name(row.get("Size", "")),
+                }
+            )
     return items
 
 
@@ -209,7 +211,9 @@ def match_items(
     custom_pos_to_square: dict[str, str] = {}
     for rule in CUSTOM_MATCH_RULES:
         pos_key = f"{normalize_name(rule['pos'][0])}|{normalize_name(rule['pos'][1])}"
-        square_key = f"{normalize_name(rule['square'][0])}|{normalize_name(rule['square'][1])}"
+        square_key = (
+            f"{normalize_name(rule['square'][0])}|{normalize_name(rule['square'][1])}"
+        )
         custom_pos_to_square[pos_key] = square_key
 
     for pos_item in pos_items:
@@ -219,22 +223,26 @@ def match_items(
         square_key = custom_pos_to_square.get(pos_key)
         if square_key and square_key in square_lookup:
             square_item = square_lookup[square_key]
-            matched.append({
-                "pos": pos_item,
-                "square": square_item,
-                "match_type": "custom",
-            })
+            matched.append(
+                {
+                    "pos": pos_item,
+                    "square": square_item,
+                    "match_type": "custom",
+                }
+            )
             matched_square_keys.add(square_key)
             continue
 
         # Then try exact match
         if pos_key in square_lookup:
             square_item = square_lookup[pos_key]
-            matched.append({
-                "pos": pos_item,
-                "square": square_item,
-                "match_type": "exact",
-            })
+            matched.append(
+                {
+                    "pos": pos_item,
+                    "square": square_item,
+                    "match_type": "exact",
+                }
+            )
             matched_square_keys.add(pos_key)
             continue
 
@@ -242,11 +250,13 @@ def match_items(
         each_key = f"{pos_item['normalized_name']}|each"
         if each_key in square_lookup:
             square_item = square_lookup[each_key]
-            matched.append({
-                "pos": pos_item,
-                "square": square_item,
-                "match_type": "each",
-            })
+            matched.append(
+                {
+                    "pos": pos_item,
+                    "square": square_item,
+                    "match_type": "each",
+                }
+            )
             matched_square_keys.add(each_key)
             continue
 
@@ -302,17 +312,19 @@ def build_price_updates(
         if abs(pos_price - square_price) < 0.01:
             continue
 
-        regular_updates.append({
-            "variation_id": square_item["variation_id"],
-            "item_id": square_item["item_id"],
-            "variation_name": square_item["variation_name"],
-            "version": square_item["version"],
-            "price_cents": int(round(pos_price * 100)),
-            "name": f"{square_item['item_name']} / {square_item['variation_name']}",
-            "old_price": square_price,
-            "new_price": pos_price,
-            "item_option_values": square_item.get("item_option_values"),
-        })
+        regular_updates.append(
+            {
+                "variation_id": square_item["variation_id"],
+                "item_id": square_item["item_id"],
+                "variation_name": square_item["variation_name"],
+                "version": square_item["version"],
+                "price_cents": int(round(pos_price * 100)),
+                "name": f"{square_item['item_name']} / {square_item['variation_name']}",
+                "old_price": square_price,
+                "new_price": pos_price,
+                "item_option_values": square_item.get("item_option_values"),
+            }
+        )
 
     # Build Tub updates (copy Regular price)
     for key, square_item in square_lookup.items():
@@ -327,17 +339,19 @@ def build_price_updates(
         if abs(regular_price - square_item["price"]) < 0.01:
             continue
 
-        tub_updates.append({
-            "variation_id": square_item["variation_id"],
-            "item_id": square_item["item_id"],
-            "variation_name": square_item["variation_name"],
-            "version": square_item["version"],
-            "price_cents": int(round(regular_price * 100)),
-            "name": f"{square_item['item_name']} / Tub",
-            "old_price": square_item["price"],
-            "new_price": regular_price,
-            "item_option_values": square_item.get("item_option_values"),
-        })
+        tub_updates.append(
+            {
+                "variation_id": square_item["variation_id"],
+                "item_id": square_item["item_id"],
+                "variation_name": square_item["variation_name"],
+                "version": square_item["version"],
+                "price_cents": int(round(regular_price * 100)),
+                "name": f"{square_item['item_name']} / Tub",
+                "old_price": square_item["price"],
+                "new_price": regular_price,
+                "item_option_values": square_item.get("item_option_values"),
+            }
+        )
 
     return regular_updates, tub_updates
 
@@ -353,24 +367,31 @@ def print_report(
     for u in sorted(regular_updates, key=lambda x: x["name"]):
         diff = u["new_price"] - u["old_price"]
         sign = "+" if diff > 0 else ""
-        print(f"  {u['name']}: ${u['old_price']:.2f} -> ${u['new_price']:.2f} ({sign}${diff:.2f})")
+        print(
+            f"  {u['name']}: ${u['old_price']:.2f} -> ${u['new_price']:.2f} ({sign}${diff:.2f})"
+        )
 
     print(f"\n=== TUB UPDATES ({len(tub_updates)} items) ===")
     for u in sorted(tub_updates, key=lambda x: x["name"]):
-        print(f"  {u['name']}: ${u['old_price']:.2f} -> ${u['new_price']:.2f} (from Regular)")
+        print(
+            f"  {u['name']}: ${u['old_price']:.2f} -> ${u['new_price']:.2f} (from Regular)"
+        )
 
     # Filter unmatched POS items: price > $0 and not in exclude list
     significant_pos = [
-        p for p in unmatched_pos
+        p
+        for p in unmatched_pos
         if p["price"] > 0 and p["plu_name"] not in EXCLUDE_FROM_NEW_ITEMS
     ]
     print(f"\n=== NEW POS ITEMS (not in Square, {len(significant_pos)} items) ===")
     for p in sorted(significant_pos, key=lambda x: (x["plu_name"], x["size"])):
-        size_str = f" / {p['size']}" if p['size'] else ""
+        size_str = f" / {p['size']}" if p["size"] else ""
         print(f"  {p['plu_name']}{size_str}: ${p['price']:.2f}")
 
     print(f"\n=== DISCONTINUED (Square only, {len(unmatched_square)} items) ===")
-    for s in sorted(unmatched_square, key=lambda x: (x["item_name"], x["variation_name"])):
+    for s in sorted(
+        unmatched_square, key=lambda x: (x["item_name"], x["variation_name"])
+    ):
         print(f"  {s['item_name']} / {s['variation_name']}")
 
 
@@ -440,7 +461,9 @@ def main() -> None:
 
     print("Matching items...")
     matched, unmatched_pos, unmatched_square = match_items(pos_items, square_lookup)
-    print(f"  Matched: {len(matched)}, Unmatched POS: {len(unmatched_pos)}, Unmatched Square: {len(unmatched_square)}")
+    print(
+        f"  Matched: {len(matched)}, Unmatched POS: {len(unmatched_pos)}, Unmatched Square: {len(unmatched_square)}"
+    )
 
     print("Building price updates...")
     regular_updates, tub_updates = build_price_updates(matched, square_lookup)
@@ -483,16 +506,24 @@ def main() -> None:
             if len(unmatched_vars) == total_vars:
                 items_to_delete.append(item_id)
             else:
-                items_partial.append((unmatched_vars[0]["item_name"], len(unmatched_vars), total_vars))
+                items_partial.append(
+                    (unmatched_vars[0]["item_name"], len(unmatched_vars), total_vars)
+                )
 
         if items_partial:
             print(f"\n=== SKIPPING PARTIAL DELETES ({len(items_partial)} items) ===")
             for name, unmatched, total in items_partial:
-                print(f"  {name}: {unmatched}/{total} variations unmatched (keeping item)")
+                print(
+                    f"  {name}: {unmatched}/{total} variations unmatched (keeping item)"
+                )
 
         if items_to_delete:
-            print(f"\n=== DELETING DISCONTINUED ITEMS ({len(items_to_delete)} items) ===")
-            deleted = catalog.batch_delete_catalog_objects(items_to_delete, dry_run=False)
+            print(
+                f"\n=== DELETING DISCONTINUED ITEMS ({len(items_to_delete)} items) ==="
+            )
+            deleted = catalog.batch_delete_catalog_objects(
+                items_to_delete, dry_run=False
+            )
             print(f"  Deleted {len(deleted)} items")
     elif unmatched_square and not dry_run:
         print("\n  (Use --delete-discontinued to remove discontinued items)")
@@ -506,7 +537,8 @@ def main() -> None:
     if args.create_new:
         # Filter unmatched POS items: price > $0 and not in exclude list
         items_to_create = [
-            p for p in unmatched_pos
+            p
+            for p in unmatched_pos
             if p["price"] > 0 and p["plu_name"] not in EXCLUDE_FROM_NEW_ITEMS
         ]
 
@@ -527,15 +559,21 @@ def main() -> None:
                 var_list = []
                 for v in variations:
                     var_name = v["size"] if v["size"] else "Regular"
-                    var_list.append({
-                        "name": var_name,
-                        "price_cents": int(round(v["price"] * 100)),
-                    })
+                    var_list.append(
+                        {
+                            "name": var_name,
+                            "price_cents": int(round(v["price"] * 100)),
+                        }
+                    )
 
                 # Look up image URL
-                image_url = image_manager.get_image_url(item_name) if image_manager else None
+                image_url = (
+                    image_manager.get_image_url(item_name) if image_manager else None
+                )
 
-                var_str = ", ".join(f"{v['name']}: ${v['price_cents']/100:.2f}" for v in var_list)
+                var_str = ", ".join(
+                    f"{v['name']}: ${v['price_cents'] / 100:.2f}" for v in var_list
+                )
                 image_str = " (with image)" if image_url else " (no image found)"
                 print(f"  Creating: {item_name} [{var_str}]{image_str}")
 
@@ -554,7 +592,8 @@ def main() -> None:
             print(f"  Created {created_count} items")
     elif unmatched_pos and not dry_run:
         significant_pos = [
-            p for p in unmatched_pos
+            p
+            for p in unmatched_pos
             if p["price"] > 0 and p["plu_name"] not in EXCLUDE_FROM_NEW_ITEMS
         ]
         if significant_pos:
@@ -579,14 +618,18 @@ def main() -> None:
             try:
                 image_ids = catalog.get_item_images(item_id)
                 if not image_ids:
-                    items_needing_images.append({
-                        "item_id": item_id,
-                        "item_name": sq["item_name"],
-                    })
+                    items_needing_images.append(
+                        {
+                            "item_id": item_id,
+                            "item_name": sq["item_name"],
+                        }
+                    )
             except Exception as e:
                 logger.warning("Failed to check images for %s: %s", item_id, e)
 
-        print(f"  Checked {len(item_ids_checked)} items, {len(items_needing_images)} need images")
+        print(
+            f"  Checked {len(item_ids_checked)} items, {len(items_needing_images)} need images"
+        )
 
         if items_needing_images:
             print(f"\n=== UPLOADING IMAGES ({len(items_needing_images)} items) ===")

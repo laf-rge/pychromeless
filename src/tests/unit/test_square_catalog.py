@@ -1,6 +1,5 @@
 """Unit tests for square_catalog module."""
 
-import pytest
 from unittest.mock import MagicMock, patch
 
 
@@ -35,8 +34,9 @@ class TestSquareCatalogInit:
         )
         mock_ssm_cls.return_value = mock_ssm_instance
 
-        from square_catalog import SquareCatalog
         from square.environment import SquareEnvironment
+
+        from square_catalog import SquareCatalog
 
         catalog = SquareCatalog(environment="sandbox")
 
@@ -95,8 +95,18 @@ class TestSquareCatalogDryRun:
 
         catalog = SquareCatalog(environment="sandbox")
         updates = [
-            {"variation_id": "V1", "price_cents": 1275, "version": 1, "name": "#1 BLT Regular"},
-            {"variation_id": "V2", "price_cents": 895, "version": 1, "name": "#1 BLT Mini"},
+            {
+                "variation_id": "V1",
+                "price_cents": 1275,
+                "version": 1,
+                "name": "#1 BLT Regular",
+            },
+            {
+                "variation_id": "V2",
+                "price_cents": 895,
+                "version": 1,
+                "name": "#1 BLT Mini",
+            },
         ]
         result = catalog.batch_update_prices(updates, dry_run=True)
 

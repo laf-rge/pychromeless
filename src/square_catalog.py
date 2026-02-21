@@ -16,8 +16,6 @@ SDK v44 method mapping (v42+ rewrite):
 """
 
 import logging
-import tempfile
-from pathlib import Path
 from typing import Any, cast
 
 from square import Square
@@ -34,7 +32,7 @@ class SquareCatalog:
 
     def __init__(self, environment: str = "production") -> None:
         parameters = cast(
-            SSMParameterStore, SSMParameterStore(prefix="/prod")["square"]
+            "SSMParameterStore", SSMParameterStore(prefix="/prod")["square"]
         )
         self._application_id = str(parameters["application_id"])
         self._access_token = str(parameters["access_token"])
@@ -47,7 +45,8 @@ class SquareCatalog:
         self._client = Square(token=self._access_token, environment=env)
         logger.info(
             "Square client initialized (app=%s, env=%s)",
-            self._application_id, environment,
+            self._application_id,
+            environment,
         )
 
     # ---- Read operations ----
@@ -120,7 +119,12 @@ class SquareCatalog:
             return self._serialize(obj)
 
         if dry_run:
-            logger.info("[DRY RUN] Would rename '%s' -> '%s' (id=%s)", old_name, new_name, object_id)
+            logger.info(
+                "[DRY RUN] Would rename '%s' -> '%s' (id=%s)",
+                old_name,
+                new_name,
+                object_id,
+            )
             return None
 
         # Must include full item_data (with variations) or Square rejects the upsert
@@ -166,7 +170,8 @@ class SquareCatalog:
         if dry_run:
             logger.info(
                 "[DRY RUN] Would update variation %s to $%.2f",
-                variation_id, price_cents / 100,
+                variation_id,
+                price_cents / 100,
             )
             return None
 
@@ -245,7 +250,9 @@ class SquareCatalog:
 
         # Build update objects with full data, only changing price
         price_map = {u["variation_id"]: u["price_cents"] for u in updates}
-        name_map = {u["variation_id"]: u.get("name", u["variation_id"]) for u in updates}
+        name_map = {
+            u["variation_id"]: u.get("name", u["variation_id"]) for u in updates
+        }
 
         UPSERT_BATCH_SIZE = 1000
         results: list[dict[str, Any]] = []
@@ -291,9 +298,7 @@ class SquareCatalog:
             if response.objects:
                 results.extend([self._serialize(obj) for obj in response.objects])
 
-            logger.info(
-                "Batch updated %d variations (offset %d)", len(batch), i
-            )
+            logger.info("Batch updated %d variations (offset %d)", len(batch), i)
 
         return results
 
@@ -329,17 +334,15 @@ class SquareCatalog:
         """
         if dry_run:
             var_str = ", ".join(
-                f"{v['name']}: ${v['price_cents']/100:.2f}"
-                for v in variations
+                f"{v['name']}: ${v['price_cents'] / 100:.2f}" for v in variations
             )
             image_msg = ""
             if image_data:
                 image_msg = f" with image ({len(image_data)} bytes)"
             elif image_url:
-                image_msg = f" with image from URL"
+                image_msg = " with image from URL"
             logger.info(
-                "[DRY RUN] Would create item '%s' [%s]%s",
-                name, var_str, image_msg
+                "[DRY RUN] Would create item '%s' [%s]%s", name, var_str, image_msg
             )
             return None
 
@@ -349,19 +352,21 @@ class SquareCatalog:
         variation_objects = []
         for i, var in enumerate(variations):
             var_id = f"#temp-var-{i}-{self._idempotency_key()[:8]}"
-            variation_objects.append({
-                "type": "ITEM_VARIATION",
-                "id": var_id,
-                "item_variation_data": {
-                    "item_id": item_id,
-                    "name": var["name"],
-                    "pricing_type": "FIXED_PRICING",
-                    "price_money": {
-                        "amount": var["price_cents"],
-                        "currency": "USD",
+            variation_objects.append(
+                {
+                    "type": "ITEM_VARIATION",
+                    "id": var_id,
+                    "item_variation_data": {
+                        "item_id": item_id,
+                        "name": var["name"],
+                        "pricing_type": "FIXED_PRICING",
+                        "price_money": {
+                            "amount": var["price_cents"],
+                            "currency": "USD",
+                        },
                     },
-                },
-            })
+                }
+            )
 
         item_data: dict[str, Any] = {
             "name": name,
@@ -415,9 +420,7 @@ class SquareCatalog:
 
     # ---- Delete operations ----
 
-    def delete_catalog_object(
-        self, object_id: str, *, dry_run: bool = True
-    ) -> bool:
+    def delete_catalog_object(self, object_id: str, *, dry_run: bool = True) -> bool:
         """Delete a single catalog object.
 
         Args:
@@ -478,9 +481,7 @@ class SquareCatalog:
             if response.deleted_object_ids:
                 deleted.extend(response.deleted_object_ids)
 
-            logger.info(
-                "Batch deleted %d objects (offset %d)", len(batch), i
-            )
+            logger.info("Batch deleted %d objects (offset %d)", len(batch), i)
 
         return deleted
 
@@ -512,7 +513,9 @@ class SquareCatalog:
             attach_msg = f" and attach to {object_id}" if object_id else ""
             logger.info(
                 "[DRY RUN] Would upload image '%s' (%d bytes)%s",
-                image_name, len(image_data), attach_msg
+                image_name,
+                len(image_data),
+                attach_msg,
             )
             return None
 
@@ -555,7 +558,7 @@ class SquareCatalog:
                     "Uploaded image '%s' (id=%s)%s",
                     image_name,
                     response.image.id,
-                    f" attached to {object_id}" if object_id else ""
+                    f" attached to {object_id}" if object_id else "",
                 )
                 return self._serialize(response.image)
 
@@ -591,13 +594,15 @@ class SquareCatalog:
             attach_msg = f" and attach to {object_id}" if object_id else ""
             logger.info(
                 "[DRY RUN] Would download from %s and upload as '%s'%s",
-                url, image_name, attach_msg
+                url,
+                image_name,
+                attach_msg,
             )
             return None
 
         # Download the image
-        from urllib.request import urlopen, Request
-        from urllib.error import URLError, HTTPError
+        from urllib.error import HTTPError, URLError
+        from urllib.request import Request, urlopen
 
         try:
             request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -638,10 +643,7 @@ class SquareCatalog:
             The updated item object, or None if dry_run.
         """
         if dry_run:
-            logger.info(
-                "[DRY RUN] Would attach image %s to item %s",
-                image_id, item_id
-            )
+            logger.info("[DRY RUN] Would attach image %s to item %s", image_id, item_id)
             return None
 
         # Fetch the item to get current data
@@ -652,7 +654,11 @@ class SquareCatalog:
             raise
 
         obj = detail.object
-        item_data = obj.item_data.dict() if hasattr(obj.item_data, "dict") else dict(obj.item_data)
+        item_data = (
+            obj.item_data.dict()
+            if hasattr(obj.item_data, "dict")
+            else dict(obj.item_data)
+        )
 
         # Add the image ID to the item's image_ids list
         current_image_ids = item_data.get("image_ids", []) or []
@@ -704,6 +710,7 @@ class SquareCatalog:
     @staticmethod
     def _idempotency_key() -> str:
         import uuid
+
         return str(uuid.uuid4())
 
     @staticmethod

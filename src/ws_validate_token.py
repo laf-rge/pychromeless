@@ -56,5 +56,5 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         logger.info("Policy generated successfully")
         return policy
     except Exception as e:
-        logger.error(f"Error in WebSocket authorizer: {str(e)}", exc_info=True)
+        logger.error(f"Error in WebSocket authorizer: {e!s}", exc_info=True)
         raise

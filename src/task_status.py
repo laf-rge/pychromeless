@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize DynamoDB client
 dynamodb = cast("DynamoDBServiceResource", boto3.resource("dynamodb"))
-table = cast(Any, dynamodb.Table(os.environ["TASK_STATES_TABLE"]))
+table = cast("Any", dynamodb.Table(os.environ["TASK_STATES_TABLE"]))
 
 
 def get_task_status_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -59,7 +59,7 @@ def get_task_status_handler(event: dict[str, Any], context: Any) -> dict[str, An
 
     try:
         # Check if we're getting a specific task by ID
-        if "pathParameters" in event and event["pathParameters"]:
+        if event.get("pathParameters"):
             task_id = event["pathParameters"].get("task_id")
             if not task_id:
                 # If no task_id provided, return all tasks
@@ -89,7 +89,7 @@ def get_task_status_handler(event: dict[str, Any], context: Any) -> dict[str, An
             return create_response(200, items[0], request_id)
 
         # Check if we're getting tasks by operation type or recent tasks
-        if "queryStringParameters" in event and event["queryStringParameters"]:
+        if event.get("queryStringParameters"):
             params = event["queryStringParameters"]
 
             # Check if we're requesting recent tasks

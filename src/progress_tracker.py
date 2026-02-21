@@ -18,7 +18,7 @@ from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
 logger = logging.getLogger(__name__)
 
 # Initialize DynamoDB resource
-dynamodb = cast(DynamoDBServiceResource, boto3.resource("dynamodb"))
+dynamodb = cast("DynamoDBServiceResource", boto3.resource("dynamodb"))
 
 
 class DailySalesProgressTracker:
@@ -27,7 +27,7 @@ class DailySalesProgressTracker:
     def __init__(self) -> None:
         self.table_name = os.environ.get("DAILY_SALES_PROGRESS_TABLE")
         if self.table_name:
-            self.table = cast(Any, dynamodb.Table(self.table_name))
+            self.table = cast("Any", dynamodb.Table(self.table_name))
         else:
             self.table = None
 
@@ -50,7 +50,7 @@ class DailySalesProgressTracker:
                     "total_stores": len(stores),
                     "completed_stores": 0,
                     "failed_stores": 0,
-                    "store_statuses": {store: "dispatched" for store in stores},
+                    "store_statuses": dict.fromkeys(stores, "dispatched"),
                     "created_at": datetime.now(UTC).isoformat(),
                     "ttl": ttl_timestamp,
                 }

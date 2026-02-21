@@ -4,7 +4,7 @@ import logging
 from decimal import Decimal
 from functools import partial
 from time import sleep
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from bs4 import BeautifulSoup, Tag
 from selenium.common.exceptions import (
@@ -22,7 +22,7 @@ from webdriver import initialise_driver, wait_for_element
 logger = logging.getLogger(__name__)
 
 
-def find_element_text_by_label(soup: BeautifulSoup, label_text: str) -> Optional[str]:
+def find_element_text_by_label(soup: BeautifulSoup, label_text: str) -> str | None:
     """
     Find element text by searching for a label in section-header divs.
 
@@ -103,7 +103,7 @@ TAG_IDS = {
 }
 
 
-def onDay(weekdate: datetime.date, weekday: int) -> datetime.date:
+def on_day(weekdate: datetime.date, weekday: int) -> datetime.date:
     return weekdate + datetime.timedelta(days=(weekday - weekdate.weekday()) % 7)
 
 
@@ -119,7 +119,7 @@ class Flexepos:
 
     def __init__(self) -> None:
         self._parameters = cast(
-            SSMParameterStore, SSMParameterStore(prefix="/prod")["flexepos"]
+            "SSMParameterStore", SSMParameterStore(prefix="/prod")["flexepos"]
         )
 
     """
@@ -144,7 +144,7 @@ class Flexepos:
             str(self._parameters["password"]) + Keys.ENTER
         )
 
-    def getThirdPartyTransactions(
+    def get_third_party_transactions(
         self, stores: list[str], year: int, month: int
     ) -> dict[str, dict[str, str]]:
         span_dates = [
@@ -206,14 +206,16 @@ class Flexepos:
     """
     """
 
-    def getOnlinePayments(
+    def get_online_payments(
         self, stores: list[str], year: int, month: int
     ) -> dict[str, dict[str, str | None]]:
         # OLO billing periods end on the last Sunday of the calendar month
         period_end = last_sunday_of_month(year, month)
         prev_month = month - 1 if month > 1 else 12
         prev_year = year if month > 1 else year - 1
-        period_start = last_sunday_of_month(prev_year, prev_month) + datetime.timedelta(days=1)
+        period_start = last_sunday_of_month(prev_year, prev_month) + datetime.timedelta(
+            days=1
+        )
         span_date_start = period_start.strftime("%m%d%Y")
         span_date_end = period_end.strftime("%m%d%Y")
 
@@ -280,7 +282,7 @@ class Flexepos:
     """
     """
 
-    def getDailySales(
+    def get_daily_sales(
         self, store: str, tx_date: datetime.date
     ) -> dict[str, dict[str, Any]]:
         self._login()
@@ -323,7 +325,9 @@ class Flexepos:
                 False,
             ]
             for checkbox, state in zip(
-                map(partial(driver.find_element, By.NAME), checkboxes), states
+                map(partial(driver.find_element, By.NAME), checkboxes),
+                states,
+                strict=False,
             ):
                 if state != checkbox.is_selected():
                     checkbox.click()
@@ -473,10 +477,12 @@ class Flexepos:
             # get pay ins
             driver.find_element(By.ID, TAG_IDS["menu_header"].format(1)).click()
             WebDriverWait(driver, 25, ignored_exceptions=errors).until(
-                lambda d: driver.find_element(
-                    By.ID, TAG_IDS["menu_item"].format(1, 6)
-                ).click()
-                or True
+                lambda d: (
+                    driver.find_element(
+                        By.ID, TAG_IDS["menu_item"].format(1, 6)
+                    ).click()
+                    or True
+                )
             )
             sleep(2)
             types_element = wait_for_element(driver, (By.ID, TAG_IDS["types"]))
@@ -484,7 +490,7 @@ class Flexepos:
                 types_element.send_keys("Payins")
             else:
                 raise Exception("Failed to find payins types element")
-            self.setDateRange(driver, tx_date_str)
+            self.set_date_range(driver, tx_date_str)
             driver.find_element(By.ID, TAG_IDS["submit"]).click()
             sleep(4)
             payins_element = wait_for_element(driver, (By.ID, TAG_IDS["transactions"]))
@@ -508,7 +514,7 @@ class Flexepos:
             #     )
             #     or True
             # )
-            # self.setDateRange(driver, tx_date_str)
+            # self.set_date_range(driver, tx_date_str)
             # driver.find_element(By.ID, TAG_IDS["submit"]).click()
             # sleep(10)
             # payouts_element = wait_for_element(
@@ -523,14 +529,16 @@ class Flexepos:
             # break down third party
             driver.find_element(By.ID, TAG_IDS["menu_header"].format(0)).click()
             WebDriverWait(driver, 25, ignored_exceptions=errors).until(
-                lambda d: driver.find_element(
-                    By.ID, TAG_IDS["menu_item"].format(0, 13)
-                ).click()
-                or True
+                lambda d: (
+                    driver.find_element(
+                        By.ID, TAG_IDS["menu_item"].format(0, 13)
+                    ).click()
+                    or True
+                )
             )
             driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
             driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
-            self.setDateRange(driver, tx_date_str)
+            self.set_date_range(driver, tx_date_str)
             driver.find_element(By.ID, TAG_IDS["group_by"]).click()
             Select(
                 driver.find_element(By.ID, TAG_IDS["group_by"])
@@ -565,8 +573,8 @@ class Flexepos:
                 sleep(5)
         return sales_data
 
-    def setDateRange(
-        self, driver: Any, tx_date_str: str, tx_end_date_str: Optional[str] = None
+    def set_date_range(
+        self, driver: Any, tx_date_str: str, tx_end_date_str: str | None = None
     ) -> None:
         sleep(2)
         driver.find_element(By.ID, TAG_IDS["start_date"]).click()
@@ -581,7 +589,7 @@ class Flexepos:
     """
     """
 
-    def getDailyJournal(self, stores: list[str], qdate: str) -> dict[str, str]:
+    def get_daily_journal(self, stores: list[str], qdate: str) -> dict[str, str]:
         drawer_opens = {}
         driver = None
         try:
@@ -628,7 +636,7 @@ class Flexepos:
     """
     """
 
-    def getTips(
+    def get_tips(
         self, stores: list[str], start_date: datetime.date, end_date: datetime.date
     ) -> dict[str, list[list[Any]]]:
         rv = {}
@@ -642,7 +650,7 @@ class Flexepos:
             for store in stores:
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).clear()
                 driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(store)
-                self.setDateRange(
+                self.set_date_range(
                     driver, start_date.strftime("%m%d%Y"), end_date.strftime("%m%d%Y")
                 )
                 driver.find_element(By.ID, TAG_IDS["submit"]).click()
@@ -669,7 +677,7 @@ class Flexepos:
     """
     """
 
-    def getRoyaltyReport(
+    def get_royalty_report(
         self, group: str, start_date: datetime.date, end_date: datetime.date
     ) -> dict[str, dict[str, str]]:
         royalty_data = {}
@@ -686,7 +694,7 @@ class Flexepos:
             driver.find_element(By.ID, TAG_IDS["parameters_group"]).clear()
             driver.find_element(By.ID, TAG_IDS["parameters_group"]).send_keys(group)
             sleep(2)
-            self.setDateRange(
+            self.set_date_range(
                 driver, start_date.strftime("%m%d%Y"), end_date.strftime("%m%d%Y")
             )
             driver.find_element(By.ID, TAG_IDS["submit"]).click()
@@ -717,7 +725,7 @@ class Flexepos:
                     pass
                 self._driver.quit()
 
-    def toggleMealDeal(self, stores: list[str]) -> dict[str, bool]:
+    def toggle_meal_deal(self, stores: list[str]) -> dict[str, bool]:
         driver = None
         rv = {}
         try:
@@ -779,7 +787,7 @@ class Flexepos:
     [ store, txdate, sold, instore, online]
     """
 
-    def getGiftCardACH(
+    def get_gift_card_ach(
         self, stores: list[str], start_date: datetime.date, end_date: datetime.date
     ) -> list[list[Any]]:
         if end_date <= start_date:
@@ -794,7 +802,7 @@ class Flexepos:
             sleep(2)
             driver.find_element(By.ID, TAG_IDS["menu_item_root"].format(0, 10)).click()
             sleep(2)
-            step_date = onDay(start_date, 4)  # always Friday
+            step_date = on_day(start_date, 4)  # always Friday
             results = []
             while step_date < end_date:
                 period_end = step_date - datetime.timedelta(days=2)
@@ -810,7 +818,7 @@ class Flexepos:
                     driver.find_element(By.ID, TAG_IDS["parameters_store"]).send_keys(
                         store
                     )
-                    self.setDateRange(
+                    self.set_date_range(
                         driver,
                         period_start.strftime("%m%d%Y"),
                         period_end.strftime("%m%d%Y"),
@@ -870,7 +878,7 @@ class Flexepos:
                     pass
                 self._driver.quit()
 
-    def getDailyJournalExport(
+    def get_daily_journal_export(
         self, stores: list[str], start_date: datetime.date, end_date: datetime.date
     ) -> None:
         """Export daily journal entries for stores between start_date and end_date.
@@ -890,11 +898,9 @@ class Flexepos:
             date_str = qdate.strftime("%m%d%Y")
 
             try:
-                daily_journal = self.getDailyJournal(stores, date_str)
+                daily_journal = self.get_daily_journal(stores, date_str)
             except Exception as e:
-                logging.exception(
-                    f"Error getting daily journal for {date_str}: {str(e)}"
-                )
+                logging.exception(f"Error getting daily journal for {date_str}: {e!s}")
                 sleep(2)
                 continue
 
@@ -903,9 +909,9 @@ class Flexepos:
                 try:
                     with open(output_file, "w", encoding="utf-8") as fileout:
                         fileout.write(daily_journal[store])
-                except IOError as e:
+                except OSError as e:
                     logging.error(
-                        f"Error writing journal for store {store} on {date_str}: {str(e)}"
+                        f"Error writing journal for store {store} on {date_str}: {e!s}"
                     )
 
             qdate = qdate - datetime.timedelta(days=1)

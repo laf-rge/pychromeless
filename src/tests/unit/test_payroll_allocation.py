@@ -248,8 +248,14 @@ class TestManagerSplitting(unittest.TestCase):
     """Tests for manager vs crew labor splitting in parse_gusto_csv."""
 
     def _csv_with_employee(
-        self, employee: str, zip_code: str, regular: str, overtime: str,
-        double_ot: str = "0.00", gross: str = "0.00", taxes: str = "0.00",
+        self,
+        employee: str,
+        zip_code: str,
+        regular: str,
+        overtime: str,
+        double_ot: str = "0.00",
+        gross: str = "0.00",
+        taxes: str = "0.00",
         sick: str = "0.00",
     ) -> bytes:
         """Helper to build a CSV row with Employee column."""
@@ -266,7 +272,9 @@ class TestManagerSplitting(unittest.TestCase):
         )
         return (header + "\n" + row + "\n").encode("utf-8")
 
-    def _multi_row_csv(self, rows: list[tuple[str, str, str, str, str, str, str]]) -> bytes:
+    def _multi_row_csv(
+        self, rows: list[tuple[str, str, str, str, str, str, str]]
+    ) -> bytes:
         """Helper to build multi-row CSV. Each row: (employee, zip, gross, taxes, regular, ot, double_ot)."""
         header = (
             "Payroll,Employee,Work address (zip),Gross earnings,"
@@ -277,14 +285,20 @@ class TestManagerSplitting(unittest.TestCase):
         )
         lines = [header]
         for emp, z, g, t, r, o, do in rows:
-            lines.append(f"Nov 15 - 30,{emp},{z},{g},{t},{r},{o},{do},0.00,0.00,0.00,0.00,0.00")
+            lines.append(
+                f"Nov 15 - 30,{emp},{z},{g},{t},{r},{o},{do},0.00,0.00,0.00,0.00,0.00"
+            )
         return ("\n".join(lines) + "\n").encode("utf-8")
 
     def test_manager_wages_split_to_manager_fields(self) -> None:
         """Test that a manager's regular + OT go to manager fields."""
         csv = self._csv_with_employee(
-            "Melissa Martin", "95407", regular="3000.00", overtime="200.00",
-            gross="3200.00", taxes="300.00",
+            "Melissa Martin",
+            "95407",
+            regular="3000.00",
+            overtime="200.00",
+            gross="3200.00",
+            taxes="300.00",
         )
         manager_names = {"20358": "Melissa Martin"}
         result = parse_gusto_csv(csv, manager_names=manager_names)
@@ -299,8 +313,13 @@ class TestManagerSplitting(unittest.TestCase):
     def test_manager_double_overtime_combined(self) -> None:
         """Test that double OT is combined with OT in manager_overtime_earnings."""
         csv = self._csv_with_employee(
-            "Brandon Aguirre", "94954", regular="2500.00", overtime="150.00",
-            double_ot="50.00", gross="2700.00", taxes="250.00",
+            "Brandon Aguirre",
+            "94954",
+            regular="2500.00",
+            overtime="150.00",
+            double_ot="50.00",
+            gross="2700.00",
+            taxes="250.00",
         )
         manager_names = {"20395": "Brandon Aguirre"}
         result = parse_gusto_csv(csv, manager_names=manager_names)
@@ -312,8 +331,12 @@ class TestManagerSplitting(unittest.TestCase):
     def test_manager_case_insensitive_matching(self) -> None:
         """Test that manager matching is case-insensitive."""
         csv = self._csv_with_employee(
-            "vanessa canon", "94931", regular="2800.00", overtime="100.00",
-            gross="2900.00", taxes="280.00",
+            "vanessa canon",
+            "94931",
+            regular="2800.00",
+            overtime="100.00",
+            gross="2900.00",
+            taxes="280.00",
         )
         # Config has different case
         manager_names = {"20407": "Vanessa Canon"}
@@ -325,10 +348,20 @@ class TestManagerSplitting(unittest.TestCase):
 
     def test_crew_unaffected_when_manager_configured(self) -> None:
         """Test that non-manager employees stay in crew fields."""
-        csv = self._multi_row_csv([
-            ("Melissa Martin", "95407", "3200.00", "300.00", "3000.00", "200.00", "0.00"),
-            ("John Doe", "95407", "1500.00", "150.00", "1400.00", "100.00", "0.00"),
-        ])
+        csv = self._multi_row_csv(
+            [
+                (
+                    "Melissa Martin",
+                    "95407",
+                    "3200.00",
+                    "300.00",
+                    "3000.00",
+                    "200.00",
+                    "0.00",
+                ),
+                ("John Doe", "95407", "1500.00", "150.00", "1400.00", "100.00", "0.00"),
+            ]
+        )
         manager_names = {"20358": "Melissa Martin"}
         result = parse_gusto_csv(csv, manager_names=manager_names)
 
@@ -343,8 +376,12 @@ class TestManagerSplitting(unittest.TestCase):
     def test_backward_compat_no_manager_names(self) -> None:
         """Test that omitting manager_names preserves existing behavior."""
         csv = self._csv_with_employee(
-            "Melissa Martin", "95407", regular="3000.00", overtime="200.00",
-            gross="3200.00", taxes="300.00",
+            "Melissa Martin",
+            "95407",
+            regular="3000.00",
+            overtime="200.00",
+            gross="3200.00",
+            taxes="300.00",
         )
         # No manager_names passed
         result = parse_gusto_csv(csv)
@@ -371,8 +408,13 @@ Nov 15 - 30,94954,1000.00,100.00,900.00,100.00,0.00,0.00,0.00,0.00,0.00,0.00
     def test_manager_sick_stays_shared(self) -> None:
         """Test that manager's sick pay stays in shared (crew) fields."""
         csv = self._csv_with_employee(
-            "Melissa Martin", "95407", regular="3000.00", overtime="0.00",
-            gross="3100.00", taxes="300.00", sick="100.00",
+            "Melissa Martin",
+            "95407",
+            regular="3000.00",
+            overtime="0.00",
+            gross="3100.00",
+            taxes="300.00",
+            sick="100.00",
         )
         manager_names = {"20358": "Melissa Martin"}
         result = parse_gusto_csv(csv, manager_names=manager_names)
@@ -431,8 +473,8 @@ class TestCreatePayrollAllocationJournal(unittest.TestCase):
         mock_entry = MagicMock()
         mock_entry.Id = "123"
 
-        with patch("payroll_allocation.JournalEntry") as MockJournalEntry:
-            MockJournalEntry.return_value = mock_entry
+        with patch("payroll_allocation.JournalEntry") as mock_journal_entry:
+            mock_journal_entry.return_value = mock_entry
 
             payroll_data = {
                 "20395": PayrollData(
@@ -477,8 +519,8 @@ class TestCreatePayrollAllocationJournal(unittest.TestCase):
         mock_entry = MagicMock()
         mock_entry.Id = "123"
 
-        with patch("payroll_allocation.JournalEntry") as MockJournalEntry:
-            MockJournalEntry.return_value = mock_entry
+        with patch("payroll_allocation.JournalEntry") as mock_journal_entry:
+            mock_journal_entry.return_value = mock_entry
 
             payroll_data = {
                 "20395": PayrollData(
@@ -572,7 +614,6 @@ class TestCreatePayrollAllocationJournal(unittest.TestCase):
         self.assertIn("999", url)
         mock_existing.save.assert_called_once()
 
-
     @patch("payroll_allocation.refresh_session")
     @patch("payroll_allocation.qb")
     @patch("payroll_allocation.get_store_refs")
@@ -602,8 +643,8 @@ class TestCreatePayrollAllocationJournal(unittest.TestCase):
         mock_entry = MagicMock()
         mock_entry.Id = "456"
 
-        with patch("payroll_allocation.JournalEntry") as MockJournalEntry:
-            MockJournalEntry.return_value = mock_entry
+        with patch("payroll_allocation.JournalEntry") as mock_journal_entry:
+            mock_journal_entry.return_value = mock_entry
 
             payroll_data = {
                 "20358": PayrollData(
@@ -644,17 +685,20 @@ class TestAddAccountLines(unittest.TestCase):
     @patch("payroll_allocation.JournalEntryLine", side_effect=lambda: MagicMock())
     @patch("payroll_allocation.wmc_account_ref")
     def test_skip_credit_produces_debit_only_lines(
-        self, mock_ref: MagicMock, _mock_line: MagicMock, _mock_detail: MagicMock,
+        self,
+        mock_ref: MagicMock,
+        _mock_line: MagicMock,
+        _mock_detail: MagicMock,
     ) -> None:
         """Test that skip_credit=True produces no Credit line."""
         mock_ref.return_value = MagicMock()
         lines: list = []
         store_amounts = {"20358": Decimal("3000.00"), "20395": Decimal("2000.00")}
-        _add_account_lines(lines, "5511", store_amounts, self.store_refs, skip_credit=True)
+        _add_account_lines(
+            lines, "5511", store_amounts, self.store_refs, skip_credit=True
+        )
 
-        posting_types = [
-            line.JournalEntryLineDetail.PostingType for line in lines
-        ]
+        posting_types = [line.JournalEntryLineDetail.PostingType for line in lines]
         self.assertNotIn("Credit", posting_types)
         self.assertTrue(all(p == "Debit" for p in posting_types))
 
@@ -662,19 +706,26 @@ class TestAddAccountLines(unittest.TestCase):
     @patch("payroll_allocation.JournalEntryLine", side_effect=lambda: MagicMock())
     @patch("payroll_allocation.wmc_account_ref")
     def test_credit_total_overrides_computed_credit(
-        self, mock_ref: MagicMock, _mock_line: MagicMock, _mock_detail: MagicMock,
+        self,
+        mock_ref: MagicMock,
+        _mock_line: MagicMock,
+        _mock_detail: MagicMock,
     ) -> None:
         """Test that credit_total overrides the auto-computed sum."""
         mock_ref.return_value = MagicMock()
         lines: list = []
         store_amounts = {"20358": Decimal("1500.00")}
         _add_account_lines(
-            lines, "5502", store_amounts, self.store_refs,
+            lines,
+            "5502",
+            store_amounts,
+            self.store_refs,
             credit_total=Decimal("4500.00"),
         )
 
         credit_lines = [
-            line for line in lines
+            line
+            for line in lines
             if line.JournalEntryLineDetail.PostingType == "Credit"
         ]
         self.assertEqual(len(credit_lines), 1)
@@ -684,7 +735,10 @@ class TestAddAccountLines(unittest.TestCase):
     @patch("payroll_allocation.JournalEntryLine", side_effect=lambda: MagicMock())
     @patch("payroll_allocation.wmc_account_ref")
     def test_default_credit_equals_debit_sum(
-        self, mock_ref: MagicMock, _mock_line: MagicMock, _mock_detail: MagicMock,
+        self,
+        mock_ref: MagicMock,
+        _mock_line: MagicMock,
+        _mock_detail: MagicMock,
     ) -> None:
         """Test that without overrides, credit equals sum of store amounts."""
         mock_ref.return_value = MagicMock()
@@ -693,7 +747,8 @@ class TestAddAccountLines(unittest.TestCase):
         _add_account_lines(lines, "5502", store_amounts, self.store_refs)
 
         credit_lines = [
-            line for line in lines
+            line
+            for line in lines
             if line.JournalEntryLineDetail.PostingType == "Credit"
         ]
         self.assertEqual(len(credit_lines), 1)

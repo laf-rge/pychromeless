@@ -1,10 +1,8 @@
-import datetime
 import logging
 from time import sleep
-from typing import Any, cast
+from typing import Any
 
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 
 from webdriver import initialise_driver
 

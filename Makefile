@@ -43,20 +43,13 @@ test-financial: install-dev
 	PYTHONPATH=src python -m pytest src/tests -v -m "financial"
 
 # Linting targets
-lint-comprehensive: install-dev
-	black --check src/
-	isort --check-only src/
-	flake8 src/
-	mypy src/ --ignore-missing-imports
-	bandit -r src/ -f json || true
-	pylint src/ --output-format=json || true
-
-# Enhanced lint target (backwards compatible)
 lint: install-dev
-	black --check src/
-	isort --check-only src/
-	flake8 src/
+	ruff check src/
+	ruff format --check src/
 	mypy src/ --ignore-missing-imports
+
+# Comprehensive lint (same as lint now — ruff covers flake8+pylint+bandit rules)
+lint-comprehensive: lint
 
 # New target that runs both linting and tests
 test-all: lint test frontend-lint frontend-test
@@ -66,8 +59,8 @@ ci-test-all: lint ci-test
 
 # Formatting
 format: install-dev
-	black src/
-	isort src/
+	ruff check --fix src/
+	ruff format src/
 
 # CI/CD targets
 ci-test: install-dev
@@ -188,7 +181,7 @@ help:
 	@echo "Development:"
 	@echo "  install               - Install development dependencies"
 	@echo "  install-prod          - Install production dependencies only"
-	@echo "  format                - Format code with black and isort"
+	@echo "  format                - Format code with ruff"
 	@echo "  pre-commit-install   - Install pre-commit hooks"
 	@echo ""
 	@echo "Testing:"
@@ -202,8 +195,8 @@ help:
 	@echo "  test-financial        - Run financial calculation tests only"
 	@echo ""
 	@echo "Code Quality:"
-	@echo "  lint                  - Run basic code quality checks"
-	@echo "  lint-comprehensive    - Run comprehensive linting (includes pylint, bandit)"
+	@echo "  lint                  - Run ruff linter, ruff formatter check, and mypy"
+	@echo "  lint-comprehensive    - Same as lint (ruff covers all rules)"
 	@echo "  security-check        - Run security vulnerability scanning"
 	@echo ""
 	@echo "CI/CD:"

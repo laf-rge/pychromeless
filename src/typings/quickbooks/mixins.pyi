@@ -1,4 +1,5 @@
-from typing import Any, Iterator, Self
+from collections.abc import Iterator
+from typing import Any, Self
 
 from _typeshed import Incomplete
 

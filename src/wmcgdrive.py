@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 class WMCGdrive:
     def __init__(self) -> None:
         self._parameters = cast(
-            SSMParameterStore, SSMParameterStore(prefix="/prod")["gcp"]
+            "SSMParameterStore", SSMParameterStore(prefix="/prod")["gcp"]
         )
-        gdrive_json = json.loads(cast(str, self._parameters["gdrive"]))
+        gdrive_json = json.loads(cast("str", self._parameters["gdrive"]))
 
         scopes_list = [
             "https://www.googleapis.com/auth/drive",
@@ -31,9 +31,9 @@ class WMCGdrive:
         self._credentials = service_account.Credentials.from_service_account_info(
             gdrive_json, scopes=scopes_list
         )
-        self._journal_folder_id = cast(str, self._parameters["journal_folder"])
-        self._employees_folder_id = cast(str, self._parameters["employees_folder"])
-        self._public_folder_id = cast(str, self._parameters["public_folder"])
+        self._journal_folder_id = cast("str", self._parameters["journal_folder"])
+        self._employees_folder_id = cast("str", self._parameters["employees_folder"])
+        self._public_folder_id = cast("str", self._parameters["public_folder"])
         self._service = build("drive", "v3", credentials=self._credentials)
 
     def upload(self, filename: str, content: bytes, mime_type: str) -> None:

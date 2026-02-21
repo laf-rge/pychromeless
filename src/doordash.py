@@ -35,7 +35,7 @@ class Doordash:
 
     def __init__(self) -> None:
         self._parameters = cast(
-            SSMParameterStore, SSMParameterStore(prefix="/prod")["doordash"]
+            "SSMParameterStore", SSMParameterStore(prefix="/prod")["doordash"]
         )
         self._driver = initialise_driver()
 
@@ -122,7 +122,9 @@ class Doordash:
         txdate = datetime.datetime.strptime(txdate_str, "Payout on %B %d, %Y").date()
 
         # Click the 'Show details' button
-        driver.find_element(By.XPATH, "//button[.//span[text()='Show details']]").click()
+        driver.find_element(
+            By.XPATH, "//button[.//span[text()='Show details']]"
+        ).click()
         sleep(1)
 
         notes = {}
@@ -222,7 +224,7 @@ class Doordash:
         if "Adjustments" in notes:
             lines.append(["4830", "Adjustments", notes["Adjustments"]])
         # tips, merchant fee tax and customer fees tax not implemented
-        store = store_inv_map.get(payout_id.split("/")[7], None)
+        store = store_inv_map.get(payout_id.split("/")[7])
         if store is None:
             return None
         return [
@@ -250,7 +252,7 @@ class Doordash:
 
                 for row in p_reader:
                     if header:
-                        notes = json.dumps(dict(zip(header, row)))
+                        notes = json.dumps(dict(zip(header, row, strict=False)))
                         lines = []
                         lines.append(
                             ["1361", "SUBTOTAL", row[header.index("SUBTOTAL")]]

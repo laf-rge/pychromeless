@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Any, Dict, Type
+from typing import Any
 
 from _typeshed import Incomplete
 
@@ -35,7 +35,7 @@ class DepositLine(QuickbooksBaseObject):
     DepositLineDetail: DepositLineDetail
     DepositToAccountRef: Ref
 
-    list_dict: Dict[str, Type[Any]] = {
+    list_dict: dict[str, type[Any]] = {
         "LinkedTxn": LinkedTxn,
         "CustomField": CustomField,
     }

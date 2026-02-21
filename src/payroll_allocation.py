@@ -535,8 +535,7 @@ def create_payroll_allocation_journal(
         store: data.regular_earnings for store, data in payroll_by_store.items()
     }
     manager_wages_by_store = {
-        store: data.manager_regular_earnings
-        for store, data in payroll_by_store.items()
+        store: data.manager_regular_earnings for store, data in payroll_by_store.items()
     }
     wages_credit = sum(wages_by_store.values()) + sum(manager_wages_by_store.values())
     _add_account_lines(
@@ -557,7 +556,9 @@ def create_payroll_allocation_journal(
         store: data.manager_overtime_earnings
         for store, data in payroll_by_store.items()
     }
-    ot_credit = sum(overtime_by_store.values()) + sum(manager_overtime_by_store.values())
+    ot_credit = sum(overtime_by_store.values()) + sum(
+        manager_overtime_by_store.values()
+    )
     _add_account_lines(
         lines,
         PAYROLL_ACCOUNTS["overtime"],
@@ -748,7 +749,9 @@ def process_payroll_allocation(
 
     try:
         # Parse Gusto CSV
-        payroll_by_store = parse_gusto_csv(gusto_csv_content, manager_names=manager_names)
+        payroll_by_store = parse_gusto_csv(
+            gusto_csv_content, manager_names=manager_names
+        )
 
         if not payroll_by_store:
             logger.warning(
@@ -839,8 +842,6 @@ def process_payroll_allocation(
 
 # For local testing / Phase 0 examination
 if __name__ == "__main__":
-    import sys
-
     logging.basicConfig(level=logging.INFO)
 
     print("Examining existing labor journal entries...")

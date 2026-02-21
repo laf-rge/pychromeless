@@ -11,7 +11,6 @@ import html
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
-
 # -- Dataclasses --
 
 
@@ -119,11 +118,11 @@ def _wrap_document(body: str) -> str:
         f'<table width="100%" cellpadding="0" cellspacing="0" style="background:{_CREAM_BG};padding:20px 0;">\n'
         '<tr><td align="center">\n'
         '<table width="600" cellpadding="0" cellspacing="0">\n'
-        f'{body}'
-        '</table>\n'
-        '</td></tr>\n'
-        '</table>\n'
-        '</body>\n</html>'
+        f"{body}"
+        "</table>\n"
+        "</td></tr>\n"
+        "</table>\n"
+        "</body>\n</html>"
     )
 
 
@@ -131,18 +130,18 @@ def _render_header(title: str, subtitle: str) -> str:
     return (
         f'<tr><td style="background:{_DARK};border-radius:8px 8px 0 0;padding:20px 24px;">\n'
         '  <table width="100%" cellpadding="0" cellspacing="0">\n'
-        '  <tr>\n'
-        '    <td>\n'
+        "  <tr>\n"
+        "    <td>\n"
         f'      <div style="font-family:{_SERIF};font-size:24px;font-weight:800;color:{_GOLD};letter-spacing:2px;">WMC</div>\n'
         f'      <div style="font-family:{_SANS};font-size:10px;font-weight:500;color:{_MUTED};text-transform:uppercase;letter-spacing:2px;margin-top:2px;">Wagoner Management Corp.</div>\n'
-        '    </td>\n'
+        "    </td>\n"
         '    <td align="right" valign="bottom">\n'
         f'      <div style="font-family:{_SANS};font-size:14px;font-weight:600;color:#F5F0E8;">{_esc(title)}</div>\n'
         f'      <div style="font-family:{_SANS};font-size:12px;font-weight:400;color:{_MUTED};margin-top:2px;">{_esc(subtitle)}</div>\n'
-        '    </td>\n'
-        '  </tr>\n'
-        '  </table>\n'
-        '</td></tr>\n'
+        "    </td>\n"
+        "  </tr>\n"
+        "  </table>\n"
+        "</td></tr>\n"
     )
 
 
@@ -152,9 +151,9 @@ def _render_footer() -> str:
         f'  <table width="100%" cellpadding="0" cellspacing="0" style="background:{_DARK};border-radius:0 0 8px 8px;overflow:hidden;">\n'
         f'    <tr><td style="padding:14px 24px;">\n'
         f'      <span style="font-family:{_SANS};font-size:11px;font-weight:400;color:{_MUTED};">Josiah &middot; Wagoner Management Corp.</span>\n'
-        '    </td></tr>\n'
-        '  </table>\n'
-        '</td></tr>\n'
+        "    </td></tr>\n"
+        "  </table>\n"
+        "</td></tr>\n"
     )
 
 
@@ -166,12 +165,14 @@ def _render_summary_metric(label: str, value: int, is_alert: bool = False) -> st
         f'<td align="center" width="20%" style="padding:0 4px;">\n'
         f'  <div style="font-family:{_SANS};font-size:10px;font-weight:600;color:{label_color};text-transform:uppercase;letter-spacing:0.5px;{label_opacity}">{_esc(label)}</div>\n'
         f'  <div style="font-family:{_SERIF};font-size:22px;font-weight:800;color:{value_color};line-height:1.2;">{value}</div>\n'
-        '</td>\n'
+        "</td>\n"
     )
 
 
 def _render_summary_divider() -> str:
-    return f'<td width="1" style="background:{_DIVIDER_GOLD};font-size:0;">&nbsp;</td>\n'
+    return (
+        f'<td width="1" style="background:{_DIVIDER_GOLD};font-size:0;">&nbsp;</td>\n'
+    )
 
 
 def _render_summary_strip(data: DailyJournalData) -> str:
@@ -191,11 +192,11 @@ def _render_summary_strip(data: DailyJournalData) -> str:
     return (
         f'<tr><td style="background:{_GOLD};padding:14px 24px;">\n'
         '  <table width="100%" cellpadding="0" cellspacing="0">\n'
-        '  <tr>\n'
-        f'    {"".join(cells)}'
-        '  </tr>\n'
-        '  </table>\n'
-        '</td></tr>\n'
+        "  <tr>\n"
+        f"    {''.join(cells)}"
+        "  </tr>\n"
+        "  </table>\n"
+        "</td></tr>\n"
     )
 
 
@@ -209,7 +210,7 @@ def _render_attendance_row(record: AttendanceRecord) -> str:
         detail_text = f"{_fmt_date_short(record.shift_time)}, {_fmt_time(record.shift_time)} shift"
         badge_html = (
             f'<td align="right" style="font-family:{_SANS};font-size:10px;font-weight:600;'
-            f'color:{_RED_TEXT};padding:5px 8px;border-bottom:1px solid {_RED_BORDER};'
+            f"color:{_RED_TEXT};padding:5px 8px;border-bottom:1px solid {_RED_BORDER};"
             f'text-transform:uppercase;letter-spacing:0.5px;">no show</td>\n'
         )
     elif record.record_type == "late":
@@ -218,12 +219,18 @@ def _render_attendance_row(record: AttendanceRecord) -> str:
         name_weight = ""
         detail_color = _MUTED
         border_color = _ROW_BORDER
-        minutes = abs(int(record.minutes_diff)) if record.minutes_diff is not None else 0
-        detail_text = f"{_fmt_date_short(record.clock_in_time)}, in {_fmt_time(record.clock_in_time)}" if record.clock_in_time else ""
+        minutes = (
+            abs(int(record.minutes_diff)) if record.minutes_diff is not None else 0
+        )
+        detail_text = (
+            f"{_fmt_date_short(record.clock_in_time)}, in {_fmt_time(record.clock_in_time)}"
+            if record.clock_in_time
+            else ""
+        )
         badge_html = (
             f'<td align="right" style="font-family:{_SANS};font-size:11px;font-weight:600;'
             f'color:{_YELLOW_TEXT};padding:5px 8px;border-bottom:1px solid {_ROW_BORDER};">'
-            f'{minutes} min late</td>\n'
+            f"{minutes} min late</td>\n"
         )
     else:  # early
         bg = _GREEN_BG
@@ -231,12 +238,18 @@ def _render_attendance_row(record: AttendanceRecord) -> str:
         name_weight = ""
         detail_color = _MUTED
         border_color = _ROW_BORDER
-        minutes = abs(int(record.minutes_diff)) if record.minutes_diff is not None else 0
-        detail_text = f"{_fmt_date_short(record.clock_in_time)}, in {_fmt_time(record.clock_in_time)}" if record.clock_in_time else ""
+        minutes = (
+            abs(int(record.minutes_diff)) if record.minutes_diff is not None else 0
+        )
+        detail_text = (
+            f"{_fmt_date_short(record.clock_in_time)}, in {_fmt_time(record.clock_in_time)}"
+            if record.clock_in_time
+            else ""
+        )
         badge_html = (
             f'<td align="right" style="font-family:{_SANS};font-size:11px;font-weight:600;'
             f'color:{_GREEN_TEXT};padding:5px 8px;border-bottom:1px solid {_ROW_BORDER};">'
-            f'{minutes} min early</td>\n'
+            f"{minutes} min early</td>\n"
         )
 
     return (
@@ -245,8 +258,8 @@ def _render_attendance_row(record: AttendanceRecord) -> str:
         f'padding:5px 8px;border-bottom:1px solid {border_color};">{_esc(record.name)}</td>\n'
         f'  <td style="font-family:{_SYSTEM};font-size:12px;color:{detail_color};'
         f'padding:5px 8px;border-bottom:1px solid {border_color};">{_esc(detail_text)}</td>\n'
-        f'  {badge_html}'
-        '</tr>\n'
+        f"  {badge_html}"
+        "</tr>\n"
     )
 
 
@@ -255,36 +268,38 @@ def _render_section_header(label: str, color: str = _MUTED) -> str:
         f'<tr><td style="padding:12px 20px 4px;">\n'
         f'  <div style="font-family:{_SANS};font-size:11px;font-weight:600;color:{color};'
         f'text-transform:uppercase;letter-spacing:0.5px;">{_esc(label)}</div>\n'
-        '</td></tr>\n'
+        "</td></tr>\n"
     )
 
 
 def _render_missing_punch_row(mp: MissingPunch) -> str:
     return (
-        '<tr>\n'
+        "<tr>\n"
         f'  <td style="font-family:{_SYSTEM};font-size:12px;color:{_DARK};padding:2px 0;">'
-        f'{_esc(mp.name)}</td>\n'
+        f"{_esc(mp.name)}</td>\n"
         f'  <td align="right" style="font-family:{_SYSTEM};font-size:12px;color:{_MUTED};padding:2px 0;">'
-        f'{_esc(_fmt_date_short(mp.start_time))}, clocked in {_esc(_fmt_time(mp.start_time))}</td>\n'
-        '</tr>\n'
+        f"{_esc(_fmt_date_short(mp.start_time))}, clocked in {_esc(_fmt_time(mp.start_time))}</td>\n"
+        "</tr>\n"
     )
 
 
 def _render_mpv_row(mpv: MealPeriodViolation) -> str:
     return (
-        '<tr>\n'
+        "<tr>\n"
         f'  <td style="font-family:{_SYSTEM};font-size:12px;color:{_MPV_RED};padding:2px 0;">'
-        f'{_esc(mpv.name)}</td>\n'
+        f"{_esc(mpv.name)}</td>\n"
         f'  <td style="font-family:{_SYSTEM};font-size:12px;color:{_MPV_RED};padding:2px 0;">'
-        f'{_esc(_fmt_date_short(mpv.day))}</td>\n'
+        f"{_esc(_fmt_date_short(mpv.day))}</td>\n"
         f'  <td align="right" style="font-family:{_SYSTEM};font-size:12px;color:{_MPV_RED};padding:2px 0;">'
-        f'Shift {_esc(_fmt_time(mpv.shift_start))}</td>\n'
-        '</tr>\n'
+        f"Shift {_esc(_fmt_time(mpv.shift_start))}</td>\n"
+        "</tr>\n"
     )
 
 
 def _render_store_card(card: StoreCard) -> str:
-    drawer_label = f"{card.drawer_opens} drawer open{'s' if card.drawer_opens != 1 else ''}"
+    drawer_label = (
+        f"{card.drawer_opens} drawer open{'s' if card.drawer_opens != 1 else ''}"
+    )
 
     parts = []
 
@@ -292,17 +307,17 @@ def _render_store_card(card: StoreCard) -> str:
     parts.append(
         f'<tr><td style="padding:12px 20px;background:{_CARD_HEADER_BG};border-bottom:1px solid {_CARD_HEADER_BORDER};">\n'
         '  <table width="100%" cellpadding="0" cellspacing="0">\n'
-        '  <tr>\n'
-        '    <td>\n'
+        "  <tr>\n"
+        "    <td>\n"
         f'      <span style="font-family:{_SANS};font-size:15px;font-weight:700;color:{_DARK};">{_esc(card.store_id)}</span>\n'
         f'      <span style="font-family:{_SANS};font-size:14px;font-weight:500;color:{_MUTED};"> {_esc(card.store_name)}</span>\n'
-        '    </td>\n'
+        "    </td>\n"
         '    <td align="right">\n'
         f'      <span style="font-family:{_SANS};font-size:11px;font-weight:600;color:{_MUTED};">{_esc(drawer_label)}</span>\n'
-        '    </td>\n'
-        '  </tr>\n'
-        '  </table>\n'
-        '</td></tr>\n'
+        "    </td>\n"
+        "  </tr>\n"
+        "  </table>\n"
+        "</td></tr>\n"
     )
 
     # Attendance section
@@ -312,9 +327,9 @@ def _render_store_card(card: StoreCard) -> str:
         parts.append(
             '<tr><td style="padding:4px 20px 12px;">\n'
             '  <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">\n'
-            f'    {rows}'
-            '  </table>\n'
-            '</td></tr>\n'
+            f"    {rows}"
+            "  </table>\n"
+            "</td></tr>\n"
         )
 
     # Missing punches section
@@ -324,22 +339,24 @@ def _render_store_card(card: StoreCard) -> str:
         parts.append(
             '<tr><td style="padding:2px 20px 14px;">\n'
             '  <table width="100%" cellpadding="0" cellspacing="0">\n'
-            f'    {rows}'
-            '  </table>\n'
-            '</td></tr>\n'
+            f"    {rows}"
+            "  </table>\n"
+            "</td></tr>\n"
         )
 
     # Meal period violations section
     if card.mpvs:
-        label = "Meal Period Violation" if len(card.mpvs) == 1 else "Meal Period Violations"
+        label = (
+            "Meal Period Violation" if len(card.mpvs) == 1 else "Meal Period Violations"
+        )
         parts.append(_render_section_header(label, color=_MPV_RED))
         rows = "".join(_render_mpv_row(mpv) for mpv in card.mpvs)
         parts.append(
             '<tr><td style="padding:2px 20px 14px;">\n'
             '  <table width="100%" cellpadding="0" cellspacing="0">\n'
-            f'    {rows}'
-            '  </table>\n'
-            '</td></tr>\n'
+            f"    {rows}"
+            "  </table>\n"
+            "</td></tr>\n"
         )
 
     inner = "".join(parts)
@@ -347,9 +364,9 @@ def _render_store_card(card: StoreCard) -> str:
         '<tr><td style="padding:0 0 12px;">\n'
         '  <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;'
         'border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">\n'
-        f'    {inner}'
-        '  </table>\n'
-        '</td></tr>\n'
+        f"    {inner}"
+        "  </table>\n"
+        "</td></tr>\n"
     )
 
 
@@ -360,10 +377,10 @@ def _render_alert_card(body_html: str) -> str:
         'border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">\n'
         f'    <tr><td style="padding:20px 24px;font-family:{_SYSTEM};font-size:14px;'
         f'color:{_DARK};line-height:1.6;">\n'
-        f'      {body_html}\n'
-        '    </td></tr>\n'
-        '  </table>\n'
-        '</td></tr>\n'
+        f"      {body_html}\n"
+        "    </td></tr>\n"
+        "  </table>\n"
+        "</td></tr>\n"
     )
 
 
@@ -372,14 +389,20 @@ def _render_alert_card(body_html: str) -> str:
 
 def render_daily_journal(data: DailyJournalData) -> str:
     """Render the Daily Journal Report as a complete HTML document."""
-    subtitle = data.report_date.strftime("%A, %B ") + str(data.report_date.day) + data.report_date.strftime(", %Y")
+    subtitle = (
+        data.report_date.strftime("%A, %B ")
+        + str(data.report_date.day)
+        + data.report_date.strftime(", %Y")
+    )
 
     parts = []
     parts.append(_render_header("Daily Journal Report", subtitle))
     parts.append(_render_summary_strip(data))
 
     # Spacer between summary and cards
-    parts.append('<tr><td style="height:12px;font-size:0;line-height:0;">&nbsp;</td></tr>\n')
+    parts.append(
+        '<tr><td style="height:12px;font-size:0;line-height:0;">&nbsp;</td></tr>\n'
+    )
 
     for card in data.store_cards:
         parts.append(_render_store_card(card))
@@ -391,7 +414,11 @@ def render_daily_journal(data: DailyJournalData) -> str:
 
 def render_alert_email(title: str, alert_date: date, body_html: str) -> str:
     """Render a branded alert email (missing deposit, high pay-in, etc.)."""
-    subtitle = alert_date.strftime("%A, %B ") + str(alert_date.day) + alert_date.strftime(", %Y")
+    subtitle = (
+        alert_date.strftime("%A, %B ")
+        + str(alert_date.day)
+        + alert_date.strftime(", %Y")
+    )
 
     parts = []
     parts.append(_render_header(title, subtitle))
@@ -403,11 +430,15 @@ def render_alert_email(title: str, alert_date: date, body_html: str) -> str:
 
 def render_tips_email(subject: str, report_date: date) -> str:
     """Render a branded wrapper for the tip spreadsheet attachment email."""
-    subtitle = report_date.strftime("%A, %B ") + str(report_date.day) + report_date.strftime(", %Y")
+    subtitle = (
+        report_date.strftime("%A, %B ")
+        + str(report_date.day)
+        + report_date.strftime(", %Y")
+    )
 
     body_html = (
         f'<div style="font-family:{_SYSTEM};font-size:14px;color:{_DARK};line-height:1.6;">'
-        'Attached is the tip spreadsheet for your review.</div>'
+        "Attached is the tip spreadsheet for your review.</div>"
     )
 
     parts = []

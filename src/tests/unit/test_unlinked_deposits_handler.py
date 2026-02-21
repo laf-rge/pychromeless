@@ -2,7 +2,6 @@
 
 import json
 import unittest
-from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 
@@ -168,9 +167,9 @@ class TestDailySalesHandlerWithStore(unittest.TestCase):
         mock_ws_manager.return_value = mock_ws
 
         mock_flexepos = MagicMock()
-        mock_flexepos.getDailySales.return_value = {"20358": {"Payins": ""}}
-        mock_flexepos.getOnlinePayments.return_value = []
-        mock_flexepos.getRoyaltyReport.return_value = []
+        mock_flexepos.get_daily_sales.return_value = {"20358": {"Payins": ""}}
+        mock_flexepos.get_online_payments.return_value = []
+        mock_flexepos.get_royalty_report.return_value = []
         mock_flexepos_class.return_value = mock_flexepos
 
         # Event with store parameter
@@ -186,8 +185,8 @@ class TestDailySalesHandlerWithStore(unittest.TestCase):
         # it will use sequential processing
         response = daily_sales_handler(event, None)
 
-        # Verify that getDailySales was called with the specific store
-        call_args = mock_flexepos.getDailySales.call_args
+        # Verify that get_daily_sales was called with the specific store
+        call_args = mock_flexepos.get_daily_sales.call_args
         if call_args:
             # First positional arg should be the store
             store_arg = call_args[0][0]

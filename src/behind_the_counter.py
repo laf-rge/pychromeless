@@ -15,7 +15,7 @@ class BehindTheCounter:
     def __init__(self) -> None:
         self.url = "https://franchisee.jerseymikes.com/"
         self._parameters = cast(
-            dict[str, str], SSMParameterStore(prefix="/prod")["btc"]
+            "dict[str, str]", SSMParameterStore(prefix="/prod")["btc"]
         )
         self.username = str(self._parameters["user"])
         self.password = str(self._parameters["password"])
@@ -78,7 +78,7 @@ class BehindTheCounter:
             print("Login failed - timeout waiting for elements")
             return False
         except Exception as e:
-            print(f"Login failed: {str(e)}")
+            print(f"Login failed: {e!s}")
             return False
 
     def download_csv(self) -> bool:
@@ -110,7 +110,7 @@ class BehindTheCounter:
             raise TimeoutException("CSV download did not complete within 30 seconds")
 
         except Exception as e:
-            print(f"CSV download failed: {str(e)}")
+            print(f"CSV download failed: {e!s}")
             return False
 
     def cleanup(self) -> None:

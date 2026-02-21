@@ -22,7 +22,9 @@ from store_config import StoreConfig
 
 class EmailService:
     def __init__(self, store_config: StoreConfig):
-        parameters = cast(SSMParameterStore, SSMParameterStore(prefix="/prod")["email"])
+        parameters = cast(
+            "SSMParameterStore", SSMParameterStore(prefix="/prod")["email"]
+        )
         self.from_email = parameters["from_email"]
         self.default_recipients = str(parameters["receiver_email"]).split(", ")
         self.charset = "UTF-8"
@@ -73,7 +75,7 @@ class EmailService:
 
     def send_missing_deposit_alert(self, store: str, txdate: date) -> None:
         """Send alert email for missing store deposits."""
-        subject = f"{store} missing deposit for {str(txdate)}"
+        subject = f"{store} missing deposit for {txdate!s}"
         body_html = (
             f"Folks,<br/><br/>"
             f"I couldn't find a deposit for <strong>{html.escape(store)}</strong> "
@@ -90,7 +92,7 @@ class EmailService:
         body_html = (
             f"<strong>{html.escape(store)}</strong> &mdash; "
             f"<strong>${html.escape(str(amount))}</strong><br/><br/>"
-            f"<pre style=\"font-size:12px;margin:0;white-space:pre-wrap;\">{html.escape(payins)}</pre>"
+            f'<pre style="font-size:12px;margin:0;white-space:pre-wrap;">{html.escape(payins)}</pre>'
         )
         message = render_alert_email(subject, date.today(), body_html)
         self.send_email(subject, message)

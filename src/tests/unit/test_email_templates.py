@@ -181,7 +181,10 @@ class TestEmptySectionsOmitted(unittest.TestCase):
         data = DailyJournalData(
             report_date=date(2026, 2, 15),
             store_cards=[card],
-            total_no_shows=0, total_late=0, total_early=0, total_mpvs=0,
+            total_no_shows=0,
+            total_late=0,
+            total_early=0,
+            total_mpvs=0,
             total_drawer_opens=1,
         )
         html = render_daily_journal(data)

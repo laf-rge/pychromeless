@@ -17,7 +17,7 @@ import logging
 import os
 import re
 import uuid
-from concurrent.futures import (  # pylint: disable=no-name-in-module  # type: ignore[attr-defined]  # noqa: F401
+from concurrent.futures import (  # pylint: disable=no-name-in-module  # type: ignore[attr-defined]
     ThreadPoolExecutor,
     as_completed,
 )
@@ -61,11 +61,11 @@ load_dotenv()
 store_config = StoreConfig()
 email_service = EmailService(store_config)
 
-dynamodb = cast(DynamoDBServiceResource, boto3.resource("dynamodb"))
+dynamodb = cast("DynamoDBServiceResource", boto3.resource("dynamodb"))
 
 # Initialize table conditionally (only if environment variable exists)
 if "CONNECTIONS_TABLE" in os.environ:
-    table = cast(Any, dynamodb.Table(os.environ["CONNECTIONS_TABLE"]))
+    table = cast("Any", dynamodb.Table(os.environ["CONNECTIONS_TABLE"]))
 else:
     table = None
 
@@ -129,9 +129,7 @@ def third_party_deposit_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         >>> third_party_deposit_handler()
     """
     context = _args[1] if _args and len(_args) > 1 else None
-    task_id = (
-        context.aws_request_id if context else None
-    ) or f"local-{str(uuid.uuid4())}"
+    task_id = (context.aws_request_id if context else None) or f"local-{uuid.uuid4()!s}"
     ws_manager = WebSocketManager()
 
     ws_manager.broadcast_status(
@@ -144,7 +142,13 @@ def third_party_deposit_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
     end_date = date.today()
 
     services = [
-        (Flexepos(), "getGiftCardACH", store_config.all_stores, start_date, end_date),
+        (
+            Flexepos(),
+            "get_gift_card_ach",
+            store_config.all_stores,
+            start_date,
+            end_date,
+        ),
         (Doordash(), "get_payments", store_config.all_stores, start_date, end_date),
         (
             UberEats(store_config),
@@ -220,9 +224,7 @@ def invoice_sync_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         >>> invoice_sync_handler({"year": "2024", "month": "03"})  # Process specific month
     """
     context = _args[1] if _args and len(_args) > 1 else None
-    task_id = (
-        context.aws_request_id if context else None
-    ) or f"local-{str(uuid.uuid4())}"
+    task_id = (context.aws_request_id if context else None) or f"local-{uuid.uuid4()!s}"
     ws_manager = WebSocketManager()
 
     ws_manager.broadcast_status(
@@ -306,14 +308,16 @@ def daily_sales_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         >>> from lambda_function import daily_sales_handler
         >>> daily_sales_handler()  # Process yesterday's sales
         >>> daily_sales_handler({"year": "2024", "month": "01", "day": "15"})
-        >>> daily_sales_handler({"year": "2024", "month": "01", "day": "15", "store": "20358"})
+        >>> daily_sales_handler(
+        ...     {"year": "2024", "month": "01", "day": "15", "store": "20358"}
+        ... )
     """
     event = _args[0] if _args and len(_args) > 0 else {}
     context = _args[1] if _args and len(_args) > 1 else None
     request_id = (
         event.get("requestContext", {}).get("requestId")
         or (context.aws_request_id if context else None)
-        or f"local-{str(uuid.uuid4())}"
+        or f"local-{uuid.uuid4()!s}"
     )
 
     ws_manager = WebSocketManager()
@@ -708,11 +712,11 @@ def daily_sales_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
                         task_id=request_id,
                         operation=OperationType.DAILY_SALES,
                         status="failed",
-                        error=f"Failed to create QuickBooks entries: {str(e)}",
+                        error=f"Failed to create QuickBooks entries: {e!s}",
                     )
                     return create_response(
                         500,
-                        {"message": f"Failed to create QuickBooks entries: {str(e)}"},
+                        {"message": f"Failed to create QuickBooks entries: {e!s}"},
                         request_id=request_id,
                     )
             else:
@@ -753,11 +757,11 @@ def daily_sales_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         try:
             txdate = txdates[0]
             dj = Flexepos()  # Initialize for online payments/royalty processing
-            payment_data = dj.getOnlinePayments(
+            payment_data = dj.get_online_payments(
                 store_config.all_stores, txdate.year, txdate.month
             )
             qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
-            royalty_data = dj.getRoyaltyReport(
+            royalty_data = dj.get_royalty_report(
                 "wmc",
                 date(txdate.year, txdate.month, 1),
                 date(
@@ -824,7 +828,7 @@ def online_cc_fee(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
     txdate = date.today() - timedelta(days=1)
 
     dj = Flexepos()
-    payment_data = dj.getOnlinePayments(
+    payment_data = dj.get_online_payments(
         store_config.all_stores, txdate.year, txdate.month
     )
     qb.enter_online_cc_fee(txdate.year, txdate.month, payment_data)
@@ -940,9 +944,7 @@ def daily_journal_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         >>> daily_journal_handler()
     """
     context = _args[1] if _args and len(_args) > 1 else None
-    task_id = (
-        context.aws_request_id if context else None
-    ) or f"local-{str(uuid.uuid4())}"
+    task_id = (context.aws_request_id if context else None) or f"local-{uuid.uuid4()!s}"
     ws_manager = WebSocketManager()
 
     ws_manager.broadcast_status(
@@ -958,7 +960,7 @@ def daily_journal_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
 
         # Fetch drawer opens from Flexepos
         dj = Flexepos()
-        drawer_opens = dj.getDailyJournal(
+        drawer_opens = dj.get_daily_journal(
             store_config.all_stores, yesterday.strftime("%m%d%Y")
         )
 
@@ -966,19 +968,19 @@ def daily_journal_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         gdrive = WMCGdrive()
         for store in store_config.all_stores:
             gdrive.upload(
-                "{0}-{1}_daily_journal.txt".format(str(yesterday), store),
+                f"{yesterday!s}-{store}_daily_journal.txt",
                 drawer_opens[store].encode("utf-8"),
                 "text/plain",
             )
 
         # Collect WhenIWork data
         t = Tips()
-        missing_punches_raw = t.getMissingPunches()
+        missing_punches_raw = t.get_missing_punches()
         mpvs_raw = sorted(
-            t.getMealPeriodViolations(store_config.all_stores, yesterday),
+            t.get_meal_period_violations(store_config.all_stores, yesterday),
             key=itemgetter("store", "start_time"),
         )
-        attendance_raw = t.attendanceReport(
+        attendance_raw = t.attendance_report(
             store_config.all_stores, yesterday, date.today()
         )
 
@@ -1049,9 +1051,7 @@ def daily_journal_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
 
 def email_tips_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
     context = args[1] if args and len(args) > 1 else None
-    task_id = (
-        context.aws_request_id if context else None
-    ) or f"local-{str(uuid.uuid4())}"
+    task_id = (context.aws_request_id if context else None) or f"local-{uuid.uuid4()!s}"
     ws_manager = WebSocketManager()
 
     ws_manager.broadcast_status(
@@ -1074,7 +1074,7 @@ def email_tips_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
             pay_period = int(event["day"])
         logger.info(f"year: {year}, month: {month}, pay_period: {pay_period}")
         t = Tips()
-        t.emailTips(store_config.all_stores, date(year, month, 5), pay_period)
+        t.email_tips(store_config.all_stores, date(year, month, 5), pay_period)
 
         ws_manager.broadcast_status(
             task_id=task_id,
@@ -1207,7 +1207,7 @@ def split_bill_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
         except Exception as e:
             logger.exception("Error parsing request parameters")
             return create_response(
-                400, {"message": f"Invalid request parameters: {str(e)}"}
+                400, {"message": f"Invalid request parameters: {e!s}"}
             )
 
         # Find the bill to split
@@ -1252,7 +1252,7 @@ def split_bill_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
 
     except Exception as e:
         logger.exception("Unexpected error in split_bill_handler")
-        return create_response(500, {"message": f"Internal server error: {str(e)}"})
+        return create_response(500, {"message": f"Internal server error: {e!s}"})
 
 
 def process_store_sales_internal_handler(
@@ -1283,10 +1283,10 @@ def process_store_sales_internal_handler(
 
         while retry:
             try:
-                journal_data = dj.getDailySales(store, txdate)
+                journal_data = dj.get_daily_sales(store, txdate)
                 retry = 0
             except Exception as e:
-                logger.exception(f"error {txdate.isoformat()}: {str(e)}")
+                logger.exception(f"error {txdate.isoformat()}: {e!s}")
                 retry -= 1
                 if retry == 0:
                     # Final failure - return error
@@ -1301,7 +1301,7 @@ def process_store_sales_internal_handler(
                     return create_response(
                         500,
                         {
-                            "message": f"Failed to get sales data for store {store}: {str(e)}"
+                            "message": f"Failed to get sales data for store {store}: {e!s}"
                         },
                     )
 
@@ -1567,7 +1567,7 @@ def payroll_allocation_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
             status="failed",
             error=str(e),
         )
-        return create_response(500, {"message": f"Error: {str(e)}"})
+        return create_response(500, {"message": f"Error: {e!s}"})
 
 
 def grubhub_csv_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -1776,7 +1776,7 @@ def grubhub_csv_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
             status="failed",
             error=str(e),
         )
-        return create_response(500, {"message": f"Error: {str(e)}"})
+        return create_response(500, {"message": f"Error: {e!s}"})
 
 
 def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -1900,7 +1900,7 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                 )
 
             except FDMSParseError as e:
-                result["error"] = f"Parse error: {str(e)}"
+                result["error"] = f"Parse error: {e!s}"
                 failed += 1
                 logger.warning(
                     "Failed to parse FDMS statement",
@@ -1908,7 +1908,7 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                 )
 
             except Exception as e:
-                result["error"] = f"Error: {str(e)}"
+                result["error"] = f"Error: {e!s}"
                 failed += 1
                 logger.exception(
                     "Error processing FDMS statement",
@@ -1964,7 +1964,7 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
             status="failed",
             error=str(e),
         )
-        return create_response(500, {"message": f"Error: {str(e)}"})
+        return create_response(500, {"message": f"Error: {e!s}"})
 
 
 def qb_auth_url_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
@@ -1993,7 +1993,7 @@ def qb_auth_url_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
 
     except Exception as e:
         logger.exception("Error generating QuickBooks auth URL")
-        return create_response(500, {"message": f"Error: {str(e)}"})
+        return create_response(500, {"message": f"Error: {e!s}"})
 
 
 def qb_callback_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
@@ -2106,7 +2106,7 @@ def qb_connection_status_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
         return create_response(200, result)
     except Exception as e:
         logger.exception("Error checking QuickBooks connection status")
-        return create_response(500, {"message": f"Error: {str(e)}"})
+        return create_response(500, {"message": f"Error: {e!s}"})
 
 
 def unlinked_deposits_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
@@ -2170,10 +2170,10 @@ def unlinked_deposits_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
 
     except ValueError as e:
         logger.warning("Invalid date format in request", extra={"error": str(e)})
-        return create_response(400, {"message": f"Invalid date format: {str(e)}"})
+        return create_response(400, {"message": f"Invalid date format: {e!s}"})
     except Exception as e:
         logger.exception("Error fetching unlinked deposits")
-        return create_response(500, {"message": f"Error: {str(e)}"})
+        return create_response(500, {"message": f"Error: {e!s}"})
 
 
 def timeout_detector_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:

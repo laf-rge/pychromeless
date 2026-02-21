@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from auth_utils import AuthPolicy, HttpVerb, OAuth2TokenValidation, extract_token
+from auth_utils import AuthPolicy, OAuth2TokenValidation, extract_token
 
 logger = logging.getLogger(__name__)
 

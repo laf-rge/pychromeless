@@ -19,11 +19,11 @@ class StoreConfig:
     def refresh(self) -> None:
         """Refresh store configuration from SSM Parameter Store"""
         try:
-            stores_param = cast(SSMParameterStore, self._ssm["stores"])
+            stores_param = cast("SSMParameterStore", self._ssm["stores"])
             config = str(stores_param["config"])
             self._store_config = json.loads(config)
         except (ClientError, KeyError, json.JSONDecodeError) as e:
-            logger.error(f"Failed to load store configuration: {str(e)}")
+            logger.error(f"Failed to load store configuration: {e!s}")
             # Fallback to default configuration if SSM fails
             self._store_config = {
                 "20400": {

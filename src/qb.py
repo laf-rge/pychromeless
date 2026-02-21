@@ -238,7 +238,7 @@ def create_daily_sales(
         for line_item, line_id in detail_map.items():
             line = SalesItemLine()
             line.LineNum = line_num
-            if line_item in daily_report and daily_report[line_item]:
+            if daily_report.get(line_item):
                 if daily_report[line_item].startswith("N"):
                     line.Amount = Decimal(0)
                 else:
@@ -246,15 +246,15 @@ def create_daily_sales(
                         Decimal(atof(daily_report[line_item].strip("$"))) * line_id[1]
                     )
                 amount_total += Decimal(line.Amount)
-                line.Description = "{} imported from ({})".format(
-                    line_item, daily_report[line_item]
+                line.Description = (
+                    f"{line_item} imported from ({daily_report[line_item]})"
                 )
             else:
                 line.Amount = Decimal(0)
                 line.Description = "Nothing captured."
             line.SalesItemLineDetail = SalesItemLineDetail()
             item = Item.query(
-                "select * from Item where id = '{}'".format(line_id[0]), qb=CLIENT
+                f"select * from Item where id = '{line_id[0]}'", qb=CLIENT
             )[0]
             line.SalesItemLineDetail.ItemRef = item.to_ref()
             line.SalesItemLineDetail.ServiceDate = None
@@ -279,7 +279,7 @@ def create_daily_sales(
         else:
             line.Amount = Decimal(0)
         line.SalesItemLineDetail = SalesItemLineDetail()
-        item = Item.query("select * from Item where id = '{}'".format(43), qb=CLIENT)[0]
+        item = Item.query(f"select * from Item where id = '{43}'", qb=CLIENT)[0]
         line.SalesItemLineDetail.ItemRef = item.to_ref()
         line.SalesItemLineDetail.ServiceDate = None
         new_receipt.Line.append(line)
@@ -301,7 +301,7 @@ def create_daily_sales(
             extra={"amount": str(line.Amount), "store": store, "txdate": str(txdate)},
         )
         line.SalesItemLineDetail = SalesItemLineDetail()
-        item = Item.query("select * from Item where id = '{}'".format(31), qb=CLIENT)[0]
+        item = Item.query(f"select * from Item where id = '{31}'", qb=CLIENT)[0]
         line.SalesItemLineDetail.ItemRef = item.to_ref()
         line.SalesItemLineDetail.ServiceDate = None
         new_receipt.Line.append(line)
@@ -475,13 +475,13 @@ def sync_third_party_transactions(
 
     for store, store_data in payment_data.items():
         entries = JournalEntry.where(
-            "DocNumber = 'tp-{0}-{2}-{1}'".format(store, str(month).zfill(2), year),
+            f"DocNumber = 'tp-{store}-{year}-{str(month).zfill(2)}'",
             qb=CLIENT,
         )
         if len(entries) == 0:
             # create the JournalEntry
             jentry = JournalEntry()
-            jentry.DocNumber = "tp-{0}-{2}-{1}".format(store, str(month).zfill(2), year)
+            jentry.DocNumber = f"tp-{store}-{year}-{str(month).zfill(2)}"
         else:
             jentry = entries[0]
 
@@ -536,15 +536,13 @@ def sync_inventory(
     store_refs = get_store_refs()
 
     entries = JournalEntry.where(
-        "DocNumber = 'inv-{0}-{2}-{1}'".format(department, str(month).zfill(2), year),
+        f"DocNumber = 'inv-{department}-{year}-{str(month).zfill(2)}'",
         qb=CLIENT,
     )
     if len(entries) == 0:
         # create the JournalEntry
         jentry = JournalEntry()
-        jentry.DocNumber = "inv-{0}-{2}-{1}".format(
-            department, str(month).zfill(2), year
-        )
+        jentry.DocNumber = f"inv-{department}-{year}-{str(month).zfill(2)}"
     else:
         jentry = entries[0]
     jentry.TxnDate = qb_date_format(
@@ -597,7 +595,7 @@ def sync_inventory(
         )
 
 
-def wmc_account_ref(acctNum: int | str) -> Any:
+def wmc_account_ref(acct_num: int | str) -> Any:
     global account_ref
     if account_ref is None:
         refresh_session()
@@ -607,7 +605,7 @@ def wmc_account_ref(acctNum: int | str) -> Any:
                 Account.all(max_results=1000, qb=CLIENT),
             )
         )
-    return account_ref[str(acctNum)]
+    return account_ref[str(acct_num)]
 
 
 def get_store_refs() -> dict[str, Any]:
@@ -741,7 +739,7 @@ def get_secret() -> bytes | str:
     # Depending on whether the secret is a string or binary, one of these fields will be populated.
     if get_secret_value_response:
         if "SecretString" in get_secret_value_response:
-            return cast(str, get_secret_value_response["SecretString"])
+            return cast("str", get_secret_value_response["SecretString"])
         else:
             return base64.b64decode(get_secret_value_response["SecretBinary"])
     else:
@@ -752,7 +750,7 @@ def put_secret(secret_string: str) -> dict[str, Any]:
     put_secret_value_response = client.put_secret_value(
         SecretId=secret_name, SecretString=secret_string
     )
-    return cast(dict[str, Any], put_secret_value_response)
+    return cast("dict[str, Any]", put_secret_value_response)
 
 
 def get_auth_url(state: str) -> dict[str, str]:
@@ -843,7 +841,7 @@ def get_connection_status() -> dict[str, Any]:
         }
     except Exception as e:
         logger.exception("Failed to verify QuickBooks connection")
-        return {"connected": False, "message": f"Connection error: {str(e)}"}
+        return {"connected": False, "message": f"Connection error: {e!s}"}
 
 
 def bill_export() -> None:
@@ -851,7 +849,7 @@ def bill_export() -> None:
     # store_refs = {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
     for qb_data_type in [VendorCredit, Bill, SalesReceipt, Deposit, JournalEntry]:
         with open(
-            "purchase_{0}_journal.json".format(qb_data_type.__name__),
+            f"purchase_{qb_data_type.__name__}_journal.json",
             "w",
             encoding="utf-8",
         ) as fileout:
@@ -887,7 +885,7 @@ def fix_deposit() -> None:
     qb_data_type = Deposit
     modify_queue = []
     with open(
-        "purchase_{0}_journal.json".format(qb_data_type.__name__),
+        f"purchase_{qb_data_type.__name__}_journal.json",
         "w",
         encoding="utf-8",
     ) as fileout:
@@ -1057,11 +1055,11 @@ def calculate_bill_splits(
 
     Example:
         >>> amounts = calculate_bill_splits(
-        ...     Decimal('256.36'),
-        ...     [Decimal('256.36')],
-        ...     ['20025', '20358', '20366', '20367', '20368']
+        ...     Decimal("256.36"),
+        ...     [Decimal("256.36")],
+        ...     ["20025", "20358", "20366", "20367", "20368"],
         ... )
-        >>> amounts['20025']
+        >>> amounts["20025"]
         [Decimal('51.27')]
         >>> sum(sum(v) for v in amounts.values())
         Decimal('256.36')
@@ -1150,7 +1148,7 @@ def test_bill_split() -> bool:
         return total == total_split
 
     except Exception as e:
-        print(f"Test failed with error: {str(e)}")
+        print(f"Test failed with error: {e!s}")
         return False
 
 
@@ -1207,7 +1205,7 @@ def split_bill(
 
             # Create line items using pre-calculated amounts
             for line_num, (orig_line, split_amount) in enumerate(
-                zip(original_bill.Line, split_amounts[location]), 1
+                zip(original_bill.Line, split_amounts[location], strict=False), 1
             ):
                 new_line = AccountBasedExpenseLine()
                 new_line.AccountBasedExpenseLineDetail = AccountBasedExpenseLineDetail()

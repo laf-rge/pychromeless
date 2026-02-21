@@ -16,7 +16,7 @@ import sys
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from store_config import StoreConfig
 from wmcgdrive import WMCGdrive
@@ -66,9 +66,9 @@ class DateStoreResult:
     audit_date: date
     store: str
     status: FileStatus
-    file_info: Optional[FileInfo] = None
+    file_info: FileInfo | None = None
     is_holiday: bool = False
-    holiday_name: Optional[str] = None
+    holiday_name: str | None = None
 
 
 @dataclass
@@ -87,7 +87,7 @@ class AuditResult:
     present: list[DateStoreResult] = field(default_factory=list)
 
 
-def is_holiday(check_date: date) -> tuple[bool, Optional[str]]:
+def is_holiday(check_date: date) -> tuple[bool, str | None]:
     """Check if a date is a holiday.
 
     Args:
@@ -101,7 +101,7 @@ def is_holiday(check_date: date) -> tuple[bool, Optional[str]]:
     return False, None
 
 
-def parse_filename(filename: str) -> Optional[tuple[date, str]]:
+def parse_filename(filename: str) -> tuple[date, str] | None:
     """Parse a journal filename to extract date and store.
 
     Args:
@@ -146,7 +146,7 @@ def build_file_lookup(
 
 
 def get_audit_date_range(
-    start_date: Optional[date] = None, end_date: Optional[date] = None
+    start_date: date | None = None, end_date: date | None = None
 ) -> tuple[date, date]:
     """Get date range for the audit.
 
@@ -168,8 +168,8 @@ def get_audit_date_range(
 
 
 def audit_journals(
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
     verbose: bool = False,
 ) -> AuditResult:
     """Audit daily journal files in Google Drive.

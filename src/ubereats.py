@@ -21,7 +21,7 @@ class UberEats:
     def __init__(self, store_config: StoreConfig):
         self._store_config = store_config
         self._parameters = cast(
-            SSMParameterStore, SSMParameterStore(prefix="/prod")["ubereats"]
+            "SSMParameterStore", SSMParameterStore(prefix="/prod")["ubereats"]
         )
         self._month_abbr_to_num = {
             name: num for num, name in enumerate(calendar.month_abbr) if num
@@ -149,9 +149,9 @@ class UberEats:
                 logger.exception("month search failed trying anyway")
                 raise ex
             sleep(2)
-            logger.info('//div[contains(@aria-label, "{}")]'.format(date_text))
+            logger.info(f'//div[contains(@aria-label, "{date_text}")]')
             driver.find_element(
-                By.XPATH, '//div[contains(@aria-label, "{}")]'.format(date_text)
+                By.XPATH, f'//div[contains(@aria-label, "{date_text}")]'
             ).click()
             ActionChains(driver).send_keys(Keys.ESCAPE).perform()
             return
@@ -177,7 +177,7 @@ class UberEats:
 
             try:
                 while qdate < end_date:
-                    logger.info("Week of {}".format(qdate))
+                    logger.info(f"Week of {qdate}")
                     if not self._store_config.is_store_active(store, qdate):
                         logger.warn(f"skipping {store} {qdate} - not in date range")
                     else:
@@ -274,11 +274,9 @@ class UberEats:
             raise RuntimeError("Driver not initialized")
         driver = self._driver
         driver.get(
-            "https://restaurant.uber.com/v2/payments?restaurantUUID={}".format(
-                self._store_config.get_store_ubereats_uuid(store)
-            )
+            f"https://restaurant.uber.com/v2/payments?restaurantUUID={self._store_config.get_store_ubereats_uuid(store)}"
         )
-        logger.info("Getting payments for {}".format(qdate))
+        logger.info(f"Getting payments for {qdate}")
 
         qdate2 = qdate - datetime.timedelta(days=(qdate.weekday() + 7))
         if not self._store_config.is_store_active(store, qdate2):

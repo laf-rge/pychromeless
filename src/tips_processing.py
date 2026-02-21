@@ -170,7 +170,7 @@ def transform_tips_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                     logger.exception(error_body["message"])
                     return create_response(400, error_body)
         t = Tips()
-        csv_tips = t.exportTipsTransform(tips_stream)
+        csv_tips = t.export_tips_transform(tips_stream)
         lines = csv_tips.strip().split("\n")
         if len(lines) <= 1:
             # CSV text contains only the header and no data
@@ -184,7 +184,7 @@ def transform_tips_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
         if pay_period >= 3:
             csv = csv_tips
         else:
-            csv_mpvs = t.exportMealPeriodViolations(
+            csv_mpvs = t.export_meal_period_violations(
                 store_config.all_stores, date(year, month, 5), pay_period
             )
             merged_data = pd.merge(
@@ -242,7 +242,7 @@ def get_mpvs_handler(*args: Any, **_kwargs: Any) -> dict[str, Any]:
                 logger.exception(error_body["message"])
                 return create_response(400, error_body)
         t = Tips()
-        csv = t.exportMealPeriodViolations(
+        csv = t.export_meal_period_violations(
             store_config.all_stores, date(year, month, 5), pay_period
         )
     except Exception:

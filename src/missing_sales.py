@@ -35,9 +35,7 @@ def find_missing_sales_entries(
     missing = []
 
     # Get all store refs from QuickBooks
-    _store_refs = {  # noqa: F841
-        x.Name: x.to_ref() for x in Department.all(qb=qb_session)
-    }
+    _store_refs = {x.Name: x.to_ref() for x in Department.all(qb=qb_session)}
 
     for day_offset in range(1, days_back + 1):  # Start at 1 to skip today
         txdate = today - timedelta(days=day_offset)
@@ -74,7 +72,7 @@ def fill_missing_sales_entries(
         for store in m["stores"]:
             try:
                 logger.info(f"Filling missing sales for store {store} on {txdate}")
-                sales_data = dj.getDailySales(store, txdate)
+                sales_data = dj.get_daily_sales(store, txdate)
                 qb.create_daily_sales(txdate, sales_data)
                 filled_count += 1
             except Exception as e:

@@ -38,7 +38,7 @@ class Tips:
 
     def __init__(self) -> None:
         self._parameters: SSMParameterStore = cast(
-            SSMParameterStore, SSMParameterStore(prefix="/prod")["wheniwork"]
+            "SSMParameterStore", SSMParameterStore(prefix="/prod")["wheniwork"]
         )
         self._a = WhenIWork()
         self._a.login(
@@ -90,7 +90,7 @@ class Tips:
             )
         return span_dates
 
-    def getTimes(
+    def get_times(
         self, stores: list[str], year_month_date: datetime.date, pay_period: int = 0
     ) -> dict[str, dict[int, list[Any]]]:
         span_dates = self.payperiod_dates(pay_period, year_month_date)
@@ -125,7 +125,7 @@ class Tips:
 
         return rv
 
-    def attendanceReport(
+    def attendance_report(
         self, stores: list[str], start_date: datetime.date, end_date: datetime.date
     ) -> list[list[str]]:
         self._shifts = self._a.get(
@@ -161,7 +161,7 @@ class Tips:
         text_csv: list[list[str]] = []
 
         text_csv.append(
-            "Store,Name,Shift Time,Clock-in Time,Late/Early,Type".split(",")
+            ["Store", "Name", "Shift Time", "Clock-in Time", "Late/Early", "Type"]
         )
 
         if self._times and self._shifts:
@@ -218,13 +218,15 @@ class Tips:
                 )
         return text_csv
 
-    def emailTips(
+    def email_tips(
         self, stores: list[str], tip_date: datetime.date, pay_period: int = 0
     ) -> None:
         span_dates = self.payperiod_dates(pay_period, tip_date)
-        parameters = cast(SSMParameterStore, SSMParameterStore(prefix="/prod")["email"])
+        parameters = cast(
+            "SSMParameterStore", SSMParameterStore(prefix="/prod")["email"]
+        )
         receiver_email = ["info@wagonermanagement.com"]
-        from_email = cast(str, parameters["from_email"])
+        from_email = cast("str", parameters["from_email"])
         subject = "Tip Spreadsheet for {} pp {}".format(
             tip_date.strftime("%m/%Y"), pay_period
         )
@@ -235,10 +237,10 @@ class Tips:
         workbook.remove(active) if active else None
         f = flexepos.Flexepos()
         # remove the non inclusive dates as flexepos is inclusive on the end
-        tip_totals = f.getTips(
+        tip_totals = f.get_tips(
             stores, span_dates[0], span_dates[1] - datetime.timedelta(days=1)
         )
-        times = self.getTimes(
+        times = self.get_times(
             stores, datetime.date(tip_date.year, tip_date.month, 1), pay_period
         )
 
@@ -254,7 +256,7 @@ class Tips:
                 sheet.cell(2, n).number_format = '"$"#,##0.00_-'
             sheet.append(["Last Name", "First Name", "Hours", "Tip Share"])
             for user_times in times[store].values():
-                user = self.getUser(user_times[0]["user_id"])
+                user = self.get_user(user_times[0]["user_id"])
                 if user is None:
                     continue
                 first_name = user["first_name"]
@@ -264,14 +266,14 @@ class Tips:
                         last_name,
                         first_name,
                         sum(item["length"] for item in user_times),
-                        "=$A$2 / SUM($C$4:$C$99) * $C{}".format(i + 1),
+                        f"=$A$2 / SUM($C$4:$C$99) * $C{i + 1}",
                     ]
                 )
                 sheet.cell(i + 1, 4).number_format = '"$"#,##0.00_-'
                 i = i + 1
 
-            sheet.auto_filter.ref = "A3:D{}".format(i)
-            sheet.auto_filter.add_sort_condition("A3:A{}".format(i))
+            sheet.auto_filter.ref = f"A3:D{i}"
+            sheet.auto_filter.add_sort_condition(f"A3:A{i}")
             dim_holder = DimensionHolder(worksheet=sheet)
             for col in range(sheet.min_column, sheet.max_column + 1):
                 dim_holder[get_column_letter(col)] = ColumnDimension(
@@ -304,7 +306,7 @@ class Tips:
             },
         )
 
-    def getMissingPunches(self) -> list[dict[str, Any]]:
+    def get_missing_punches(self) -> list[dict[str, Any]]:
         times: dict[str, Any] | None = self._a.get(
             "/times",
             params={
@@ -322,14 +324,14 @@ class Tips:
         else:
             return []
 
-    def getMealPeriodViolations(
+    def get_meal_period_violations(
         self, stores: list[str], year_month_date: datetime.date, pay_period: int = 0
     ) -> list[dict[str, Any]]:
-        times = self.getTimes(stores, year_month_date, pay_period)
+        times = self.get_times(stores, year_month_date, pay_period)
         mpvs = []
         for store in stores:
             for user_times in times[store].values():
-                user = self.getUser(user_times[0]["user_id"])
+                user = self.get_user(user_times[0]["user_id"])
                 if user is None:
                     continue
                 first_name = user["first_name"]
@@ -376,11 +378,11 @@ class Tips:
 
         return sorted(mpvs, key=itemgetter("last_name", "first_name"))
 
-    def exportMealPeriodViolations(
+    def export_meal_period_violations(
         self, stores: list[str], year_month_date: datetime.date, pay_period: int = 0
     ) -> str:
         text_csv = []
-        mpvs = self.getMealPeriodViolations(stores, year_month_date, pay_period)
+        mpvs = self.get_meal_period_violations(stores, year_month_date, pay_period)
         grouped = defaultdict(list)
         for mpv in mpvs:
             grouped[f"{mpv['last_name']}, {mpv['first_name']}"].append(mpv)
@@ -401,7 +403,7 @@ class Tips:
             text_csv.append(t)
         return "\n".join(text_csv)
 
-    def exportTipsTransform(self, tips_stream: BytesIO) -> str:
+    def export_tips_transform(self, tips_stream: BytesIO) -> str:
         text_csv = []
         workbook = openpyxl.load_workbook(tips_stream, data_only=True)
         text_csv.append("last_name,first_name,title,paycheck_tips")
@@ -431,8 +433,8 @@ class Tips:
                             )
         return "\n".join(text_csv)
 
-    def getUser(self, user_id: int) -> dict[str, Any] | None:
-        user_response: dict[str, Any] | None = self._a.get("/users/{}".format(user_id))
+    def get_user(self, user_id: int) -> dict[str, Any] | None:
+        user_response: dict[str, Any] | None = self._a.get(f"/users/{user_id}")
         if user_response is None:
             return None
         else:

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class EZCater:
     def __init__(self) -> None:
         self._parameters = cast(
-            SSMParameterStore, SSMParameterStore(prefix="/prod")["ezcater"]
+            "SSMParameterStore", SSMParameterStore(prefix="/prod")["ezcater"]
         )
 
     def _login(self) -> None:

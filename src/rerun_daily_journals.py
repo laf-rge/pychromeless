@@ -52,7 +52,7 @@ def rerun_daily_journal(
     logger.info(f"Fetching daily journal for {target_date} stores: {stores}")
 
     try:
-        journal_data = flexepos.getDailyJournal(stores, date_str)
+        journal_data = flexepos.get_daily_journal(stores, date_str)
 
         for store in stores:
             if store not in journal_data:

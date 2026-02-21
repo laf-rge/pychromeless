@@ -19,11 +19,11 @@ from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
 logger = logging.getLogger(__name__)
 
 # Initialize DynamoDB resource and table
-dynamodb = cast(DynamoDBServiceResource, boto3.resource("dynamodb"))
+dynamodb = cast("DynamoDBServiceResource", boto3.resource("dynamodb"))
 
 # Initialize table conditionally (only if environment variable exists)
 if "CONNECTIONS_TABLE" in os.environ:
-    table = cast(Any, dynamodb.Table(os.environ["CONNECTIONS_TABLE"]))
+    table = cast("Any", dynamodb.Table(os.environ["CONNECTIONS_TABLE"]))
 else:
     table = None
 
@@ -63,7 +63,7 @@ def connect_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
 
         return {"statusCode": 200, "body": json.dumps({"message": "Connected"})}
     except ClientError as e:
-        logger.exception(f"Error connecting: {str(e)}")
+        logger.exception(f"Error connecting: {e!s}")
         return {"statusCode": 500, "body": json.dumps({"message": "Failed to connect"})}
 
 
@@ -84,7 +84,7 @@ def disconnect_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
 
         return {"statusCode": 200, "body": json.dumps({"message": "Disconnected"})}
     except ClientError as e:
-        logger.exception(f"Error disconnecting: {str(e)}")
+        logger.exception(f"Error disconnecting: {e!s}")
         return {
             "statusCode": 500,
             "body": json.dumps({"message": "Failed to disconnect"}),
@@ -129,7 +129,7 @@ def default_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception(f"Error in default handler: {str(e)}")
+        logger.exception(f"Error in default handler: {e!s}")
         return {
             "statusCode": 500,
             "body": json.dumps({"message": "Internal server error"}),
@@ -144,7 +144,7 @@ def cleanup_connections_handler(_event: dict[str, Any], context: Any) -> dict[st
         logger.info(f"Processing cleanup request {request_id}")
 
         # Get the connections table
-        connections_table = cast(Any, dynamodb.Table(os.environ["CONNECTIONS_TABLE"]))
+        connections_table = cast("Any", dynamodb.Table(os.environ["CONNECTIONS_TABLE"]))
 
         # Scan for all connections
         response = connections_table.scan()

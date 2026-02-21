@@ -4,7 +4,6 @@ Dry-run verification script for payroll allocation.
 Compares what our new code would generate against the existing labor-2025-11 journal entry.
 """
 
-import json
 import sys
 from decimal import Decimal
 from pathlib import Path

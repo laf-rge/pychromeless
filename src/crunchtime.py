@@ -28,7 +28,7 @@ class Crunchtime:
     def __init__(self) -> None:
         self._driver = initialise_driver(download_location="/tmp")
         self._parameters = cast(
-            SSMParameterStore, SSMParameterStore(prefix="/prod")["crunchtime"]
+            "SSMParameterStore", SSMParameterStore(prefix="/prod")["crunchtime"]
         )
 
     """
@@ -44,33 +44,38 @@ class Crunchtime:
         driver.get("https://jerseymikes.net-chef.com/standalone/modern.ct#Login")
         username_element = driver.find_element(By.XPATH, '//input[@name="username"]')
         driver.execute_script(
-            f"arguments[0].value = '{self._parameters["user"]}'", username_element
+            f"arguments[0].value = '{self._parameters['user']}'", username_element
         )
         sleep(4)
         username_element.send_keys("w" + Keys.BACK_SPACE)
         WebDriverWait(driver, 10).until(
-            lambda driver: driver.execute_script("return document.readyState")
-            == "complete"
+            lambda driver: (
+                driver.execute_script("return document.readyState") == "complete"
+            )
         )
         password_element = driver.find_element(By.XPATH, '//input[@name="password"]')
         driver.execute_script(
-            f"arguments[0].value = '{self._parameters["password"]}'", password_element
+            f"arguments[0].value = '{self._parameters['password']}'", password_element
         )
         sleep(4)
         password_element.send_keys("w" + Keys.BACK_SPACE)
         WebDriverWait(driver, 10).until(
-            lambda driver: driver.execute_script("return document.readyState")
-            == "complete"
+            lambda driver: (
+                driver.execute_script("return document.readyState") == "complete"
+            )
         )
         driver.find_element(By.XPATH, '//button[@tabindex="3"]').click()
         WebDriverWait(driver, 10).until(
-            lambda driver: driver.execute_script("return document.readyState")
-            == "complete"
+            lambda driver: (
+                driver.execute_script("return document.readyState") == "complete"
+            )
         )
         sleep(3)
         WebDriverWait(driver, 10).until(
-            lambda driver: driver.switch_to.active_element
-            == driver.find_element(By.XPATH, '//input[@name="locationId"]')
+            lambda driver: (
+                driver.switch_to.active_element
+                == driver.find_element(By.XPATH, '//input[@name="locationId"]')
+            )
         )
         driver.find_element(By.XPATH, '//input[@name="locationId"]').send_keys(store)
         sleep(1)
@@ -96,9 +101,11 @@ class Crunchtime:
         sleep(3)
         element = driver.find_element(By.NAME, "startDateCombo")
         loop_detection = 0
-        while loop_detection < 30 and driver.switch_to.active_element.get_attribute(
-            "value"
-        ) != "{0}/01/{1}".format(str(month).zfill(2), year):
+        while (
+            loop_detection < 30
+            and driver.switch_to.active_element.get_attribute("value")
+            != f"{str(month).zfill(2)}/01/{year}"
+        ):
             ActionChains(driver).move_to_element(element).click().send_keys(
                 Keys.ARROW_DOWN
             ).send_keys(Keys.RETURN).perform()
@@ -179,18 +186,14 @@ class Crunchtime:
             with open(filename, newline="", encoding="utf-8-sig") as csvfile:
                 inventory_reader = csv.reader(csvfile)
                 header = next(inventory_reader)
-                notes_header = (
-                    "Information generated from CrunchTime at {0} for {1}".format(
-                        header[2], header[0]
-                    )
-                )
+                notes_header = f"Information generated from CrunchTime at {header[2]} for {header[0]}"
                 items: list[list[Any]] = []
                 total = ""
                 for row in inventory_reader:
                     if row[0] == "Total Cost of Goods Sold":
                         total = row[2]
                         logger.info(
-                            "Total Cost of Goods Sold: {0}".format(total),
+                            f"Total Cost of Goods Sold: {total}",
                             extra={"store": store, "year": year, "month": month},
                         )
                     elif row[0] == "P&L Substructure":
@@ -202,7 +205,10 @@ class Crunchtime:
                             [
                                 qb.inventory_ref_lookup(row[1].split()[0]),
                                 row[2],
-                                ", ".join(" : ".join(x) for x in zip(header, row)),
+                                ", ".join(
+                                    " : ".join(x)
+                                    for x in zip(header, row, strict=False)
+                                ),
                             ]
                         )
                 qb.sync_inventory(year, month, items, notes_header, total, store)
@@ -221,11 +227,7 @@ class Crunchtime:
             with open(filename, newline="", encoding="utf-8-sig") as csvfile:
                 gl_reader = csv.reader(csvfile)
                 header = next(gl_reader)
-                notes_header = (
-                    "Information generated from CrunchTime at {0} for {1}".format(
-                        header[2], header[0]
-                    )
-                )
+                notes_header = f"Information generated from CrunchTime at {header[2]} for {header[0]}"
                 next(gl_reader)  # skip header line
                 items: list[list[Any]] = []
                 vendor = None
@@ -263,7 +265,7 @@ class Crunchtime:
                         # send invoice
                         if vendor:  # skip if store to store
                             logger.info(
-                                "Syncing {0}:{1}".format(vendor, invoice_num),
+                                f"Syncing {vendor}:{invoice_num}",
                                 extra={"store": store},
                             )
                             qb.sync_bill(

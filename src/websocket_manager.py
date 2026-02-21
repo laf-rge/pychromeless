@@ -52,7 +52,7 @@ class WebSocketManager:
 
     def __init__(self) -> None:
         self.apigateway = cast(
-            ApiGatewayManagementApiClient,
+            "ApiGatewayManagementApiClient",
             boto3.client(
                 "apigatewaymanagementapi",
                 endpoint_url=os.environ.get(
@@ -61,7 +61,7 @@ class WebSocketManager:
                 ),
             ),
         )
-        self.dynamodb = cast(DynamoDBServiceResource, boto3.resource("dynamodb"))
+        self.dynamodb = cast("DynamoDBServiceResource", boto3.resource("dynamodb"))
         self.table = self.dynamodb.Table(os.environ["CONNECTIONS_TABLE"])
         self.task_states_table = self.dynamodb.Table(os.environ["TASK_STATES_TABLE"])
 
@@ -177,7 +177,7 @@ class WebSocketManager:
                         Key={"connection_id": connection["connection_id"]}
                     )
                 except Exception as e:
-                    logger.error(f"Error removing stale connection: {str(e)}")
+                    logger.error(f"Error removing stale connection: {e!s}")
             except Exception as e:
                 logger.warning(
                     "Failed to send to connection",
@@ -233,7 +233,7 @@ class WebSocketManager:
                         Key={"connection_id": connection["connection_id"]}
                     )
                 except Exception as e:
-                    logger.error(f"Error removing stale connection: {str(e)}")
+                    logger.error(f"Error removing stale connection: {e!s}")
             except Exception as e:
                 logger.warning(
                     "Failed to send to connection",
@@ -289,10 +289,10 @@ class TaskManager:
     gatewayapi: ApiGatewayManagementApiClient
 
     def __init__(self, table_name: str):
-        self.dynamodb = cast(DynamoDBServiceResource, boto3.resource("dynamodb"))
+        self.dynamodb = cast("DynamoDBServiceResource", boto3.resource("dynamodb"))
         self.table = self.dynamodb.Table(table_name)
         self.gatewayapi = cast(
-            ApiGatewayManagementApiClient,
+            "ApiGatewayManagementApiClient",
             boto3.client("apigatewaymanagementapi"),
         )
 
@@ -474,9 +474,9 @@ class TaskManager:
                         ),
                     )
                 except Exception as e:
-                    print(f"Error broadcasting to {connection_id}: {str(e)}")
+                    print(f"Error broadcasting to {connection_id}: {e!s}")
                     # Remove stale connections
                     self.table.delete_item(Key={"connection_id": connection_id})
 
         except Exception as e:
-            print(f"Error broadcasting task status: {str(e)}")
+            print(f"Error broadcasting task status: {e!s}")

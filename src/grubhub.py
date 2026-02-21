@@ -26,7 +26,7 @@ class Grubhub:
 
     def __init__(self) -> None:
         self._parameters = cast(
-            SSMParameterStore, SSMParameterStore(prefix="/prod")["grubhub"]
+            "SSMParameterStore", SSMParameterStore(prefix="/prod")["grubhub"]
         )
 
     """
@@ -77,7 +77,7 @@ class Grubhub:
                     "https://restaurant.grubhub.com/financials/deposit-history/3192172,6177240,7583896,7585040/"
                 )
             except Exception as e:
-                logger.warning(f"Error accessing URL: {str(e)}")
+                logger.warning(f"Error accessing URL: {e!s}")
                 raise
 
             sleep(2)
@@ -218,7 +218,7 @@ class Grubhub:
         deposits: dict[str, dict] = {}
 
         try:
-            with open(filename, "r", encoding="utf-8") as csvfile:
+            with open(filename, encoding="utf-8") as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
                     deposit_id = row["Deposit ID"]
@@ -405,7 +405,9 @@ class Grubhub:
                     [
                         "4830",
                         "Adjustments",
-                        str(deposit_data["adjustments_total"].quantize(Decimal("0.01"))),
+                        str(
+                            deposit_data["adjustments_total"].quantize(Decimal("0.01"))
+                        ),
                     ]
                 )
 

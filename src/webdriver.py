@@ -1,7 +1,7 @@
 import logging
 import os
 from tempfile import mkdtemp
-from typing import Any, Optional, Union
+from typing import Any
 
 from selenium import webdriver
 from selenium.common.exceptions import (
@@ -33,13 +33,12 @@ def _get_chromedriver_service_local() -> Service:
 logger = logging.getLogger(__name__)
 
 # Global Safari driver instance (Safari only allows one active session)
-_safari_driver: Optional[webdriver.Safari] = None
+_safari_driver: webdriver.Safari | None = None
 
 
 def initialise_driver(
-    download_location: Optional[str] = None,
-) -> Union[webdriver.Chrome, webdriver.Safari]:
-
+    download_location: str | None = None,
+) -> webdriver.Chrome | webdriver.Safari:
     chrome_options = ChromeOptions()
     driver = None
     CHROME_HEADLESS = int(os.environ.get("CHROME_HEADLESS", "0"))
@@ -183,7 +182,7 @@ def cleanup_safari_driver() -> None:
 
 def wait_for_element(
     driver: Any, locator: tuple[str, str], timeout: int = 15
-) -> Optional[WebElement]:
+) -> WebElement | None:
     try:
         element = WebDriverWait(
             driver,
