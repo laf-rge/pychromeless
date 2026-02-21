@@ -1,4 +1,5 @@
 import calendar
+import contextlib
 import datetime
 import logging
 from decimal import Decimal
@@ -194,10 +195,8 @@ class Flexepos:
                 driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
         finally:
             if driver:
-                try:
+                with contextlib.suppress(WebDriverException):
                     self._driver.close()
-                except WebDriverException:
-                    pass
                 self._driver.quit()
                 logging.info("closed driver")
 
@@ -271,10 +270,8 @@ class Flexepos:
                 driver.find_element(By.ID, TAG_IDS["switch_off"]).click()
         finally:
             if driver:
-                try:
+                with contextlib.suppress(WebDriverException):
                     self._driver.close()
-                except WebDriverException:
-                    pass
                 self._driver.quit()
 
         return payment_data
@@ -626,10 +623,8 @@ class Flexepos:
             driver.find_element(By.ID, TAG_IDS["home_logout"]).click()
         finally:
             if driver:
-                try:
+                with contextlib.suppress(WebDriverException):
                     self._driver.close()
-                except WebDriverException:
-                    pass
                 self._driver.quit()
         return drawer_opens
 
@@ -666,10 +661,8 @@ class Flexepos:
 
         finally:
             if driver:
-                try:
+                with contextlib.suppress(WebDriverException):
                     self._driver.close()
-                except WebDriverException:
-                    pass
                 self._driver.quit()
 
         return rv
@@ -719,10 +712,8 @@ class Flexepos:
             return royalty_data
         finally:
             if driver:
-                try:
+                with contextlib.suppress(WebDriverException):
                     self._driver.close()
-                except WebDriverException:
-                    pass
                 self._driver.quit()
 
     def toggle_meal_deal(self, stores: list[str]) -> dict[str, bool]:
@@ -758,10 +749,8 @@ class Flexepos:
                 ).is_selected()
         finally:
             if driver:
-                try:
+                with contextlib.suppress(WebDriverException):
                     self._driver.close()
-                except WebDriverException:
-                    pass
                 self._driver.quit()
 
         return rv
@@ -872,10 +861,8 @@ class Flexepos:
             return results
         finally:
             if driver:
-                try:
+                with contextlib.suppress(WebDriverException):
                     self._driver.close()
-                except WebDriverException:
-                    pass
                 self._driver.quit()
 
     def get_daily_journal_export(

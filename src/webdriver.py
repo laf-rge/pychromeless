@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import os
 from tempfile import mkdtemp
@@ -60,10 +61,8 @@ def initialise_driver(
             except (WebDriverException, AttributeError):
                 # Session is stale, clean it up
                 logger.warning("Existing Safari session is stale, cleaning up")
-                try:
+                with contextlib.suppress(WebDriverException, AttributeError):
                     _safari_driver.quit()
-                except (WebDriverException, AttributeError):
-                    pass
                 _safari_driver = None
 
         # Create new Safari driver, handling "already paired" error

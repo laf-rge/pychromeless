@@ -1,3 +1,4 @@
+import contextlib
 import unittest
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
@@ -180,11 +181,8 @@ class TestQuickBooksExceptionHandling(unittest.TestCase):
         mock_qb_object.save.side_effect = ValueError("Unexpected error")
 
         # ValueError should NOT be caught by the QuickbooksException handler
-        with self.assertRaises(ValueError):
-            try:
-                mock_qb_object.save(qb=None)
-            except QuickbooksException:
-                pass  # This should not catch ValueError
+        with self.assertRaises(ValueError), contextlib.suppress(QuickbooksException):
+            mock_qb_object.save(qb=None)
 
 
 class TestQuickBooksOAuth(unittest.TestCase):

@@ -151,12 +151,10 @@ select = [
 ]
 ignore = [
     "E501",   # line too long (formatter handles this)
-    "E722",   # bare except (fix gradually)
     "S108",   # hardcoded /tmp paths (expected for Lambda)
     "S310",   # urlopen (intentional HTTP calls)
     "S105",   # hardcoded password strings (false positives — variable names, not secrets)
     "S608",   # hardcoded SQL (QuickBooks query strings, not user input)
-    "SIM105", # contextlib.suppress — style preference, fix gradually
     "RUF001", # ambiguous unicode (intentional en-dash in UberEats scraping)
 ]
 
