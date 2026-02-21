@@ -26,13 +26,15 @@ from decimal import Decimal
 from functools import partial  # noqa # pylint: disable=unused-import
 from locale import LC_NUMERIC, atof, setlocale
 from operator import itemgetter
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import boto3
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
-from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
 from quickbooks.objects import Bill
+
+if TYPE_CHECKING:
+    from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
 
 import crunchtime
 import qb
@@ -410,8 +412,8 @@ def daily_sales_handler(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
             ) -> tuple[str, dict[str, Any]]:
                 """Helper function for AWS Lambda invocation"""
                 try:
-                    assert lambda_client is not None  # Type hint for linter
-                    assert internal_function_name is not None  # Type hint for linter
+                    if lambda_client is None or internal_function_name is None:
+                        raise RuntimeError("Lambda client not initialized")
                     response = lambda_client.invoke(
                         FunctionName=internal_function_name,
                         InvocationType="RequestResponse",  # Synchronous call
@@ -1194,7 +1196,7 @@ def split_bill_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                     return create_response(
                         400, {"message": "split_ratios values must be numbers"}
                     )
-                if not all(loc in locations for loc in split_ratios.keys()):
+                if not all(loc in locations for loc in split_ratios):
                     return create_response(
                         400, {"message": "split_ratios keys must match locations"}
                     )

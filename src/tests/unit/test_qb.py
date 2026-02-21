@@ -23,7 +23,7 @@ class TestQuickBooks(unittest.TestCase):
 
         # Verify each location gets close to expected share
         expected_share = total / len(locations)  # $51.272
-        for loc, amounts in splits.items():
+        for _loc, amounts in splits.items():
             loc_total = sum(amounts)
             # Check that each location is within a penny of expected
             self.assertLess(abs(loc_total - expected_share), Decimal("0.01"))

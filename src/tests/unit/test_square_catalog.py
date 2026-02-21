@@ -18,7 +18,7 @@ class TestSquareCatalogInit:
 
         from square_catalog import SquareCatalog
 
-        catalog = SquareCatalog(environment="production")
+        _catalog = SquareCatalog(environment="production")
 
         mock_square_cls.assert_called_once()
         call_kwargs = mock_square_cls.call_args
@@ -38,7 +38,7 @@ class TestSquareCatalogInit:
 
         from square_catalog import SquareCatalog
 
-        catalog = SquareCatalog(environment="sandbox")
+        _catalog = SquareCatalog(environment="sandbox")
 
         call_kwargs = mock_square_cls.call_args
         assert call_kwargs.kwargs["environment"] == SquareEnvironment.SANDBOX

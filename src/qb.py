@@ -599,12 +599,9 @@ def wmc_account_ref(acct_num: int | str) -> Any:
     global account_ref
     if account_ref is None:
         refresh_session()
-        account_ref = dict(
-            map(
-                lambda x: (x.AcctNum, x.to_ref()),
-                Account.all(max_results=1000, qb=CLIENT),
-            )
-        )
+        account_ref = {
+            x.AcctNum: x.to_ref() for x in Account.all(max_results=1000, qb=CLIENT)
+        }
     return account_ref[str(acct_num)]
 
 
@@ -622,12 +619,9 @@ def account_ref_lookup(gl_account_code: str) -> Any:
     global account_ref
     if account_ref is None:
         refresh_session()
-        account_ref = dict(
-            map(
-                lambda x: (x.AcctNum, x.to_ref()),
-                Account.all(max_results=1000, qb=CLIENT),
-            )
-        )
+        account_ref = {
+            x.AcctNum: x.to_ref() for x in Account.all(max_results=1000, qb=CLIENT)
+        }
 
     return account_ref[gl_code_map[gl_account_code]]
 
@@ -636,12 +630,9 @@ def inventory_ref_lookup(inv_account_code: str) -> Any:
     global inv_account_ref
     if inv_account_ref is None:
         refresh_session()
-        inv_account_ref = dict(
-            map(
-                lambda x: (x.AcctNum, x.to_ref()),
-                Account.all(max_results=1000, qb=CLIENT),
-            )
-        )
+        inv_account_ref = {
+            x.AcctNum: x.to_ref() for x in Account.all(max_results=1000, qb=CLIENT)
+        }
 
     return inv_account_ref[gl_code_map_to_cogs[inv_account_code]]
 
@@ -904,16 +895,16 @@ def fix_deposit() -> None:
             )
             for bill in bills:
                 if (
-                    not hasattr(bill, "DepartmentRef")
-                    or bill.DepartmentRef is None
-                    or bill.DepartmentRef.name == "20025"
+                    (
+                        not hasattr(bill, "DepartmentRef")
+                        or bill.DepartmentRef is None
+                        or bill.DepartmentRef.name == "20025"
+                    )
+                    and hasattr(bill.Line[0], "DepositLineDetail")
+                    and bill.Line[0].DepositLineDetail.AccountRef.name
+                    == "1330 Other Current Assets:Gift Cards"
+                    and "20358" in bill.Line[0].Description
                 ):
-                    if (
-                        hasattr(bill.Line[0], "DepositLineDetail")
-                        and bill.Line[0].DepositLineDetail.AccountRef.name
-                        == "1330 Other Current Assets:Gift Cards"
-                    ):
-                        if "20358" in bill.Line[0].Description:
                             logger.info(
                                 "Found deposit",
                                 extra={

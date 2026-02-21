@@ -110,12 +110,7 @@ def decode_upload(event: dict[str, Any]) -> dict[str, bytes]:
                         base_key = str(name_param)
                         # Handle duplicate field names by appending index
                         count = name_counts.get(base_key, 0)
-                        if count > 0:
-                            # This is a duplicate, use indexed key
-                            key = f"{base_key}_{count}"
-                        else:
-                            # First occurrence, use original key
-                            key = base_key
+                        key = f"{base_key}_{count}" if count > 0 else base_key
                         name_counts[base_key] = count + 1
                         multipart_content[key] = payload
     return multipart_content
@@ -156,7 +151,7 @@ def transform_tips_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
 
         tips_stream: io.BufferedIOBase
         if "excel" in kwargs:
-            tips_stream = open("tips-aug.xlsx", "rb")
+            tips_stream = open(kwargs["excel"], "rb")  # noqa: SIM115
         else:
             multipart_content = decode_upload(event)
             tips_stream = io.BytesIO(multipart_content.get("file[]", b""))

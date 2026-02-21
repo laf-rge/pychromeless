@@ -250,9 +250,6 @@ class SquareCatalog:
 
         # Build update objects with full data, only changing price
         price_map = {u["variation_id"]: u["price_cents"] for u in updates}
-        name_map = {
-            u["variation_id"]: u.get("name", u["variation_id"]) for u in updates
-        }
 
         UPSERT_BATCH_SIZE = 1000
         results: list[dict[str, Any]] = []

@@ -9,11 +9,13 @@ import logging
 import os
 import time
 from datetime import UTC, date, datetime
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import boto3
 from botocore.exceptions import ClientError
-from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
+
+if TYPE_CHECKING:
+    from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource
 
 logger = logging.getLogger(__name__)
 

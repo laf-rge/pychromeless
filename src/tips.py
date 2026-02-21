@@ -368,12 +368,12 @@ class Tips:
                         if break_duration < datetime.timedelta(minutes=30):
                             logger.warning(
                                 "Lunch break less than 30 minutes",
-                                extra=dict(
-                                    day=day.isoformat(),
-                                    last_name=last_name,
-                                    first_name=first_name,
-                                    break_duration=break_duration.total_seconds() / 60,
-                                ),
+                                extra={
+                                    "day": day.isoformat(),
+                                    "last_name": last_name,
+                                    "first_name": first_name,
+                                    "break_duration": break_duration.total_seconds() / 60,
+                                },
                             )
 
         return sorted(mpvs, key=itemgetter("last_name", "first_name"))
@@ -396,7 +396,7 @@ class Tips:
                 f"{mpv['last_name']},{mpv['first_name']},"
                 + "Crew (Primary),"
                 + f"{sum(item['hourly_rate'] for item in g)},"
-                + f'"MPV {", ".join(list(str(item["day"].month) + "/" + str(item["day"].day) for item in g))}"'
+                + f'"MPV {", ".join([str(item["day"].month) + "/" + str(item["day"].day) for item in g])}"'
             )
             if pay_period == 0:
                 t += f',"{mpv["store"]}"'
@@ -424,12 +424,12 @@ class Tips:
                         except (ValueError, InvalidOperation):
                             logger.exception(
                                 "Could not convert value",
-                                extra=dict(
-                                    cell_value=cell_value,
-                                    row=row,
-                                    sheet_name=sheet_name,
-                                    type=type(cell_value),
-                                ),
+                                extra={
+                                    "cell_value": cell_value,
+                                    "row": row,
+                                    "sheet_name": sheet_name,
+                                    "type": type(cell_value),
+                                },
                             )
         return "\n".join(text_csv)
 

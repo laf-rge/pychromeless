@@ -174,8 +174,8 @@ class Grubhub:
             if driver:
                 try:
                     driver.quit()
-                except:
-                    pass
+                except Exception:
+                    logger.debug("Failed to quit driver during cleanup")
             raise e
 
     def convert_num(self, number: str) -> str:
@@ -320,7 +320,7 @@ class Grubhub:
 
         # Convert aggregated deposits to result format
         results = []
-        for deposit_id, deposit_data in deposits.items():
+        for deposit_data in deposits.values():
             txdate = deposit_data["deposit_date"]
             store = deposit_data["store"]
 

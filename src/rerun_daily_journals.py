@@ -198,7 +198,7 @@ def main() -> int:
             dry_run=args.dry_run,
         )
 
-        for store, success in results.items():
+        for success in results.values():
             if success:
                 total_success += 1
             else:

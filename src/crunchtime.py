@@ -157,7 +157,7 @@ class Crunchtime:
         element = driver.find_element(
             By.CSS_SELECTOR, "[ces-selenium-id='combobox_exportFormat'"
         )
-        element_id = "{0}-inputEl".format(element.get_property("id"))
+        element_id = "{}-inputEl".format(element.get_property("id"))
         element.find_element(By.ID, element_id).send_keys(Keys.ARROW_DOWN)
         element.find_element(By.ID, element_id).send_keys(Keys.ARROW_DOWN)
         element.find_element(By.ID, element_id).send_keys(Keys.ARROW_DOWN)
@@ -167,7 +167,7 @@ class Crunchtime:
             element = driver.find_element(
                 By.CSS_SELECTOR, "[ces-selenium-id='combobox_multiExportCombo'"
             )
-            element_id = "{0}-inputEl".format(element.get_property("id"))
+            element_id = "{}-inputEl".format(element.get_property("id"))
             element.find_element(By.ID, element_id).send_keys(Keys.ARROW_DOWN)
             element.find_element(By.ID, element_id).send_keys(Keys.ARROW_DOWN)
             element.find_element(By.ID, element_id).send_keys(Keys.ENTER)

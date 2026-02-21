@@ -94,7 +94,7 @@ def sample_lambda_event() -> dict[str, str]:
 
 
 @pytest.fixture
-def sample_store_data() -> Dict[str, dict[str, Any]]:
+def sample_store_data() -> dict[str, dict[str, Any]]:
     """Sample store configuration data."""
     return {
         "20400": {"name": "Store 20400", "open_date": date(2024, 1, 31)},

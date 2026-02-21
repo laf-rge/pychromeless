@@ -183,7 +183,7 @@ class TestDailySalesHandlerWithStore(unittest.TestCase):
         # The handler should process only the specified store
         # Since we're running locally (no AWS_LAMBDA_FUNCTION_NAME),
         # it will use sequential processing
-        response = daily_sales_handler(event, None)
+        _response = daily_sales_handler(event, None)
 
         # Verify that get_daily_sales was called with the specific store
         call_args = mock_flexepos.get_daily_sales.call_args

@@ -22,6 +22,8 @@
 # ==============================================================================
 # https://medium.com/@nqbao/how-to-use-aws-ssm-parameter-store-easily-in-python-94fda04fea84
 
+from __future__ import annotations
+
 import datetime
 from typing import Any, TypeVar, overload
 
@@ -55,7 +57,7 @@ class SSMParameterStore:
         self._substores: dict[str, SSMParameterStore] = {}
         self._ttl: int | None = ttl
 
-    def get(self, name: str, **kwargs: Any) -> str | list[str] | "SSMParameterStore":
+    def get(self, name: str, **kwargs: Any) -> str | list[str] | SSMParameterStore:
         """
         Get a parameter or a substore.
 
@@ -65,7 +67,8 @@ class SSMParameterStore:
         Returns:
             str | list[str] | SSMParameterStore: The value of the parameter or a substore.
         """
-        assert name, "Name cannot be empty"
+        if not name:
+            raise ValueError("Name cannot be empty")
         if self._keys is None:
             self.refresh()
             if self._keys is None:
@@ -205,20 +208,20 @@ class SSMParameterStore:
             return False
 
     @overload
-    def __getitem__(self, name: str) -> str | list[str] | "SSMParameterStore": ...
+    def __getitem__(self, name: str) -> str | list[str] | SSMParameterStore: ...
 
     @overload
     def __getitem__(
         self, name: slice
-    ) -> dict[str, str | list[str] | "SSMParameterStore"]: ...
+    ) -> dict[str, str | list[str] | SSMParameterStore]: ...
 
     def __getitem__(
         self, name: str | slice
     ) -> (
         str
         | list[str]
-        | "SSMParameterStore"
-        | dict[str, str | list[str] | "SSMParameterStore"]
+        | SSMParameterStore
+        | dict[str, str | list[str] | SSMParameterStore]
     ):
         """
         Get a parameter using the subscript notation.

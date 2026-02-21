@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class OperationType(str, Enum):
+class OperationType(StrEnum):
     DAILY_SALES = "daily_sales"
     INVOICE_SYNC = "invoice_sync"
     EMAIL_TIPS = "email_tips"

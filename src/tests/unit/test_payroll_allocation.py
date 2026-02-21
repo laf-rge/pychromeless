@@ -31,7 +31,7 @@ mock_qb.wmc_account_ref = MagicMock()
 mock_qb.CLIENT = MagicMock()
 sys.modules["qb"] = mock_qb
 
-from payroll_allocation import (
+from payroll_allocation import (  # noqa: E402
     PAYROLL_ACCOUNTS,
     STORE_ADDRESS_MAP,
     STORE_ORDER,
@@ -529,7 +529,7 @@ class TestCreatePayrollAllocationJournal(unittest.TestCase):
                 ),
             }
 
-            url, warnings = create_payroll_allocation_journal(2025, 11, payroll_data)
+            _, warnings = create_payroll_allocation_journal(2025, 11, payroll_data)
 
             self.assertEqual(len(warnings), 1)
             self.assertEqual(warnings[0]["type"], "reimbursements_flagged")
@@ -607,7 +607,7 @@ class TestCreatePayrollAllocationJournal(unittest.TestCase):
             ),
         }
 
-        url, warnings = create_payroll_allocation_journal(
+        url, _warnings = create_payroll_allocation_journal(
             2025, 11, payroll_data, allow_update=True
         )
 
@@ -657,7 +657,7 @@ class TestCreatePayrollAllocationJournal(unittest.TestCase):
                 ),
             }
 
-            url, warnings = create_payroll_allocation_journal(2025, 12, payroll_data)
+            url, _warnings = create_payroll_allocation_journal(2025, 12, payroll_data)
 
             self.assertIn("456", url)
             mock_entry.save.assert_called_once()

@@ -318,7 +318,7 @@ def build_price_updates(
                 "item_id": square_item["item_id"],
                 "variation_name": square_item["variation_name"],
                 "version": square_item["version"],
-                "price_cents": int(round(pos_price * 100)),
+                "price_cents": round(pos_price * 100),
                 "name": f"{square_item['item_name']} / {square_item['variation_name']}",
                 "old_price": square_price,
                 "new_price": pos_price,
@@ -327,7 +327,7 @@ def build_price_updates(
         )
 
     # Build Tub updates (copy Regular price)
-    for key, square_item in square_lookup.items():
+    for square_item in square_lookup.values():
         if square_item["variation_name"].lower() != "tub":
             continue
 
@@ -345,7 +345,7 @@ def build_price_updates(
                 "item_id": square_item["item_id"],
                 "variation_name": square_item["variation_name"],
                 "version": square_item["version"],
-                "price_cents": int(round(regular_price * 100)),
+                "price_cents": round(regular_price * 100),
                 "name": f"{square_item['item_name']} / Tub",
                 "old_price": square_item["price"],
                 "new_price": regular_price,
@@ -562,7 +562,7 @@ def main() -> None:
                     var_list.append(
                         {
                             "name": var_name,
-                            "price_cents": int(round(v["price"] * 100)),
+                            "price_cents": round(v["price"] * 100),
                         }
                     )
 

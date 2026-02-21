@@ -220,7 +220,7 @@ class TestBillSplitPrecision:
         parts = []
 
         # Split into 7 parts (awkward division)
-        for i in range(6):
+        for _ in range(6):
             parts.append((total / 7).quantize(TWO_PLACES))
 
         # Last part gets the remainder
