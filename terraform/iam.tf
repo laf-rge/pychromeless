@@ -260,3 +260,32 @@ resource "aws_iam_role_policy_attachment" "invoke_lambda_functions_attach" {
   role       = aws_iam_role.flexepos_lambda_role.name
   policy_arn = aws_iam_policy.invoke_lambda_functions.arn
 }
+
+# Create policy for S3 temp storage (used by async Lambda self-invocation)
+resource "aws_iam_policy" "s3_temp_access" {
+  name        = "s3_temp_access_${terraform.workspace}"
+  description = "Allow Lambda to use S3 tmp/ prefix for async payloads"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "arn:aws:s3:::${var.settings.s3_bucket}/tmp/*"
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+# Attach S3 temp access policy to Lambda role
+resource "aws_iam_role_policy_attachment" "s3_temp_access_attach" {
+  role       = aws_iam_role.flexepos_lambda_role.name
+  policy_arn = aws_iam_policy.s3_temp_access.arn
+}

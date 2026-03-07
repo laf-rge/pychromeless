@@ -352,6 +352,18 @@ describe('WebSocketService', () => {
     });
   });
 
+  describe('OperationType completeness', () => {
+    it('every OperationType value has a display name', () => {
+      const { OperationDisplayNames, OperationType: OpType } = require('../WebSocketService');
+      const allValues = Object.values(OpType) as string[];
+      for (const value of allValues) {
+        expect(OperationDisplayNames[value]).toBeDefined();
+        expect(typeof OperationDisplayNames[value]).toBe('string');
+        expect(OperationDisplayNames[value].length).toBeGreaterThan(0);
+      }
+    });
+  });
+
   describe('multiple subscribers', () => {
     it('notifies all global subscribers', async () => {
       const service = WebSocketService.getInstance(mockMsalInstance);

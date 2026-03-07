@@ -1785,49 +1785,41 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
     """
     Import FDMS statement PDFs and create bills in QuickBooks.
 
-    Lambda invocation:
-        - HTTP Method: POST
-        - Content-Type: multipart/form-data
-        - Form fields:
-            - file[]: One or more FDMS statement PDF files
+    Two-phase async self-invocation pattern:
+        Phase 1 (HTTP): Receive multipart upload, store PDFs in S3, async-invoke
+                         self with s3_key, return 202 immediately.
+        Phase 2 (Event): Read PDFs from S3, parse/create bills, broadcast results
+                         via WebSocket, clean up S3.
 
-    Returns:
-        JSON response with:
-            - success: bool
-            - summary: dict with total_files/bills_created/files_with_chargebacks/failed
-            - results: list of per-file results with bill URLs and chargeback/adjustment info
+    Local dev fallback: Phase 1 calls Phase 2 synchronously.
     """
+    event = args[0] if args and len(args) > 0 else {}
+    context = args[1] if args and len(args) > 1 else None
+
+    # Route: if event has s3_key, this is Phase 2 (async processing)
+    if isinstance(event, dict) and "s3_key" in event:
+        return _fdms_process_async(event)
+
+    # Otherwise Phase 1 (initiate from HTTP upload)
+    return _fdms_initiate_async(event, context)
+
+
+def _fdms_initiate_async(event: dict[str, Any], context: Any) -> dict[str, Any]:
+    """Phase 1: Receive upload, store in S3, self-invoke async, return 202."""
     # pylint: disable=import-outside-toplevel
-    from fdms_statement import (
-        FDMSParseError,
-        create_fdms_bills,
-        parse_fdms_pdf,
-    )
     from tips_processing import decode_upload
 
-    context = args[1] if args and len(args) > 1 else None
     task_id = (context.aws_request_id if context else None) or f"local-{uuid.uuid4()}"
     ws_manager = WebSocketManager()
 
-    ws_manager.broadcast_status(
-        task_id=task_id,
-        operation=OperationType.FDMS_STATEMENT_IMPORT,
-        status="started",
-    )
-
     try:
-        event = args[0] if args and len(args) > 0 else {}
-
         # Parse multipart form data
         multipart_content = decode_upload(event)
 
         # Collect all PDF files from form data
         pdf_files: list[tuple[str, bytes]] = []
-
         for key, value in multipart_content.items():
-            # Accept file[], file[0], file[1], etc. or just "file"
             if key.startswith("file") and isinstance(value, bytes):
-                # Try to get filename from content-disposition if available
                 filename = f"statement_{len(pdf_files) + 1}.pdf"
                 pdf_files.append((filename, value))
 
@@ -1839,6 +1831,107 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                 error="No PDF files provided",
             )
             return create_response(400, {"message": "No PDF files provided"})
+
+        # Build payload: base64-encode PDFs for JSON storage
+        import base64
+
+        payload = {
+            "task_id": task_id,
+            "files": [
+                {"filename": name, "data": base64.b64encode(data).decode("ascii")}
+                for name, data in pdf_files
+            ],
+        }
+
+        is_aws = "AWS_LAMBDA_FUNCTION_NAME" in os.environ
+
+        if is_aws:
+            # Store payload in S3
+            s3_key = f"tmp/fdms/{task_id}.json"
+            s3_client = boto3.client("s3")
+            s3_client.put_object(
+                Bucket=os.environ["S3_BUCKET"],
+                Key=s3_key,
+                Body=json.dumps(payload),
+                ContentType="application/json",
+            )
+
+            # Async self-invoke with s3_key
+            from botocore.config import Config
+
+            config = Config(retries={"max_attempts": 0})
+            lambda_client = boto3.client("lambda", config=config)
+            lambda_client.invoke(
+                FunctionName=os.environ["AWS_LAMBDA_FUNCTION_NAME"],
+                InvocationType="Event",
+                Payload=json.dumps({"s3_key": s3_key, "task_id": task_id}),
+            )
+
+            logger.info(
+                "FDMS async import initiated",
+                extra={
+                    "task_id": task_id,
+                    "s3_key": s3_key,
+                    "file_count": len(pdf_files),
+                },
+            )
+
+            return create_response(
+                202, {"task_id": task_id, "message": "Processing started"}
+            )
+        else:
+            # Local dev: call Phase 2 synchronously
+            logger.info("FDMS import running synchronously (local dev)")
+            return _fdms_process_async({"task_id": task_id, "_payload": payload})
+
+    except Exception as e:
+        logger.exception("Error initiating FDMS statement import")
+        ws_manager.broadcast_status(
+            task_id=task_id,
+            operation=OperationType.FDMS_STATEMENT_IMPORT,
+            status="failed",
+            error=str(e),
+        )
+        return create_response(500, {"message": f"Error: {e!s}"})
+
+
+def _fdms_process_async(event: dict[str, Any]) -> dict[str, Any]:
+    """Phase 2: Read PDFs from S3, parse, create bills, broadcast results."""
+    # pylint: disable=import-outside-toplevel
+    import base64
+
+    from fdms_statement import (
+        FDMSParseError,
+        create_fdms_bills,
+        parse_fdms_pdf,
+    )
+
+    task_id = event.get("task_id", f"async-{uuid.uuid4()}")
+    s3_key = event.get("s3_key")
+    ws_manager = WebSocketManager()
+
+    ws_manager.broadcast_status(
+        task_id=task_id,
+        operation=OperationType.FDMS_STATEMENT_IMPORT,
+        status="started",
+    )
+
+    try:
+        # Load payload from S3 or from inline (local dev)
+        if "_payload" in event:
+            payload = event["_payload"]
+        else:
+            s3_client = boto3.client("s3")
+            response = s3_client.get_object(
+                Bucket=os.environ["S3_BUCKET"],
+                Key=s3_key,
+            )
+            payload = json.loads(response["Body"].read().decode("utf-8"))
+
+        # Decode PDF files
+        pdf_files: list[tuple[str, bytes]] = [
+            (f["filename"], base64.b64decode(f["data"])) for f in payload["files"]
+        ]
 
         # Process each PDF
         results: list[dict[str, Any]] = []
@@ -1862,7 +1955,6 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
             }
 
             try:
-                # Parse PDF
                 data = parse_fdms_pdf(pdf_content)
                 result["store"] = data.store_number
                 result["statement_month"] = data.statement_month.strftime("%B %Y")
@@ -1876,7 +1968,6 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
                     f"FDMS-{data.store_number}-{data.statement_month.strftime('%Y%m')}"
                 )
 
-                # Create bills in QuickBooks (one per fee type: INT, SVC, FEE)
                 bills_count, chargebacks_text, adjustments_text = create_fdms_bills(
                     data
                 )
@@ -1919,7 +2010,6 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
 
             results.append(result)
 
-            # Send progress update
             ws_manager.broadcast_status(
                 task_id=task_id,
                 operation=OperationType.FDMS_STATEMENT_IMPORT,
@@ -1939,15 +2029,29 @@ def fdms_statement_import_handler(*args: Any, **kwargs: Any) -> dict[str, Any]:
         }
 
         success = failed == 0
+        final_status = "completed" if success else "completed_with_errors"
 
         ws_manager.broadcast_status(
             task_id=task_id,
             operation=OperationType.FDMS_STATEMENT_IMPORT,
-            status="completed" if success else "completed_with_errors",
+            status=final_status,
             result={
-                "summary": f"Created {bills_created} bills, {files_with_chargebacks} with chargebacks/adjustments, {failed} failed",
+                "success": success,
+                "summary": summary,
+                "results": results,
             },
         )
+
+        # Clean up S3 object
+        if s3_key:
+            try:
+                s3_client = boto3.client("s3")
+                s3_client.delete_object(
+                    Bucket=os.environ["S3_BUCKET"],
+                    Key=s3_key,
+                )
+            except Exception:
+                logger.warning("Failed to clean up S3 object", extra={"s3_key": s3_key})
 
         return create_response(
             200,

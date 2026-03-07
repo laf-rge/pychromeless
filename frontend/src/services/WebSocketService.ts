@@ -16,6 +16,9 @@ export enum OperationType {
   GET_FOOD_HANDLER_LINKS = "get_food_handler_links",
   DAILY_JOURNAL = "daily_journal",
   THIRD_PARTY_DEPOSIT = "third_party_deposit",
+  PAYROLL_ALLOCATION = "payroll_allocation",
+  GRUBHUB_CSV_IMPORT = "grubhub_csv_import",
+  FDMS_STATEMENT_IMPORT = "fdms_statement_import",
 }
 
 export const OperationDisplayNames: Record<OperationType, string> = {
@@ -28,6 +31,9 @@ export const OperationDisplayNames: Record<OperationType, string> = {
   [OperationType.GET_FOOD_HANDLER_LINKS]: "Food Handler PDF Links",
   [OperationType.DAILY_JOURNAL]: "Daily Journal Processing",
   [OperationType.THIRD_PARTY_DEPOSIT]: "Third Party Deposits",
+  [OperationType.PAYROLL_ALLOCATION]: "Payroll Allocation",
+  [OperationType.GRUBHUB_CSV_IMPORT]: "GrubHub CSV Import",
+  [OperationType.FDMS_STATEMENT_IMPORT]: "FDMS Statement Import",
 };
 
 interface EnrichedTaskStatus extends TaskStatus {

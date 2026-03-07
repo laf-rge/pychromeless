@@ -131,7 +131,11 @@ locals {
   update_food_handler_pdfs = { prod = local.base_env_config }
   payroll_allocation       = { prod = local.base_env_config }
   grubhub_csv_import       = { prod = local.base_env_config }
-  fdms_statement_import    = { prod = local.base_env_config }
+  fdms_statement_import = {
+    prod = merge(local.base_env_config, {
+      S3_BUCKET = var.settings.s3_bucket
+    })
+  }
   authorizer               = { prod = local.base_env_config }
   qb_auth_url              = { prod = local.base_env_config }
   qb_callback = {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { SubmitHandler } from "react-hook-form";
 import {
   FormControl,
@@ -13,6 +13,8 @@ import { logger } from "../../utils/logger";
 import { JosiahAlert } from "../../components/features/JosiahAlert";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { API_BASE_URL, API_ENDPOINTS } from "../../config/api";
+import { useTaskStore } from "../../stores/taskStore";
+import { OperationType } from "../../services/WebSocketService";
 
 interface FdmsResult {
   filename: string;
@@ -41,6 +43,34 @@ interface FdmsImportResult {
 
 export function FdmsImport() {
   const [result, setResult] = useState<FdmsImportResult | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const pendingTaskId = useRef<string | null>(null);
+
+  const createImmediateTask = useTaskStore((state) => state.createImmediateTask);
+  const completedTasks = useTaskStore((state) => state.completedTasks);
+  const failedTasks = useTaskStore((state) => state.failedTasks);
+
+  // Watch for task completion via WebSocket
+  useEffect(() => {
+    if (!pendingTaskId.current) return;
+
+    const taskId = pendingTaskId.current;
+    const completedTask = completedTasks.get(taskId);
+    const failedTask = failedTasks.get(taskId);
+
+    if (completedTask) {
+      pendingTaskId.current = null;
+      setIsProcessing(false);
+      // Extract result from WebSocket task data
+      const taskResult = completedTask.result as FdmsImportResult | undefined;
+      if (taskResult?.results) {
+        setResult(taskResult);
+      }
+    } else if (failedTask) {
+      pendingTaskId.current = null;
+      setIsProcessing(false);
+    }
+  }, [completedTasks, failedTasks]);
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     logger.debug(values);
@@ -61,8 +91,16 @@ export function FdmsImport() {
     endpoint: API_ENDPOINTS.FDMS_STATEMENT_IMPORT,
     formDataSubmission: true,
     defaultValues: {},
-    onSuccess: (data: FdmsImportResult) => {
-      setResult(data);
+    onSuccess: (data: { task_id?: string } & Partial<FdmsImportResult>) => {
+      if (data.task_id) {
+        // Async mode: 202 response with task_id
+        pendingTaskId.current = data.task_id;
+        setIsProcessing(true);
+        createImmediateTask(data.task_id, OperationType.FDMS_STATEMENT_IMPORT);
+      } else if (data.results) {
+        // Synchronous mode (local dev): full result in response
+        setResult(data as FdmsImportResult);
+      }
     },
   });
 
@@ -103,6 +141,8 @@ export function FdmsImport() {
     }
 
     setResult(null);
+    setIsProcessing(false);
+    pendingTaskId.current = null;
   };
 
   const successfulResults = result?.results.filter(r => !r.error) || [];
@@ -114,12 +154,12 @@ export function FdmsImport() {
       <Feature
         title="FDMS Statement Import"
         desc="Upload FDMS credit card processor statement PDFs to create bills in QuickBooks. Each statement generates a bill with fee line items. Chargebacks and adjustments are flagged for review."
-        isLoading={isSubmitting}
+        isLoading={isSubmitting || isProcessing}
         type="submit"
       >
         <JosiahAlert
           error={error}
-          isSuccess={isSubmitSuccessful && result?.success}
+          isSuccess={isSubmitSuccessful && !isProcessing && result?.success}
           successMessage={
             result
               ? `Created ${result.summary.bills_created} bills from ${result.summary.total_files} files`
@@ -127,7 +167,15 @@ export function FdmsImport() {
           }
         />
 
-        {isSubmitSuccessful && result && (
+        {isProcessing && (
+          <Alert variant="default" className="mt-2 bg-blue-50 border-blue-200">
+            <AlertDescription>
+              Processing FDMS statements in the background. Results will appear here when complete.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {result && (
           <Alert variant={result.summary.failed > 0 ? "warning" : "default"} className="mt-2 bg-green-50 border-green-200">
             <AlertDescription>
               <strong>Import Summary:</strong>
@@ -145,7 +193,7 @@ export function FdmsImport() {
           </Alert>
         )}
 
-        {isSubmitSuccessful && successfulResults.length > 0 && (
+        {successfulResults.length > 0 && (
           <Alert variant="default" className="mt-2">
             <AlertDescription>
               <details>
@@ -179,7 +227,7 @@ export function FdmsImport() {
           </Alert>
         )}
 
-        {isSubmitSuccessful && chargebackResults.length > 0 && (
+        {chargebackResults.length > 0 && (
           <Alert variant="warning" className="mt-2">
             <AlertDescription>
               <details open>
@@ -204,7 +252,7 @@ export function FdmsImport() {
           </Alert>
         )}
 
-        {isSubmitSuccessful && failedResults.length > 0 && (
+        {failedResults.length > 0 && (
           <Alert variant="destructive" className="mt-2">
             <AlertDescription>
               <strong>Failed Files:</strong>
