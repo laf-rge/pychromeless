@@ -198,6 +198,15 @@ def create_daily_sales(
         x.DepartmentRef.name if x.DepartmentRef else "20025": x
         for x in SalesReceipt.filter(TxnDate=qb_date_format(txdate), qb=CLIENT)
     }
+
+    # Pre-fetch shared lookups to avoid redundant API calls per store
+    customer_ref = Customer.all(qb=CLIENT)[0].to_ref()
+    all_item_ids = {line_id[0] for line_id in detail_map.values()} | {"43", "31"}
+    id_list = ",".join(f"'{i}'" for i in all_item_ids)
+    item_cache = {
+        str(item.Id): item for item in Item.where(f"Id IN ({id_list})", qb=CLIENT)
+    }
+
     new_receipts = {}
 
     for store, _sref in store_refs.items():
@@ -230,7 +239,7 @@ def create_daily_sales(
             continue
         new_receipts[store].DepartmentRef = store_refs[store]
         new_receipt.TxnDate = qb_date_format(txdate)
-        new_receipt.CustomerRef = Customer.all(qb=CLIENT)[0].to_ref()
+        new_receipt.CustomerRef = customer_ref
         daily_report = daily_reports[store]
 
         line_num = 1
@@ -253,9 +262,7 @@ def create_daily_sales(
                 line.Amount = Decimal(0)
                 line.Description = "Nothing captured."
             line.SalesItemLineDetail = SalesItemLineDetail()
-            item = Item.query(
-                f"select * from Item where id = '{line_id[0]}'", qb=CLIENT
-            )[0]
+            item = item_cache[line_id[0]]
             line.SalesItemLineDetail.ItemRef = item.to_ref()
             line.SalesItemLineDetail.ServiceDate = None
             new_receipt.Line.append(line)
@@ -279,7 +286,7 @@ def create_daily_sales(
         else:
             line.Amount = Decimal(0)
         line.SalesItemLineDetail = SalesItemLineDetail()
-        item = Item.query(f"select * from Item where id = '{43}'", qb=CLIENT)[0]
+        item = item_cache["43"]
         line.SalesItemLineDetail.ItemRef = item.to_ref()
         line.SalesItemLineDetail.ServiceDate = None
         new_receipt.Line.append(line)
@@ -301,7 +308,7 @@ def create_daily_sales(
             extra={"amount": str(line.Amount), "store": store, "txdate": str(txdate)},
         )
         line.SalesItemLineDetail = SalesItemLineDetail()
-        item = Item.query(f"select * from Item where id = '{31}'", qb=CLIENT)[0]
+        item = item_cache["31"]
         line.SalesItemLineDetail.ItemRef = item.to_ref()
         line.SalesItemLineDetail.ServiceDate = None
         new_receipt.Line.append(line)
@@ -611,7 +618,6 @@ def get_store_refs() -> dict[str, Any]:
     Returns:
         Dict mapping store name (e.g., "20407") to QB Ref object
     """
-    refresh_session()
     return {x.Name: x.to_ref() for x in Department.all(qb=CLIENT)}
 
 

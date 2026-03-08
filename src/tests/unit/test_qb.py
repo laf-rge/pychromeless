@@ -113,8 +113,12 @@ class TestQuickBooksExceptionHandling(unittest.TestCase):
     @patch("qb.refresh_session")
     @patch("qb.SalesReceipt")
     @patch("qb.Department")
+    @patch("qb.Customer")
+    @patch("qb.Item")
     def test_create_daily_sales_handles_quickbooks_exception(
         self,
+        mock_item: MagicMock,
+        mock_customer: MagicMock,
         mock_department: MagicMock,
         mock_sales_receipt: MagicMock,
         mock_refresh: MagicMock,
@@ -128,6 +132,8 @@ class TestQuickBooksExceptionHandling(unittest.TestCase):
         # Set up mocks
         mock_department.all.return_value = []
         mock_sales_receipt.filter.return_value = []
+        mock_customer.all.return_value = [MagicMock()]
+        mock_item.where.return_value = []
 
         # Create a mock receipt that raises on save
         mock_receipt = MagicMock()
@@ -542,6 +548,102 @@ class TestUnlinkedSalesReceipts(unittest.TestCase):
         self.assertEqual(len(result), 3)
         # Should have made exactly 2 API calls (pages)
         self.assertEqual(call_count[0], 2)
+
+
+class TestCreateDailySalesCaching(unittest.TestCase):
+    """Test that create_daily_sales caches QBO lookups."""
+
+    @patch("qb.CLIENT")
+    @patch("qb.refresh_session")
+    @patch("qb.SalesReceipt")
+    @patch("qb.Department")
+    @patch("qb.Customer")
+    @patch("qb.Item")
+    def test_customer_and_item_fetched_once(
+        self,
+        mock_item: MagicMock,
+        mock_customer: MagicMock,
+        mock_department: MagicMock,
+        mock_sales_receipt: MagicMock,
+        mock_refresh: MagicMock,
+        mock_client: MagicMock,
+    ) -> None:
+        """Customer.all and Item.where are called exactly once regardless of store count."""
+        from datetime import date
+
+        from qb import create_daily_sales
+
+        # Set up store refs for 3 stores
+        dept1 = MagicMock()
+        dept1.Name = "20358"
+        dept2 = MagicMock()
+        dept2.Name = "20395"
+        dept3 = MagicMock()
+        dept3.Name = "20400"
+        mock_department.all.return_value = [dept1, dept2, dept3]
+
+        mock_sales_receipt.filter.return_value = []
+
+        # Customer mock
+        mock_cust = MagicMock()
+        mock_customer.all.return_value = [mock_cust]
+
+        # Item mock - return items with matching Ids
+        def make_item(item_id: str) -> MagicMock:
+            m = MagicMock()
+            m.Id = item_id
+            return m
+
+        from qb import detail_map
+
+        all_ids = {lid[0] for lid in detail_map.values()} | {"43", "31"}
+        mock_item.where.return_value = [make_item(i) for i in all_ids]
+
+        # Build minimal daily reports for 3 stores
+        daily_report = {
+            "Pre-Discount Sales": "$100.00",
+            "Discounts": "$0.00",
+            "House Account": "$0.00",
+            "Online Gift Card": "$0.00",
+            "Gift Card": "$0.00",
+            "Online Credit Card": "$0.00",
+            "InStore Credit Card": "$0.00",
+            "DoorDash": "$0.00",
+            "GrubHub": "$0.00",
+            "UberEats": "$0.00",
+            "EZ Cater": "$0.00",
+            "Remote Payment": "$0.00",
+            "Gift Cards Sold": "$0.00",
+            "Sales Tax": "$0.00",
+            "Donations": "$0.00",
+            "Online CC Tips": "$0.00",
+            "Gift Card Tips": "$0.00",
+            "CC Tips": "$0.00",
+            "Payins": "None",
+            "Bank Deposits": "",
+        }
+        daily_reports = {
+            "20358": {**daily_report},
+            "20395": {**daily_report},
+            "20400": {**daily_report},
+        }
+
+        # Mock receipt save to avoid actual API call
+        mock_receipt = MagicMock()
+        mock_receipt.to_json.return_value = "{}"
+        mock_sales_receipt.return_value = mock_receipt
+
+        create_daily_sales(
+            txdate=date(2024, 6, 15),
+            daily_reports=daily_reports,
+        )
+
+        # Customer.all called exactly once (not 3 times)
+        mock_customer.all.assert_called_once()
+        # Item.where called exactly once with batch query (not 60+ individual queries)
+        mock_item.where.assert_called_once()
+        # Item.query should NOT have been called at all
+        mock_item.query.assert_not_called()
 
 
 if __name__ == "__main__":
